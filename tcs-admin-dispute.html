@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจสอบข้อพิพาท #DSP-0847 — TCS Admin</title>
+<meta name="description" content="แอดมิน TCS ตรวจสอบข้อพิพาท เทียบรูปประกาศขายกับวิดีโอแกะกล่อง แล้วตัดสินคืนเงินหรือโอนให้ผู้ขาย">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0A0C10;
+    --panel: #12161D;
+    --panel-2: #171C25;
+    --blue: #2F8FE8;
+    --blue-dim: #1E5C99;
+    --cyan: #5FD4FF;
+    --white: #F4F5F7;
+    --steel: #8C93A3;
+    --steel-dim: #565D6C;
+    --danger: #E8664F;
+    --good: #4FC97A;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; min-width: 0; }
+  html { background: var(--bg); }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--cyan); color: var(--bg); }
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 8px; border: 3px solid var(--bg); }
+  html { scrollbar-color: var(--panel-2) var(--bg); scrollbar-width: thin; }
+
+  a { color: var(--cyan); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 2px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  button { font-family: inherit; }
+  textarea { font-family: inherit; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 640px) { .wrap { padding: 0 16px; } }
+
+  header.top {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 12, 16, 0.78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(140, 147, 163, 0.1);
+  }
+  .top-inner { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+  .back-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--panel); border: 1px solid rgba(140,147,163,0.2);
+    color: var(--steel); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; text-decoration: none;
+  }
+  .back-btn:hover { color: var(--cyan); border-color: rgba(95,212,255,0.4); }
+  .back-btn svg { width: 18px; height: 18px; }
+  .top-title-wrap { min-width: 0; }
+  .top-title { font-family: var(--font-display); font-weight: 600; font-size: 14.5px; }
+  .top-id { font-size: 11px; color: var(--steel-dim); font-family: var(--font-mono); }
+  .admin-tag {
+    margin-left: auto; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 10.5px; color: var(--gold, #E8B84F);
+    background: rgba(232,184,79,0.1); border: 1px solid rgba(232,184,79,0.3);
+    padding: 4px 10px; border-radius: 999px;
+  }
+
+  main { padding: 28px 0 70px; }
+
+  .case-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 880px) { .case-grid { grid-template-columns: 1fr; } }
+
+  .main-col { display: flex; flex-direction: column; gap: 22px; }
+  .side-col { position: sticky; top: 88px; }
+  @media (max-width: 880px) { .side-col { position: static; } }
+
+  .card { background: var(--panel); border: 1px solid rgba(140,147,163,0.14); border-radius: 14px; padding: 18px; }
+  .card h2 { font-size: 14px; color: var(--steel); font-weight: 500; margin-bottom: 14px; }
+
+  /* ---------- case summary ---------- */
+
+  .case-summary-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .case-thumb {
+    width: 48px; height: 62px; border-radius: 9px; flex-shrink: 0;
+    background: var(--panel-2); border: 1px solid rgba(95,212,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .case-thumb svg { width: 46%; height: 46%; }
+  .case-info { flex: 1; min-width: 160px; }
+  .case-info .name { font-size: 14.5px; font-weight: 500; color: var(--white); }
+  .case-info .meta { margin-top: 4px; font-size: 12.5px; color: var(--steel); }
+  .case-amount { text-align: right; flex-shrink: 0; }
+  .case-amount .label { font-size: 11px; color: var(--steel-dim); }
+  .case-amount .value { margin-top: 2px; font-family: var(--font-mono); font-size: 16px; color: var(--white); }
+
+  .parties-row { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(140,147,163,0.12); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 420px) { .parties-row { grid-template-columns: 1fr; } }
+  .party .p-role { font-size: 11px; color: var(--steel-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .party .p-name { margin-top: 3px; font-size: 13.5px; font-weight: 500; color: var(--white); }
+  .party .p-name a { color: inherit; text-decoration: underline; text-decoration-color: rgba(140,147,163,0.4); }
+
+  .reason-chip {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+    font-size: 12px; padding: 5px 12px; border-radius: 999px;
+    background: rgba(232,102,79,0.1); border: 1px solid rgba(232,102,79,0.28); color: var(--danger);
+  }
+
+  /* ---------- claim ---------- */
+
+  .claim-text { font-size: 14px; color: var(--steel); line-height: 1.75; }
+  .claim-text strong { color: var(--white); font-weight: 500; }
+
+  /* ---------- evidence ---------- */
+
+  .evidence-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .evidence-grid { grid-template-columns: 1fr; } }
+
+  .evidence-slot { display: flex; flex-direction: column; gap: 8px; }
+  .evidence-label { font-size: 12px; color: var(--steel); font-weight: 500; }
+  .evidence-label .src { display: block; margin-top: 1px; font-size: 10.5px; color: var(--steel-dim); font-weight: 400; }
+
+  .evidence-box {
+    position: relative; aspect-ratio: 5/6.2;
+    background: var(--panel-2); border: 1px solid rgba(140,147,163,0.18);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .evidence-box.is-video { border-color: rgba(95,212,255,0.3); cursor: pointer; }
+  .evidence-box svg.glyph { width: 30%; height: 30%; }
+
+  .play-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(10,12,16,0.35);
+  }
+  .play-overlay .play-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(95,212,255,0.14); border: 1.5px solid rgba(95,212,255,0.4);
+    color: var(--cyan);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .play-overlay .play-btn svg { width: 17px; height: 17px; margin-left: 2px; }
+  .play-overlay span { font-family: var(--font-mono); font-size: 11px; color: var(--white); background: rgba(10,12,16,0.6); padding: 3px 8px; border-radius: 999px; }
+
+  .evidence-box.is-playing .play-overlay { display: none; }
+  .evidence-box.is-playing::after {
+    content: 'กำลังเล่น...'; position: absolute; bottom: 10px; left: 0; right: 0; text-align: center;
+    font-family: var(--font-mono); font-size: 11px; color: var(--cyan);
+  }
+
+  /* ---------- chat (read-only) ---------- */
+
+  .chat-list { display: flex; flex-direction: column; gap: 12px; }
+  .chat-msg { display: flex; gap: 10px; max-width: 88%; }
+  .chat-msg.is-seller { align-self: flex-end; flex-direction: row-reverse; }
+  .chat-avatar {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: var(--panel-2); display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 600; font-size: 10px; color: var(--steel);
+  }
+  .chat-bubble { background: var(--panel-2); border-radius: 12px; padding: 8px 12px; font-size: 13px; line-height: 1.6; color: var(--white); }
+  .chat-msg.is-seller .chat-bubble { background: var(--blue-dim); }
+  .chat-time { display: block; margin-top: 4px; font-size: 10px; color: var(--steel-dim); font-family: var(--font-mono); }
+
+  /* ---------- decision panel ---------- */
+
+  .decision-card { background: var(--panel); border: 1px solid rgba(95,212,255,0.2); border-radius: 14px; padding: 20px; }
+  .decision-card h2 { font-size: 15px; color: var(--white); font-weight: 500; margin-bottom: 6px; }
+  .decision-card p.lede { font-size: 12.5px; color: var(--steel); line-height: 1.6; margin-bottom: 16px; }
+
+  .decision-row { display: flex; flex-direction: column; gap: 10px; }
+  .decision-option {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 13px 14px;
+    background: var(--panel-2);
+    border: 1.5px solid rgba(140,147,163,0.18);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .decision-option.is-selected { border-color: var(--cyan); background: rgba(95,212,255,0.05); }
+  .decision-option .radio {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+    border: 1.5px solid rgba(140,147,163,0.4);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .decision-option.is-selected .radio { border-color: var(--cyan); }
+  .decision-option .radio::after {
+    content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--cyan);
+    transform: scale(0); transition: transform 0.12s ease;
+  }
+  .decision-option.is-selected .radio::after { transform: scale(1); }
+  .decision-option .d-label { font-size: 13.5px; font-weight: 500; color: var(--white); }
+  .decision-option .d-sub { margin-top: 2px; font-size: 11.5px; color: var(--steel-dim); }
+
+  .field { margin-top: 16px; }
+  .field label { display: block; font-size: 12.5px; color: var(--steel); margin-bottom: 7px; }
+  .input {
+    width: 100%; background: var(--panel-2); border: 1px solid rgba(140,147,163,0.2);
+    border-radius: 10px; padding: 10px 13px; color: var(--white); font-size: 13.5px;
+    outline: 0; resize: vertical; min-height: 74px; line-height: 1.6;
+  }
+  .input:focus { border-color: var(--cyan); }
+  .input::placeholder { color: var(--steel-dim); }
+
+  .field-error { margin-top: 8px; font-size: 12px; color: var(--danger); display: none; }
+  .field-error.is-visible { display: block; }
+
+  .confirm-btn {
+    margin-top: 18px; width: 100%; height: 48px; border-radius: 11px;
+    background: var(--blue); border: 0; color: #071523; font-size: 14.5px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s ease; position: relative;
+  }
+  .confirm-btn:hover { background: #4aa0ef; }
+  .confirm-btn.is-loading { color: transparent; }
+  .confirm-btn.is-loading::after {
+    content: ''; position: absolute; top: 50%; left: 50%; width: 19px; height: 19px; margin: -9.5px 0 0 -9.5px;
+    border-radius: 50%; border: 2px solid rgba(7,21,35,0.35); border-top-color: #071523;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- resolved state ---------- */
+
+  .resolved-card { display: none; text-align: center; }
+  .resolved-card.is-visible { display: block; }
+  .resolved-icon {
+    width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 14px;
+    background: rgba(79,201,122,0.12); border: 1px solid rgba(79,201,122,0.35);
+    display: flex; align-items: center; justify-content: center; color: var(--good);
+  }
+  .resolved-icon svg { width: 20px; height: 20px; }
+  .resolved-card h2 { font-size: 16px; color: var(--white); }
+  .resolved-card p.outcome { margin-top: 8px; font-size: 13.5px; color: var(--steel); line-height: 1.65; }
+  .resolved-card p.outcome strong { color: var(--white); font-weight: 500; }
+  .resolved-note { margin-top: 14px; text-align: left; background: var(--panel-2); border-radius: 10px; padding: 12px 14px; font-size: 12.5px; color: var(--steel); line-height: 1.6; }
+  .resolved-note .label { font-size: 11px; color: var(--steel-dim); margin-bottom: 5px; }
+
+  footer { padding: 32px 0 48px; border-top: 1px solid rgba(140, 147, 163, 0.12); margin-top: 30px; }
+  footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+  footer .foot-note { font-size: 12px; color: var(--steel-dim); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="back-btn" href="tcs-browse.html" aria-label="กลับ">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div class="top-title-wrap">
+      <p class="top-title">ตรวจสอบข้อพิพาท</p>
+      <p class="top-id">#DSP-0847 · คำสั่งซื้อ #TCS-240915-0847</p>
+    </div>
+    <span class="admin-tag">ADMIN</span>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="case-grid">
+
+      <div class="main-col">
+
+        <div class="card">
+          <h2>สรุปคำสั่งซื้อ</h2>
+          <div class="case-summary-row">
+            <div class="case-thumb"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 28 L64 28 L44 42 L52 64 L32 50 L12 64 L20 42 L0 28 L24 28 Z" fill="var(--cyan)"/></svg></div>
+            <div class="case-info">
+              <p class="name">Dragonic Overlord SP</p>
+              <p class="meta">ยื่นข้อพิพาทเมื่อ <span class="mono">3 ชั่วโมงที่แล้ว</span></p>
+            </div>
+            <div class="case-amount">
+              <p class="label">ยอดเงินที่พักไว้</p>
+              <p class="value mono">฿4,200</p>
+            </div>
+          </div>
+          <div class="parties-row">
+            <div class="party">
+              <p class="p-role">ผู้ซื้อ</p>
+              <p class="p-name">ผู้ใช้ ···832</p>
+            </div>
+            <div class="party">
+              <p class="p-role">ผู้ขาย</p>
+              <p class="p-name"><a href="tcs-profile.html">DragonForge</a></p>
+            </div>
+          </div>
+          <span class="reason-chip">สภาพการ์ดไม่ตรงกับที่ประกาศขาย</span>
+        </div>
+
+        <div class="card">
+          <h2>คำชี้แจงจากผู้ซื้อ</h2>
+          <p class="claim-text">"การ์ดที่ได้รับมี<strong>รอยขีดข่วนที่มุมขวาล่าง</strong>ซึ่งไม่เห็นในรูปประกาศขายเลยครับ เทียบกับรูปที่ลงไว้แล้วชัดเจนว่าเป็นคนละสภาพกัน อยากให้แอดมินช่วยตรวจสอบให้หน่อยครับ"</p>
+        </div>
+
+        <div class="card">
+          <h2>หลักฐาน — เทียบรูปประกาศขายกับวิดีโอแกะกล่อง</h2>
+          <div class="evidence-grid">
+            <div class="evidence-slot">
+              <p class="evidence-label">รูปประกาศขาย (หน้า)<span class="src">จากผู้ขาย ตอนลงประกาศ</span></p>
+              <div class="evidence-box"><svg class="glyph" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 28 L64 28 L44 42 L52 64 L32 50 L12 64 L20 42 L0 28 L24 28 Z" fill="var(--blue)" opacity="0.85"/></svg></div>
+            </div>
+            <div class="evidence-slot">
+              <p class="evidence-label">รูปประกาศขาย (หลัง)<span class="src">จากผู้ขาย ตอนลงประกาศ</span></p>
+              <div class="evidence-box"><svg class="glyph" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="var(--blue)" opacity="0.85"/></svg></div>
+            </div>
+            <div class="evidence-slot">
+              <p class="evidence-label">วิดีโอแกะกล่อง<span class="src">จากผู้ซื้อ 48 วินาที</span></p>
+              <div class="evidence-box is-video" id="video-evidence" tabindex="0" role="button">
+                <svg class="glyph" viewBox="0 0 64 64" aria-hidden="true"><path d="M16 2 L19 13 L30 16 L19 19 L16 30 L13 19 L2 16 L13 13 Z" fill="var(--cyan)" opacity="0.85"/></svg>
+                <div class="play-overlay">
+                  <span class="play-btn"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 4l10 6-10 6V4z" fill="currentColor"/></svg></span>
+                  <span class="mono">00:48</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>ประวัติแชทของคำสั่งซื้อนี้</h2>
+          <div class="chat-list">
+            <div class="chat-msg">
+              <div class="chat-avatar">···832</div>
+              <div>
+                <div class="chat-bubble">สวัสดีครับ รบกวนแพ็คแน่นๆ หน่อยนะครับ กลัวการ์ดช้ำ</div>
+                <span class="chat-time">15 ก.ย. 10:02</span>
+              </div>
+            </div>
+            <div class="chat-msg is-seller">
+              <div class="chat-avatar">DF</div>
+              <div>
+                <div class="chat-bubble">ได้เลยครับ แพ็คใส่ท็อปโหลดเดอร์ + กันกระแทก 2 ชั้นให้แน่นอนครับ</div>
+                <span class="chat-time">15 ก.ย. 10:15</span>
+              </div>
+            </div>
+            <div class="chat-msg">
+              <div class="chat-avatar">···832</div>
+              <div>
+                <div class="chat-bubble">ได้รับแล้วครับ กำลังถ่ายวิดีโอแกะกล่องอยู่</div>
+                <span class="chat-time">17 ก.ย. 09:14</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="side-col">
+        <div class="decision-card" id="decision-card">
+          <h2>ตัดสินคดี</h2>
+          <p class="lede">เลือกผลการตัดสินตามหลักฐานที่มี บันทึกเหตุผลไว้ ผู้ซื้อและผู้ขายจะเห็นข้อความนี้</p>
+
+          <div class="decision-row" id="decision-row">
+            <div class="decision-option" data-outcome="refund" tabindex="0" role="radio" aria-checked="false">
+              <span class="radio" aria-hidden="true"></span>
+              <div>
+                <p class="d-label">คืนเงินให้ผู้ซื้อ</p>
+                <p class="d-sub">฿4,200 คืนเข้าบัญชีผู้ซื้อ</p>
+              </div>
+            </div>
+            <div class="decision-option" data-outcome="release" tabindex="0" role="radio" aria-checked="false">
+              <span class="radio" aria-hidden="true"></span>
+              <div>
+                <p class="d-label">โอนเงินให้ผู้ขาย</p>
+                <p class="d-sub">฿4,200 โอนเข้าบัญชี DragonForge</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="resolution-note">บันทึกเหตุผล</label>
+            <textarea class="input" id="resolution-note" maxlength="400" placeholder="เช่น เทียบรูปประกาศขายกับวิดีโอแกะกล่องแล้วพบว่า..."></textarea>
+          </div>
+
+          <p class="field-error" id="decision-error">เลือกผลการตัดสินและกรอกเหตุผลก่อนยืนยัน</p>
+          <button class="confirm-btn" id="confirm-decision-btn" type="button">ยืนยันผลการตัดสิน</button>
+        </div>
+
+        <div class="card resolved-card" id="resolved-card">
+          <div class="resolved-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5 L9.5 17 L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h2>ตัดสินคดีแล้ว</h2>
+          <p class="outcome" id="resolved-outcome">เงิน ฿4,200 คืนเข้าบัญชีผู้ซื้อแล้ว</p>
+          <div class="resolved-note">
+            <p class="label">บันทึกเหตุผล</p>
+            <p id="resolved-note-text"></p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="tcs-browse.html" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+      <svg viewBox="0 0 40 40" fill="none" width="22" height="22" aria-hidden="true">
+        <rect x="10" y="5" width="22" height="30" rx="5" fill="#0D1016" stroke="rgba(95,212,255,0.5)" stroke-width="1.5"/>
+        <path d="M21 15 L24.8 23.2 L21 31.4 L17.2 23.2 Z" fill="var(--cyan)"/>
+      </svg>
+      <span style="font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--steel)">TCS</span>
+    </a>
+    <p class="foot-note">เอกสารแนวคิดฉบับพรีวิว — เครื่องมือแอดมินจำลองไว้เพื่อสาธิตการออกแบบ ยังไม่มีระบบคิวหรือสิทธิ์แอดมินจริง</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var videoBox = document.getElementById('video-evidence');
+  videoBox.addEventListener('click', function () { videoBox.classList.toggle('is-playing'); });
+  videoBox.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); videoBox.classList.toggle('is-playing'); }
+  });
+
+  var selectedOutcome = null;
+  var decisionOptions = document.querySelectorAll('.decision-option');
+  var decisionError = document.getElementById('decision-error');
+
+  function selectOutcome(el) {
+    decisionOptions.forEach(function (o) {
+      o.classList.toggle('is-selected', o === el);
+      o.setAttribute('aria-checked', o === el ? 'true' : 'false');
+    });
+    selectedOutcome = el.dataset.outcome;
+    decisionError.classList.remove('is-visible');
+  }
+
+  decisionOptions.forEach(function (el) {
+    el.addEventListener('click', function () { selectOutcome(el); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectOutcome(el); }
+    });
+  });
+
+  document.getElementById('resolution-note').addEventListener('input', function () {
+    decisionError.classList.remove('is-visible');
+  });
+
+  document.getElementById('confirm-decision-btn').addEventListener('click', function () {
+    var note = document.getElementById('resolution-note').value.trim();
+    if (!selectedOutcome || !note) {
+      decisionError.classList.add('is-visible');
+      return;
+    }
+
+    var btn = this;
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    setTimeout(function () {
+      document.getElementById('decision-card').style.display = 'none';
+      var outcomeText = selectedOutcome === 'refund'
+        ? 'เงิน ฿4,200 คืนเข้าบัญชีผู้ซื้อแล้ว'
+        : 'เงิน ฿4,200 โอนเข้าบัญชี DragonForge แล้ว';
+      document.getElementById('resolved-outcome').textContent = outcomeText;
+      document.getElementById('resolved-note-text').textContent = note;
+      document.getElementById('resolved-card').classList.add('is-visible');
+    }, 900);
+  });
+})();
+</script>
+
+</body>
+</html>

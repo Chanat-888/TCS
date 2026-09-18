@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCS — เข้าสู่ระบบ</title>
+<meta name="description" content="เข้าสู่ระบบ TCS ด้วยเบอร์โทรศัพท์ หนึ่งเบอร์ หนึ่งบัญชี">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0A0C10;
+    --panel: #12161D;
+    --panel-2: #171C25;
+    --blue: #2F8FE8;
+    --blue-dim: #1E5C99;
+    --cyan: #5FD4FF;
+    --white: #F4F5F7;
+    --steel: #8C93A3;
+    --steel-dim: #565D6C;
+    --danger: #E8664F;
+    --good: #4FC97A;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { background: var(--bg); }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: var(--cyan); color: var(--bg); }
+  a { color: var(--cyan); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 2px; }
+  h1, h2 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  button { font-family: inherit; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+  .deco-field { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+
+  .deco-card {
+    position: absolute;
+    width: 64px; height: 90px;
+    border-radius: 11px;
+    background: var(--panel);
+    border: 1px solid rgba(95, 212, 255, 0.12);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0.28;
+  }
+  .deco-card svg { width: 24px; height: 24px; }
+
+  .stage {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+  .brand svg { width: 34px; height: 34px; }
+  .brand span { font-family: var(--font-display); font-weight: 700; font-size: 20px; }
+
+  .auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--panel);
+    border: 1px solid rgba(140, 147, 163, 0.14);
+    border-radius: 18px;
+    padding: 32px 28px;
+  }
+
+  @media (max-width: 460px) { .auth-card { padding: 26px 20px; border-radius: 16px; } }
+
+  .step { display: none; flex-direction: column; }
+  .step.is-active { display: flex; }
+
+  .step h1 { font-size: 1.4rem; }
+  .step .lede { margin-top: 8px; color: var(--steel); font-size: 14px; line-height: 1.6; }
+  .step .lede strong { color: var(--white); font-weight: 500; }
+
+  .field { margin-top: 24px; }
+  .field label { display: block; font-size: 12.5px; color: var(--steel); margin-bottom: 8px; }
+
+  .phone-input {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-2);
+    border: 1px solid rgba(140, 147, 163, 0.2);
+    border-radius: 11px;
+    padding: 0 14px;
+    height: 50px;
+    transition: border-color 0.15s ease;
+  }
+  .phone-input:focus-within { border-color: var(--cyan); }
+  .phone-input .prefix { font-family: var(--font-mono); color: var(--steel); font-size: 15px; flex-shrink: 0; }
+  .phone-input input {
+    flex: 1; background: none; border: 0; outline: 0;
+    color: var(--white); font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.02em;
+  }
+  .phone-input input::placeholder { color: var(--steel-dim); }
+
+  .field-error {
+    margin-top: 7px;
+    font-size: 12.5px;
+    color: var(--danger);
+    display: none;
+  }
+  .field-error.is-visible { display: block; }
+
+  .primary-btn {
+    margin-top: 22px;
+    width: 100%;
+    height: 50px;
+    border-radius: 11px;
+    background: var(--blue);
+    border: 0;
+    color: #071523;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+  }
+  .primary-btn:hover { background: #4aa0ef; }
+  .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .primary-btn.is-loading { color: transparent; position: relative; }
+  .primary-btn.is-loading::after {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    width: 18px; height: 18px;
+    margin: -9px 0 0 -9px;
+    border-radius: 50%;
+    border: 2px solid rgba(7,21,35,0.35);
+    border-top-color: #071523;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .otp-row { display: flex; gap: 9px; justify-content: space-between; }
+  .otp-digit {
+    width: 46px; height: 56px;
+    background: var(--panel-2);
+    border: 1px solid rgba(140, 147, 163, 0.2);
+    border-radius: 11px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 22px;
+    color: var(--white);
+    outline: 0;
+    transition: border-color 0.15s ease;
+  }
+  .otp-digit:focus { border-color: var(--cyan); }
+  .otp-digit.filled { border-color: rgba(95, 212, 255, 0.4); }
+
+  @media (max-width: 460px) { .otp-digit { width: 15%; height: 50px; font-size: 19px; } }
+
+  .resend-row {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--steel);
+  }
+  .resend-link {
+    background: none; border: 0; padding: 0;
+    color: var(--cyan); font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .resend-link:disabled { color: var(--steel-dim); cursor: not-allowed; }
+
+  .back-link {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .back-link button {
+    background: none; border: 0; padding: 0;
+    color: var(--steel); font-size: 13px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .back-link button:hover { color: var(--white); }
+  .back-link svg { width: 13px; height: 13px; }
+
+  /* ---- success step ---- */
+
+  .success-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(79, 201, 122, 0.12);
+    border: 1px solid rgba(79, 201, 122, 0.35);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--good);
+    margin: 0 auto 18px;
+  }
+  .success-icon svg { width: 24px; height: 24px; }
+
+  .step.success-step { text-align: center; align-items: center; }
+
+  .bank-prompt {
+    margin-top: 26px;
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid rgba(95, 212, 255, 0.18);
+    border-radius: 13px;
+    padding: 18px;
+    text-align: left;
+  }
+  .bank-prompt-head { display: flex; align-items: center; gap: 8px; }
+  .bank-prompt-head svg { width: 16px; height: 16px; color: var(--cyan); flex-shrink: 0; }
+  .bank-prompt-head span { font-size: 13.5px; font-weight: 500; color: var(--white); }
+  .bank-prompt p { margin-top: 8px; font-size: 12.5px; color: var(--steel); line-height: 1.6; }
+
+  .bank-prompt-actions { margin-top: 14px; display: flex; gap: 10px; }
+  .bank-prompt-actions a {
+    flex: 1; text-align: center; text-decoration: none;
+    padding: 10px 0; border-radius: 9px; font-size: 13px; font-weight: 500;
+  }
+  .bank-prompt-actions .go {
+    background: var(--blue); color: #071523;
+  }
+  .bank-prompt-actions .go:hover { background: #4aa0ef; }
+  .bank-prompt-actions .skip {
+    background: transparent; border: 1px solid rgba(140,147,163,0.25); color: var(--steel);
+  }
+  .bank-prompt-actions .skip:hover { color: var(--white); border-color: rgba(140,147,163,0.4); }
+
+  .foot-note {
+    position: relative; z-index: 1;
+    text-align: center;
+    font-size: 12px;
+    color: var(--steel-dim);
+    padding: 0 20px 28px;
+  }
+</style>
+</head>
+<body>
+
+<div class="deco-field" id="deco" aria-hidden="true"></div>
+
+<div class="stage">
+  <div class="brand">
+    <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <rect x="4" y="7" width="22" height="30" rx="5" fill="var(--blue)" transform="rotate(-8 15 22)"/>
+      <rect x="10" y="5" width="22" height="30" rx="5" fill="#0D1016" stroke="rgba(95,212,255,0.5)" stroke-width="1.5"/>
+      <path d="M21 15 L24.8 23.2 L21 31.4 L17.2 23.2 Z" fill="var(--cyan)"/>
+    </svg>
+    <span>TCS</span>
+  </div>
+
+  <div class="auth-card">
+
+    <!-- STEP 1: phone -->
+    <div class="step is-active" id="step-phone">
+      <h1>เข้าสู่ระบบ TCS</h1>
+      <p class="lede">ใช้เบอร์โทรศัพท์เดียว เป็นหนึ่งบัญชี — ไม่ต้องตั้งรหัสผ่าน เราจะส่งรหัสยืนยันให้ทาง SMS</p>
+
+      <div class="field">
+        <label for="phone">เบอร์โทรศัพท์</label>
+        <div class="phone-input">
+          <span class="prefix">+66</span>
+          <input type="tel" id="phone" inputmode="numeric" placeholder="81 234 5678" maxlength="12" autocomplete="tel">
+        </div>
+        <p class="field-error" id="phone-error">กรอกเบอร์โทรศัพท์ให้ครบก่อนดำเนินการต่อ</p>
+      </div>
+
+      <button class="primary-btn" id="send-otp-btn" type="button">ส่งรหัส OTP</button>
+    </div>
+
+    <!-- STEP 2: otp -->
+    <div class="step" id="step-otp">
+      <h1>กรอกรหัสยืนยัน</h1>
+      <p class="lede">เราส่งรหัส 6 หลักไปที่ <strong class="mono" id="otp-phone-echo">+66 81 234 5678</strong></p>
+
+      <div class="field">
+        <label>รหัส OTP</label>
+        <div class="otp-row" id="otp-row">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 1">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 2">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 3">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 4">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 5">
+          <input class="otp-digit" inputmode="numeric" maxlength="1" aria-label="หลักที่ 6">
+        </div>
+        <p class="field-error" id="otp-error">กรอกรหัสให้ครบ 6 หลักก่อนยืนยัน</p>
+      </div>
+
+      <button class="primary-btn" id="verify-otp-btn" type="button">ยืนยัน</button>
+
+      <p class="resend-row">
+        ขอรหัสใหม่ได้ใน <span class="mono" id="resend-timer">00:30</span>
+        <button class="resend-link" id="resend-btn" type="button" hidden>ส่งรหัสอีกครั้ง</button>
+      </p>
+
+      <div class="back-link">
+        <button type="button" id="back-to-phone-btn">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          เปลี่ยนเบอร์โทร
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: success -->
+    <div class="step success-step" id="step-success">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5 L9.5 17 L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1>ยินดีต้อนรับสู่ TCS</h1>
+      <p class="lede">เข้าสู่ระบบสำเร็จ — เริ่มเลือกซื้อหรือลงประกาศขายการ์ดได้ทันที</p>
+
+      <div class="bank-prompt">
+        <div class="bank-prompt-head">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 10.2 L9 12.6 L13.5 7.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>รับป้ายยืนยันตัวตน</span>
+        </div>
+        <p>ผูกบัญชีธนาคารที่ชื่อตรงกับโปรไฟล์ของคุณ เพื่อรับป้ายยืนยันตัวตนและเปิดสิทธิ์รับเงินจากการขาย ทำตอนนี้หรือทีหลังก็ได้</p>
+        <div class="bank-prompt-actions">
+          <a class="go" href="tcs-profile.html">ยืนยันตอนนี้</a>
+          <a class="skip" href="tcs-browse.html">ข้ามไปก่อน</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<p class="foot-note">เอกสารแนวคิดฉบับพรีวิว — ขั้นตอน OTP จำลองไว้เพื่อสาธิตการออกแบบ ยังไม่เชื่อมระบบส่ง SMS จริง</p>
+
+<script>
+(function () {
+  var crestPaths = {
+    burst: 'M16 2 L19 10 L27 8 L22 15 L28 20 L20 21 L21 29 L16 23 L11 29 L12 21 L4 20 L10 15 L5 8 L13 10 Z',
+    star: 'M16 3 L20 13 L31 13 L22 20 L25 30 L16 24 L7 30 L10 20 L1 13 L12 13 Z',
+    spark: 'M16 2 L19 13 L30 16 L19 19 L16 30 L13 19 L2 16 L13 13 Z'
+  };
+  var keys = Object.keys(crestPaths);
+  var decoEl = document.getElementById('deco');
+  for (var i = 0; i < 5; i++) {
+    var card = document.createElement('div');
+    card.className = 'deco-card';
+    var key = keys[i % keys.length];
+    card.innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="' + crestPaths[key] + '" fill="var(--cyan)" opacity="0.85"/></svg>';
+    var edge = i % 2 === 0 ? (Math.random() * 10) : (88 + Math.random() * 10);
+    card.style.top = (Math.random() * 82 + 4) + '%';
+    card.style.left = edge + '%';
+    card.style.transform = 'rotate(' + (Math.random() * 22 - 11).toFixed(1) + 'deg)';
+    decoEl.appendChild(card);
+  }
+
+  var steps = {
+    phone: document.getElementById('step-phone'),
+    otp: document.getElementById('step-otp'),
+    success: document.getElementById('step-success')
+  };
+
+  function showStep(name) {
+    Object.keys(steps).forEach(function (k) { steps[k].classList.toggle('is-active', k === name); });
+  }
+
+  var phoneInput = document.getElementById('phone');
+  var phoneError = document.getElementById('phone-error');
+  var sendBtn = document.getElementById('send-otp-btn');
+
+  phoneInput.addEventListener('input', function () {
+    phoneError.classList.remove('is-visible');
+  });
+
+  sendBtn.addEventListener('click', function () {
+    var digits = phoneInput.value.replace(/\D/g, '');
+    if (digits.length < 8) {
+      phoneError.classList.add('is-visible');
+      phoneInput.focus();
+      return;
+    }
+    sendBtn.classList.add('is-loading');
+    sendBtn.disabled = true;
+    setTimeout(function () {
+      sendBtn.classList.remove('is-loading');
+      sendBtn.disabled = false;
+      document.getElementById('otp-phone-echo').textContent = '+66 ' + phoneInput.value;
+      showStep('otp');
+      startResendTimer();
+      otpInputs[0].focus();
+    }, 600);
+  });
+
+  var otpInputs = Array.prototype.slice.call(document.querySelectorAll('.otp-digit'));
+  var otpError = document.getElementById('otp-error');
+
+  otpInputs.forEach(function (input, idx) {
+    input.addEventListener('input', function () {
+      input.value = input.value.replace(/\D/g, '').slice(0, 1);
+      input.classList.toggle('filled', input.value.length === 1);
+      otpError.classList.remove('is-visible');
+      if (input.value && idx < otpInputs.length - 1) otpInputs[idx + 1].focus();
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !input.value && idx > 0) otpInputs[idx - 1].focus();
+    });
+  });
+
+  document.getElementById('verify-otp-btn').addEventListener('click', function () {
+    var code = otpInputs.map(function (i) { return i.value; }).join('');
+    if (code.length < 6) {
+      otpError.classList.add('is-visible');
+      return;
+    }
+    var btn = this;
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    setTimeout(function () {
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+      showStep('success');
+    }, 600);
+  });
+
+  document.getElementById('back-to-phone-btn').addEventListener('click', function () {
+    clearInterval(resendInterval);
+    showStep('phone');
+  });
+
+  var resendInterval;
+  function startResendTimer() {
+    var seconds = 30;
+    var timerEl = document.getElementById('resend-timer');
+    var resendBtn = document.getElementById('resend-btn');
+    resendBtn.hidden = true;
+    timerEl.hidden = false;
+    clearInterval(resendInterval);
+    resendInterval = setInterval(function () {
+      seconds--;
+      var m = String(Math.floor(seconds / 60)).padStart(2, '0');
+      var s = String(seconds % 60).padStart(2, '0');
+      timerEl.textContent = m + ':' + s;
+      if (seconds <= 0) {
+        clearInterval(resendInterval);
+        timerEl.hidden = true;
+        resendBtn.hidden = false;
+      }
+    }, 1000);
+  }
+
+  document.getElementById('resend-btn').addEventListener('click', function () {
+    otpInputs.forEach(function (i) { i.value = ''; i.classList.remove('filled'); });
+    otpInputs[0].focus();
+    startResendTimer();
+  });
+})();
+</script>
+
+</body>
+</html>

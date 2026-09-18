@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCS — หน้าแรก</title>
+<meta name="description" content="เลือกซื้อและประมูลการ์ด Cardfight!! Vanguard บน TCS เงินของผู้ซื้ออยู่กับ TCS จนกว่าการ์ดจะถึงมือจริง">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0A0C10;
+    --panel: #12161D;
+    --panel-2: #171C25;
+    --panel-3: #1C222D;
+    --blue: #2F8FE8;
+    --blue-dim: #1E5C99;
+    --cyan: #5FD4FF;
+    --white: #F4F5F7;
+    --steel: #8C93A3;
+    --steel-dim: #565D6C;
+    --danger: #E8664F;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { background: var(--bg); }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--cyan); color: var(--bg); }
+
+  ::-webkit-scrollbar { width: 12px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 8px; border: 3px solid var(--bg); }
+  html { scrollbar-color: var(--panel-2) var(--bg); scrollbar-width: thin; }
+
+  a { color: var(--cyan); }
+
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 2px; }
+
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+
+  p { margin: 0; }
+
+  button { font-family: inherit; }
+
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+  @media (max-width: 640px) { .wrap { padding: 0 16px; } }
+
+  /* ---------- header ---------- */
+
+  header.top {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(10, 12, 16, 0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(140, 147, 163, 0.1);
+  }
+
+  .top-inner {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 14px 0;
+  }
+
+  .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; flex-shrink: 0; }
+  .brand svg { width: 30px; height: 30px; }
+  .brand span { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--white); }
+
+  .search-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid rgba(140, 147, 163, 0.2);
+    border-radius: 12px;
+    padding: 0 14px;
+    height: 46px;
+    transition: border-color 0.15s ease;
+  }
+
+  .search-field:focus-within { border-color: var(--cyan); }
+
+  .search-field svg { width: 18px; height: 18px; color: var(--steel); flex-shrink: 0; }
+
+  .search-field input {
+    flex: 1;
+    background: none;
+    border: 0;
+    outline: 0;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 15px;
+  }
+
+  .search-field input::placeholder { color: var(--steel-dim); }
+
+  .icon-btn {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid rgba(140, 147, 163, 0.2);
+    color: var(--steel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .icon-btn svg { width: 19px; height: 19px; }
+  .icon-btn:hover { color: var(--cyan); border-color: rgba(95, 212, 255, 0.4); }
+
+  /* ---------- category tabs ---------- */
+
+  .tabs-row {
+    position: sticky;
+    top: 74px;
+    z-index: 45;
+    background: rgba(10, 12, 16, 0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(140, 147, 163, 0.08);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 0;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex-shrink: 0;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(140, 147, 163, 0.2);
+    background: transparent;
+    color: var(--steel);
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+
+  .tab:hover { border-color: rgba(95, 212, 255, 0.35); color: var(--white); }
+
+  .tab.is-active {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #071523;
+  }
+
+  /* ---------- banner ---------- */
+
+  .banner-section { padding: 32px 0 8px; }
+
+  .banner {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(120deg, #0D1420 0%, #0A0C10 60%);
+    border: 1px solid rgba(95, 212, 255, 0.18);
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 32px;
+    align-items: center;
+  }
+
+  @media (max-width: 800px) {
+    .banner { grid-template-columns: 1fr; padding: 28px 22px; gap: 24px; }
+  }
+
+  .banner-circuit {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .banner-content { position: relative; z-index: 1; }
+
+  .banner h2 {
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    line-height: 1.2;
+    max-width: 16ch;
+  }
+
+  .banner-meta {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  .banner-meta .price { color: var(--white); font-size: 16px; }
+  .banner-meta .price span { color: var(--steel); font-size: 12px; font-family: var(--font-body); margin-right: 6px; }
+
+  .banner-timer {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--cyan);
+  }
+
+  .banner-timer .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px 1px var(--cyan);
+  }
+
+  .banner-trust {
+    margin-top: 18px;
+    font-size: 13.5px;
+    color: var(--steel);
+    max-width: 40ch;
+    line-height: 1.6;
+  }
+
+  .banner-trust strong { color: var(--white); font-weight: 500; }
+
+  .banner-cta {
+    margin-top: 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 10px;
+    background: var(--blue);
+    color: #071523;
+    font-weight: 600;
+    font-size: 14.5px;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .banner-cta:hover { background: #4aa0ef; }
+
+  .banner-art {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .feat-card {
+    width: 168px;
+    height: 234px;
+    border-radius: 14px;
+    background: var(--panel-2);
+    border: 1.5px solid rgba(95, 212, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 24px 50px -18px rgba(47, 143, 232, 0.4);
+  }
+
+  .feat-card .rarity {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--cyan);
+    background: rgba(95, 212, 255, 0.1);
+    border: 1px solid rgba(95, 212, 255, 0.3);
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+
+  /* ---------- listing grid ---------- */
+
+  .listings-section { padding: 44px 0 80px; }
+
+  .listings-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .listings-head h2 { font-size: 1.3rem; }
+  .listings-head span { font-family: var(--font-mono); font-size: 12.5px; color: var(--steel); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+
+  @media (max-width: 1024px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px) { .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(140, 147, 163, 0.12);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .card:hover { border-color: rgba(95, 212, 255, 0.35); transform: translateY(-2px); }
+
+  .card-thumb {
+    position: relative;
+    aspect-ratio: 5 / 6;
+    background: var(--panel-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-thumb svg.crest { width: 34%; height: 34%; }
+
+  .card-status {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+
+  .card-status.closing {
+    color: var(--cyan);
+    background: rgba(95, 212, 255, 0.1);
+    border: 1px solid rgba(95, 212, 255, 0.28);
+  }
+
+  .card-status.buynow {
+    color: var(--steel);
+    background: rgba(140, 147, 163, 0.1);
+    border: 1px solid rgba(140, 147, 163, 0.22);
+  }
+
+  .card-rarity {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--blue-dim);
+    background: rgba(47, 143, 232, 0.12);
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+
+  .card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+
+  .card-name {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--white);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.8em;
+  }
+
+  .card-price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .card-price {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--white);
+  }
+
+  .card-price-label {
+    font-family: var(--font-body);
+    font-size: 10.5px;
+    color: var(--steel-dim);
+  }
+
+  .card-seller {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(140, 147, 163, 0.1);
+    font-size: 11.5px;
+    color: var(--steel);
+    min-width: 0;
+  }
+
+  .card-seller svg { width: 13px; height: 13px; color: var(--cyan); flex-shrink: 0; }
+
+  .card-seller .shop-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .card-seller .sales {
+    margin-left: auto;
+    color: var(--steel-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-left: 6px;
+  }
+
+  [hidden] { display: none !important; }
+
+  .empty-note {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--steel);
+    font-size: 14px;
+  }
+
+  /* ---------- footer ---------- */
+
+  footer { padding: 32px 0 48px; border-top: 1px solid rgba(140, 147, 163, 0.12); }
+  footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+  footer .foot-note { font-size: 12.5px; color: var(--steel-dim); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" href="#" aria-label="TCS — หน้าแรก">
+      <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <rect x="4" y="7" width="22" height="30" rx="5" fill="var(--blue)" transform="rotate(-8 15 22)"/>
+        <rect x="10" y="5" width="22" height="30" rx="5" fill="#0D1016" stroke="rgba(95,212,255,0.5)" stroke-width="1.5"/>
+        <path d="M21 15 L24.8 23.2 L21 31.4 L17.2 23.2 Z" fill="var(--cyan)"/>
+      </svg>
+      <span>TCS</span>
+    </a>
+    <label class="search-field">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6.2" stroke="currentColor" stroke-width="1.5"/><path d="M17 17 L13.6 13.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input type="text" placeholder="ค้นหาการ์ด ชื่อชุด หรือร้านค้า" aria-label="ค้นหาการ์ด ชื่อชุด หรือร้านค้า">
+    </label>
+    <button class="icon-btn" type="button" aria-label="ตัวกรอง">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5h14M6 10h8M8.5 15h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs-row" aria-label="หมวดหมู่การ์ด">
+  <div class="wrap">
+    <div class="tabs" id="tabs">
+      <button class="tab is-active" data-filter="all" type="button">ทั้งหมด</button>
+      <button class="tab" data-filter="new" type="button">บูสเตอร์ใหม่</button>
+      <button class="tab" data-filter="deck" type="button">เด็คพร้อมเล่น</button>
+      <button class="tab" data-filter="rare" type="button">การ์ดหายาก</button>
+      <button class="tab" data-filter="closing" type="button">ใกล้ปิดประมูล</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+
+  <section class="banner-section">
+    <div class="wrap">
+      <div class="banner">
+        <svg class="banner-circuit" viewBox="0 0 900 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <g stroke="var(--cyan)" stroke-width="1" opacity="0.35" fill="none">
+            <circle cx="760" cy="160" r="90"/>
+            <circle cx="760" cy="160" r="130"/>
+            <path d="M760 40 L760 10 M760 280 L760 310 M630 160 L600 160"/>
+          </g>
+        </svg>
+        <div class="banner-content">
+          <h2>Dragonic Overlord SP — ประมูลเด่นประจำสัปดาห์</h2>
+          <div class="banner-meta">
+            <span class="price mono"><span>ราคาปัจจุบัน</span>฿4,200</span>
+            <span class="banner-timer"><span class="dot" aria-hidden="true"></span><span class="mono">ปิดใน 00:42:10</span></span>
+          </div>
+          <p class="banner-trust">เงินอยู่กับ <strong>TCS</strong> จนกว่าคุณจะกดรับการ์ด ไม่พอใจ ได้เงินคืน — ทุกการประมูลผ่านระบบพักเงินเดียวกัน</p>
+          <button class="banner-cta" type="button">ดูประมูลนี้
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="banner-art">
+          <div class="feat-card">
+            <span class="rarity mono">SP</span>
+            <svg width="30%" height="30%" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="var(--cyan)"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="listings-section">
+    <div class="wrap">
+      <div class="listings-head">
+        <h2>การ์ดที่เปิดขาย</h2>
+        <span class="mono" id="count">10 รายการ</span>
+      </div>
+
+      <div class="grid" id="grid">
+        <!-- cards injected by script -->
+      </div>
+
+      <p class="empty-note" id="empty" hidden>ไม่มีการ์ดในหมวดนี้ตอนนี้</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="brand" href="#" style="gap:8px">
+      <svg viewBox="0 0 40 40" fill="none" width="22" height="22" aria-hidden="true">
+        <rect x="10" y="5" width="22" height="30" rx="5" fill="#0D1016" stroke="rgba(95,212,255,0.5)" stroke-width="1.5"/>
+        <path d="M21 15 L24.8 23.2 L21 31.4 L17.2 23.2 Z" fill="var(--cyan)"/>
+      </svg>
+      <span style="font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--steel)">TCS</span>
+    </a>
+    <p class="foot-note">เอกสารแนวคิดฉบับพรีวิว — ข้อมูลสินค้าเป็นตัวอย่างประกอบการออกแบบ ไม่ใช่รายการขายจริง</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var crestPaths = {
+    burst: 'M16 2 L19 10 L27 8 L22 15 L28 20 L20 21 L21 29 L16 23 L11 29 L12 21 L4 20 L10 15 L5 8 L13 10 Z',
+    star: 'M16 3 L20 13 L31 13 L22 20 L25 30 L16 24 L7 30 L10 20 L1 13 L12 13 Z',
+    spark: 'M16 2 L19 13 L30 16 L19 19 L16 30 L13 19 L2 16 L13 13 Z'
+  };
+
+  var listings = [
+    { name: 'Dragonic Overlord SP — Vanguard DZ-BT ชุดใหม่', rarity: 'SP', crest: 'burst', cat: 'new rare closing', price: '4,200', label: 'ราคาปัจจุบัน', status: 'closing', time: '00:42:10', shop: 'DragonForge', sales: 128 },
+    { name: 'Blaster Blade Liberator RRR', rarity: 'RRR', crest: 'star', cat: 'deck', price: '1,850', label: 'ซื้อทันที', status: 'buynow', shop: 'CardVault TH', sales: 64 },
+    { name: 'Amaterasu SP Foil', rarity: 'SP', crest: 'spark', cat: 'rare closing', price: '6,900', label: 'ราคาปัจจุบัน', status: 'closing', time: '02:15:44', shop: 'SakuraTCG', sales: 210 },
+    { name: 'Starter Deck: Shadow Paladin พร้อมเล่น', rarity: 'DECK', crest: 'star', cat: 'deck', price: '650', label: 'ซื้อทันที', status: 'buynow', shop: 'BangkokVanguard', sales: 41 },
+    { name: 'Ultimate Raizer RRR', rarity: 'RRR', crest: 'burst', cat: 'new', price: '980', label: 'ราคาปัจจุบัน', status: 'closing', time: '05:03:12', shop: 'CardVault TH', sales: 64 },
+    { name: 'Gancelot SP', rarity: 'SP', crest: 'spark', cat: 'rare closing', price: '3,300', label: 'ราคาปัจจุบัน', status: 'closing', time: '00:12:58', shop: 'DragonForge', sales: 128 },
+    { name: 'Great Silver Wolf Garmore', rarity: 'RRR', crest: 'star', cat: 'new', price: '2,100', label: 'ราคาปัจจุบัน', status: 'closing', time: '01:40:00', shop: 'SakuraTCG', sales: 210 },
+    { name: 'Blaster Blade Seeker', rarity: 'RR', crest: 'burst', cat: 'rare', price: '1,200', label: 'ราคาปัจจุบัน', status: 'closing', time: '03:20:10', shop: 'BangkokVanguard', sales: 41 },
+    { name: 'Starter Deck: Nova Grappler', rarity: 'DECK', crest: 'spark', cat: 'deck', price: '600', label: 'ซื้อทันที', status: 'buynow', shop: 'CardVault TH', sales: 64 },
+    { name: 'CEO Amaterasu', rarity: 'SP', crest: 'star', cat: 'rare closing', price: '8,500', label: 'ราคาปัจจุบัน', status: 'closing', time: '00:05:30', shop: 'SakuraTCG', sales: 210 }
+  ];
+
+  var grid = document.getElementById('grid');
+  var countEl = document.getElementById('count');
+  var emptyEl = document.getElementById('empty');
+
+  listings.forEach(function (item, i) {
+    var el = document.createElement('article');
+    el.className = 'card';
+    el.dataset.cat = item.cat;
+
+    var statusHtml = item.status === 'closing'
+      ? '<span class="card-status closing mono">ใกล้ปิด ' + item.time + '</span>'
+      : '<span class="card-status buynow mono">ซื้อทันที</span>';
+
+    el.innerHTML =
+      '<div class="card-thumb">' +
+        statusHtml +
+        '<span class="card-rarity mono">' + item.rarity + '</span>' +
+        '<svg class="crest" viewBox="0 0 32 32" aria-hidden="true"><path d="' + crestPaths[item.crest] + '" fill="var(--blue)" opacity="0.85"/></svg>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<p class="card-name">' + item.name + '</p>' +
+        '<div class="card-price-row"><span class="card-price mono">฿' + item.price + '</span><span class="card-price-label">' + item.label + '</span></div>' +
+        '<div class="card-seller">' +
+          '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 10.2 L9 12.6 L13.5 7.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '<span class="shop-name">' + item.shop + '</span>' +
+          '<span class="sales mono">' + item.sales + ' ออเดอร์</span>' +
+        '</div>' +
+      '</div>';
+
+    grid.appendChild(el);
+  });
+
+  function applyFilter(filter) {
+    var visible = 0;
+    Array.prototype.forEach.call(grid.children, function (card) {
+      var cats = card.dataset.cat.split(' ');
+      var show = filter === 'all' || cats.indexOf(filter) !== -1;
+      card.hidden = !show;
+      if (show) visible++;
+    });
+    countEl.textContent = visible + ' รายการ';
+    emptyEl.hidden = visible !== 0;
+  }
+
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('.tab');
+    if (!btn) return;
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('is-active'); });
+    btn.classList.add('is-active');
+    applyFilter(btn.dataset.filter);
+  });
+})();
+</script>
+
+</body>
+</html>

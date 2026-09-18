@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ให้คะแนนร้านค้า — TCS</title>
+<meta name="description" content="ให้คะแนนและเขียนรีวิวหลังคำสั่งซื้อเสร็จสมบูรณ์บน TCS">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0A0C10;
+    --panel: #12161D;
+    --panel-2: #171C25;
+    --blue: #2F8FE8;
+    --blue-dim: #1E5C99;
+    --cyan: #5FD4FF;
+    --white: #F4F5F7;
+    --steel: #8C93A3;
+    --steel-dim: #565D6C;
+    --danger: #E8664F;
+    --good: #4FC97A;
+    --gold: #E8B84F;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; min-width: 0; }
+  html { background: var(--bg); }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--cyan); color: var(--bg); }
+  ::-webkit-scrollbar { width: 12px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 8px; border: 3px solid var(--bg); }
+  html { scrollbar-color: var(--panel-2) var(--bg); scrollbar-width: thin; }
+
+  a { color: var(--cyan); }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; border-radius: 2px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  button { font-family: inherit; }
+  textarea { font-family: inherit; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 24px; }
+  @media (max-width: 480px) { .wrap { padding: 0 16px; } }
+
+  header.top {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10, 12, 16, 0.78);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(140, 147, 163, 0.1);
+  }
+  .top-inner { display: flex; align-items: center; gap: 14px; padding: 14px 0; }
+  .back-btn {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--panel); border: 1px solid rgba(140,147,163,0.2);
+    color: var(--steel); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; text-decoration: none;
+  }
+  .back-btn:hover { color: var(--cyan); border-color: rgba(95,212,255,0.4); }
+  .back-btn svg { width: 18px; height: 18px; }
+  .top-title { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+
+  main { padding: 28px 0 70px; }
+
+  /* ---------- order summary ---------- */
+
+  .order-card {
+    display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid rgba(140,147,163,0.14);
+    border-radius: 14px; padding: 16px;
+  }
+  .order-thumb {
+    width: 48px; height: 62px; border-radius: 9px; flex-shrink: 0;
+    background: var(--panel-2); border: 1px solid rgba(95,212,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .order-thumb svg { width: 46%; height: 46%; }
+  .order-info { flex: 1; min-width: 160px; }
+  .order-info .name { font-size: 14px; font-weight: 500; color: var(--white); }
+  .order-info .seller { margin-top: 3px; font-size: 12px; color: var(--steel); }
+  .order-badge {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--good);
+    background: rgba(79,201,122,0.1); border: 1px solid rgba(79,201,122,0.28);
+    padding: 4px 10px; border-radius: 999px;
+  }
+
+  /* ---------- rating ---------- */
+
+  .rating-section { margin-top: 26px; text-align: center; }
+  .rating-section h2 { font-size: 15px; color: var(--white); font-weight: 500; }
+
+  .star-picker { margin-top: 18px; display: flex; justify-content: center; gap: 8px; }
+  .star-btn { background: none; border: 0; padding: 4px; cursor: pointer; line-height: 0; }
+  .star-btn svg { width: 38px; height: 38px; color: var(--steel-dim); transition: color 0.1s ease, transform 0.1s ease; }
+  .star-btn.is-on svg { color: var(--gold); }
+  .star-btn:hover svg { transform: scale(1.08); }
+
+  .rating-label { margin-top: 12px; font-size: 13.5px; color: var(--steel); min-height: 1.6em; }
+  .rating-label.is-set { color: var(--gold); font-weight: 500; }
+
+  .field-error { margin-top: 10px; font-size: 12px; color: var(--danger); display: none; }
+  .field-error.is-visible { display: block; }
+
+  /* ---------- tags ---------- */
+
+  .section-block { margin-top: 26px; }
+  .section-block h2 { font-size: 14px; color: var(--steel); font-weight: 500; margin-bottom: 12px; }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-chip {
+    font-size: 13px; padding: 8px 14px; border-radius: 999px;
+    background: var(--panel); border: 1px solid rgba(140,147,163,0.2);
+    color: var(--steel); cursor: pointer; transition: all 0.15s ease;
+  }
+  .tag-chip:hover { border-color: rgba(95,212,255,0.35); color: var(--white); }
+  .tag-chip.is-selected { background: rgba(95,212,255,0.1); border-color: var(--cyan); color: var(--cyan); }
+
+  /* ---------- comment ---------- */
+
+  .input {
+    width: 100%; background: var(--panel-2); border: 1px solid rgba(140,147,163,0.2);
+    border-radius: 10px; padding: 12px 14px; color: var(--white); font-size: 14px;
+    outline: 0; resize: vertical; min-height: 100px; line-height: 1.65;
+  }
+  .input:focus { border-color: var(--cyan); }
+  .input::placeholder { color: var(--steel-dim); }
+
+  .visibility-note { margin-top: 22px; font-size: 12px; color: var(--steel-dim); line-height: 1.6; text-align: center; }
+
+  .submit-btn {
+    margin-top: 18px; width: 100%; height: 52px; border-radius: 12px;
+    background: var(--blue); border: 0; color: #071523; font-size: 15.5px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s ease; position: relative;
+  }
+  .submit-btn:hover { background: #4aa0ef; }
+  .submit-btn.is-loading { color: transparent; }
+  .submit-btn.is-loading::after {
+    content: ''; position: absolute; top: 50%; left: 50%; width: 19px; height: 19px; margin: -9.5px 0 0 -9.5px;
+    border-radius: 50%; border: 2px solid rgba(7,21,35,0.35); border-top-color: #071523;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- views ---------- */
+
+  #form-view { display: block; }
+  #success-view { display: none; }
+  #success-view.is-active { display: block; }
+  #form-view.is-hidden { display: none; }
+
+  .success-wrap { text-align: center; padding: 30px 0; }
+  .success-icon {
+    width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
+    background: rgba(79,201,122,0.12); border: 1px solid rgba(79,201,122,0.35);
+    display: flex; align-items: center; justify-content: center; color: var(--good);
+  }
+  .success-icon svg { width: 24px; height: 24px; }
+  .success-wrap .lede { margin-top: 8px; color: var(--steel); font-size: 14.5px; }
+
+  /* ---------- review preview (reused from profile.html) ---------- */
+
+  .preview-label { margin: 26px 0 12px; font-size: 12.5px; color: var(--steel-dim); text-align: left; }
+
+  .review-item { display: flex; gap: 14px; padding: 16px 0; border-top: 1px solid rgba(140,147,163,0.1); text-align: left; }
+  .review-item:first-child { border-top: 0; }
+  .review-avatar {
+    flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+    background: var(--panel-2); display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--steel);
+  }
+  .review-body { flex: 1; min-width: 0; }
+  .review-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .review-name { font-size: 13.5px; font-weight: 500; color: var(--white); }
+  .review-date { font-size: 12px; color: var(--steel-dim); margin-left: auto; }
+  .stars { display: inline-flex; gap: 1px; vertical-align: -2px; }
+  .stars svg { width: 13px; height: 13px; }
+  .stars svg.on { color: var(--gold); }
+  .stars svg.off { color: var(--steel-dim); }
+  .review-text { margin-top: 6px; font-size: 14px; color: var(--steel); line-height: 1.65; }
+  .review-order { margin-top: 6px; font-size: 11.5px; font-family: var(--font-mono); color: var(--steel-dim); }
+  .review-tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .review-tag { font-size: 11px; color: var(--cyan); background: rgba(95,212,255,0.08); border: 1px solid rgba(95,212,255,0.2); padding: 3px 9px; border-radius: 999px; }
+
+  .success-actions { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .success-actions a { flex: 1; min-width: 160px; text-align: center; text-decoration: none; padding: 12px 0; border-radius: 11px; font-size: 14px; font-weight: 500; }
+  .success-actions .go { background: var(--blue); color: #071523; }
+  .success-actions .go:hover { background: #4aa0ef; }
+  .success-actions .secondary { background: transparent; border: 1px solid rgba(140,147,163,0.25); color: var(--steel); }
+  .success-actions .secondary:hover { color: var(--white); border-color: rgba(140,147,163,0.4); }
+
+  footer { padding: 32px 0 48px; border-top: 1px solid rgba(140, 147, 163, 0.12); margin-top: 20px; }
+  footer .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+  footer .foot-note { font-size: 12px; color: var(--steel-dim); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="back-btn" href="tcs-order.html" aria-label="กลับไปคำสั่งซื้อ">
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <span class="top-title">ให้คะแนนร้านค้า</span>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+
+    <div id="form-view">
+
+      <div class="order-card">
+        <div class="order-thumb">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4 L40 28 L64 28 L44 42 L52 64 L32 50 L12 64 L20 42 L0 28 L24 28 Z" fill="var(--cyan)"/></svg>
+        </div>
+        <div class="order-info">
+          <p class="name">Dragonic Overlord SP</p>
+          <p class="seller">จาก <a href="tcs-profile.html" style="color:var(--steel)">DragonForge</a> · ฿4,200</p>
+        </div>
+        <span class="order-badge">
+          <svg width="11" height="11" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10.5 L8 14.5 L16 5.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          เสร็จสมบูรณ์
+        </span>
+      </div>
+
+      <div class="rating-section">
+        <h2>คุณให้คะแนนร้านนี้กี่ดาว</h2>
+        <div class="star-picker" id="star-picker">
+          <button class="star-btn" data-value="1" type="button" aria-label="1 ดาว"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg></button>
+          <button class="star-btn" data-value="2" type="button" aria-label="2 ดาว"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg></button>
+          <button class="star-btn" data-value="3" type="button" aria-label="3 ดาว"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg></button>
+          <button class="star-btn" data-value="4" type="button" aria-label="4 ดาว"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg></button>
+          <button class="star-btn" data-value="5" type="button" aria-label="5 ดาว"><svg viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg></button>
+        </div>
+        <p class="rating-label" id="rating-label">แตะดาวเพื่อให้คะแนน</p>
+        <p class="field-error" id="rating-error">เลือกจำนวนดาวก่อนส่งรีวิว</p>
+      </div>
+
+      <div class="section-block">
+        <h2>จุดเด่นของร้านนี้ (เลือกได้มากกว่า 1 ข้อ)</h2>
+        <div class="tag-row" id="tag-row">
+          <button class="tag-chip" type="button" data-tag="แพ็คดี">แพ็คดี</button>
+          <button class="tag-chip" type="button" data-tag="ส่งไว">ส่งไว</button>
+          <button class="tag-chip" type="button" data-tag="ตรงปก">ตรงปก</button>
+          <button class="tag-chip" type="button" data-tag="ราคาคุ้มค่า">ราคาคุ้มค่า</button>
+          <button class="tag-chip" type="button" data-tag="ตอบแชทไว">ตอบแชทไว</button>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <h2>เขียนรีวิวเพิ่มเติม (ไม่บังคับ)</h2>
+        <textarea class="input" id="comment" maxlength="400" placeholder="บอกเล่าประสบการณ์การซื้อขายครั้งนี้..."></textarea>
+      </div>
+
+      <p class="visibility-note">รีวิวนี้มาจากคำสั่งซื้อที่เสร็จสมบูรณ์แล้วเท่านั้น และจะแสดงบนโปรไฟล์ของ DragonForge ให้ทุกคนเห็น</p>
+
+      <button class="submit-btn" id="submit-btn" type="button">ส่งรีวิว</button>
+    </div>
+
+    <div id="success-view">
+      <div class="success-wrap">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5 L9.5 17 L19 6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h1>ขอบคุณสำหรับรีวิว</h1>
+        <p class="lede">รีวิวของคุณแสดงบนโปรไฟล์ของ DragonForge แล้ว</p>
+
+        <p class="preview-label">ตัวอย่างที่จะแสดงบนโปรไฟล์ร้านค้า</p>
+        <div class="review-item">
+          <div class="review-avatar">คุณ</div>
+          <div class="review-body">
+            <div class="review-head">
+              <span class="review-name">คุณ</span>
+              <span class="stars" id="preview-stars"></span>
+              <span class="review-date mono">เมื่อสักครู่</span>
+            </div>
+            <p class="review-text" id="preview-text"></p>
+            <div class="review-tags" id="preview-tags"></div>
+            <p class="review-order mono">ออเดอร์ · Dragonic Overlord SP</p>
+          </div>
+        </div>
+
+        <div class="success-actions">
+          <a class="go" href="tcs-profile.html">ดูโปรไฟล์ร้านค้า</a>
+          <a class="secondary" href="tcs-browse.html">กลับหน้าหลัก</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="tcs-browse.html" style="display:flex;align-items:center;gap:8px;text-decoration:none">
+      <svg viewBox="0 0 40 40" fill="none" width="22" height="22" aria-hidden="true">
+        <rect x="10" y="5" width="22" height="30" rx="5" fill="#0D1016" stroke="rgba(95,212,255,0.5)" stroke-width="1.5"/>
+        <path d="M21 15 L24.8 23.2 L21 31.4 L17.2 23.2 Z" fill="var(--cyan)"/>
+      </svg>
+      <span style="font-family:var(--font-display);font-weight:600;font-size:13px;color:var(--steel)">TCS</span>
+    </a>
+    <p class="foot-note">เอกสารแนวคิดฉบับพรีวิว — การส่งรีวิวจำลองไว้เพื่อสาธิตการออกแบบ</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var ratingLabels = { 1: 'แย่มาก', 2: 'ไม่ค่อยดี', 3: 'ปานกลาง', 4: 'ดี', 5: 'ดีมาก' };
+  var starBtns = Array.prototype.slice.call(document.querySelectorAll('.star-btn'));
+  var ratingLabel = document.getElementById('rating-label');
+  var ratingError = document.getElementById('rating-error');
+  var selectedRating = 0;
+
+  function paintStars(value) {
+    starBtns.forEach(function (btn) {
+      btn.classList.toggle('is-on', parseInt(btn.dataset.value, 10) <= value);
+    });
+  }
+
+  starBtns.forEach(function (btn) {
+    btn.addEventListener('mouseenter', function () { paintStars(parseInt(btn.dataset.value, 10)); });
+    btn.addEventListener('click', function () {
+      selectedRating = parseInt(btn.dataset.value, 10);
+      paintStars(selectedRating);
+      ratingLabel.textContent = ratingLabels[selectedRating];
+      ratingLabel.classList.add('is-set');
+      ratingError.classList.remove('is-visible');
+    });
+  });
+
+  document.getElementById('star-picker').addEventListener('mouseleave', function () { paintStars(selectedRating); });
+
+  var selectedTags = [];
+  document.querySelectorAll('.tag-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var tag = chip.dataset.tag;
+      chip.classList.toggle('is-selected');
+      if (chip.classList.contains('is-selected')) {
+        selectedTags.push(tag);
+      } else {
+        selectedTags = selectedTags.filter(function (t) { return t !== tag; });
+      }
+    });
+  });
+
+  function starSvg(on) {
+    return '<svg class="' + (on ? 'on' : 'off') + '" viewBox="0 0 20 20"><path fill="currentColor" d="M10 1.5l2.6 5.5 6 .7-4.4 4.1 1.2 6-5.4-3-5.4 3 1.2-6L1.4 7.7l6-.7z"/></svg>';
+  }
+
+  document.getElementById('submit-btn').addEventListener('click', function () {
+    if (!selectedRating) {
+      ratingError.classList.add('is-visible');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    var btn = this;
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    setTimeout(function () {
+      var starsHtml = '';
+      for (var i = 1; i <= 5; i++) starsHtml += starSvg(i <= selectedRating);
+      document.getElementById('preview-stars').innerHTML = starsHtml;
+
+      var comment = document.getElementById('comment').value.trim();
+      document.getElementById('preview-text').textContent = comment || 'ซื้อขายราบรื่นดีครับ';
+      document.getElementById('preview-text').style.display = comment || selectedTags.length === 0 ? 'block' : (comment ? 'block' : 'none');
+
+      var tagsEl = document.getElementById('preview-tags');
+      tagsEl.innerHTML = '';
+      selectedTags.forEach(function (t) {
+        var span = document.createElement('span');
+        span.className = 'review-tag';
+        span.textContent = t;
+        tagsEl.appendChild(span);
+      });
+
+      document.getElementById('form-view').classList.add('is-hidden');
+      document.getElementById('success-view').classList.add('is-active');
+      window.scrollTo({ top: 0 });
+    }, 800);
+  });
+})();
+</script>
+
+</body>
+</html>
