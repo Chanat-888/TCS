@@ -81,6 +81,7 @@ function PhotoSlot({
 }
 
 export function CreateListingForm() {
+  const [mode, setMode] = useState<"auction" | "sell">("auction");
   const [front, setFront] = useState<File | null>(null);
   const [back, setBack] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -90,8 +91,7 @@ export function CreateListingForm() {
   const [description, setDescription] = useState("");
   const [startPrice, setStartPrice] = useState("");
   const [duration, setDuration] = useState("3");
-  const [buyNowOn, setBuyNowOn] = useState(false);
-  const [buyNowPrice, setBuyNowPrice] = useState("");
+  const [sellPrice, setSellPrice] = useState("");
 
   const [photoError, setPhotoError] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
@@ -112,7 +112,8 @@ export function CreateListingForm() {
       return;
     }
     setDetailsError(false);
-    if (!startPrice.trim()) {
+    const price = mode === "sell" ? sellPrice : startPrice;
+    if (!price.trim()) {
       setPriceError(true);
       return;
     }
@@ -128,9 +129,13 @@ export function CreateListingForm() {
     formData.append("category", category);
     formData.append("condition", condition);
     formData.append("description", description.trim());
-    formData.append("startPrice", startPrice);
-    if (buyNowOn && buyNowPrice) formData.append("buyNowPrice", buyNowPrice);
-    formData.append("duration", duration);
+    if (mode === "sell") {
+      formData.append("startPrice", sellPrice);
+      formData.append("buyNowPrice", sellPrice);
+    } else {
+      formData.append("startPrice", startPrice);
+      formData.append("duration", duration);
+    }
 
     const res = await fetch("/api/listings", { method: "POST", body: formData });
     const json = await res.json();
@@ -283,66 +288,65 @@ export function CreateListingForm() {
         ราคาและระยะเวลา
       </h2>
       <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-        <div className="grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
-          <div>
-            <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-              ราคาเริ่มต้น
-            </label>
-            <div className="relative">
-              <span className="mono pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[14.5px]" style={{ color: "var(--steel)" }}>
-                ฿
-              </span>
-              <input
-                className="mono"
-                style={{ ...inputStyle, paddingLeft: 30 }}
-                inputMode="numeric"
-                value={startPrice}
-                onChange={(e) => { setStartPrice(e.target.value.replace(/\D/g, "")); setPriceError(false); }}
-                placeholder="1,000"
-              />
+        <div className="mb-[18px] grid grid-cols-2 gap-2 rounded-xl p-1" style={{ background: "var(--panel-2)" }}>
+          {(
+            [
+              ["auction", "ประมูล"],
+              ["sell", "ขายทันที"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setMode(key); setPriceError(false); }}
+              className="rounded-lg py-[9px] text-[13.5px] font-medium transition-colors"
+              style={
+                mode === key
+                  ? { background: "var(--blue)", color: "#071523" }
+                  : { background: "transparent", color: "var(--steel)" }
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {mode === "auction" ? (
+          <div className="grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ราคาเริ่มต้น
+              </label>
+              <div className="relative">
+                <span className="mono pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[14.5px]" style={{ color: "var(--steel)" }}>
+                  ฿
+                </span>
+                <input
+                  className="mono"
+                  style={{ ...inputStyle, paddingLeft: 30 }}
+                  inputMode="numeric"
+                  value={startPrice}
+                  onChange={(e) => { setStartPrice(e.target.value.replace(/\D/g, "")); setPriceError(false); }}
+                  placeholder="1,000"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ระยะเวลาประมูล
+              </label>
+              <select value={duration} onChange={(e) => setDuration(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                <option value="1">1 วัน</option>
+                <option value="3">3 วัน</option>
+                <option value="5">5 วัน</option>
+                <option value="7">7 วัน</option>
+              </select>
             </div>
           </div>
+        ) : (
           <div>
             <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-              ระยะเวลาประมูล
-            </label>
-            <select value={duration} onChange={(e) => setDuration(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
-              <option value="1">1 วัน</option>
-              <option value="3">3 วัน</option>
-              <option value="5">5 วัน</option>
-              <option value="7">7 วัน</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-[14px] flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[14px] font-medium" style={{ color: "var(--white)" }}>
-              เปิดให้ซื้อทันที
-            </p>
-            <p className="mt-[2px] text-[12px]" style={{ color: "var(--steel-dim)" }}>
-              ผู้ซื้อกดซื้อได้เลยโดยไม่ต้องรอประมูลจบ
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={buyNowOn}
-            onClick={() => setBuyNowOn((v) => !v)}
-            className="relative flex-shrink-0 rounded-full"
-            style={{ width: 42, height: 24, background: buyNowOn ? "rgba(95,212,255,0.15)" : "var(--panel-2)", border: `1px solid ${buyNowOn ? "var(--cyan)" : "rgba(140,147,163,0.25)"}` }}
-          >
-            <span
-              className="absolute rounded-full transition-transform"
-              style={{ top: 2, left: 2, width: 18, height: 18, background: buyNowOn ? "var(--cyan)" : "var(--steel)", transform: buyNowOn ? "translateX(18px)" : "none" }}
-            />
-          </button>
-        </div>
-
-        {buyNowOn && (
-          <div className="mt-[14px]">
-            <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-              ราคาซื้อทันที
+              ราคาขายทันที
             </label>
             <div className="relative">
               <span className="mono pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[14.5px]" style={{ color: "var(--steel)" }}>
@@ -352,29 +356,35 @@ export function CreateListingForm() {
                 className="mono"
                 style={{ ...inputStyle, paddingLeft: 30 }}
                 inputMode="numeric"
-                value={buyNowPrice}
-                onChange={(e) => setBuyNowPrice(e.target.value.replace(/\D/g, ""))}
+                value={sellPrice}
+                onChange={(e) => { setSellPrice(e.target.value.replace(/\D/g, "")); setPriceError(false); }}
                 placeholder="6,500"
               />
             </div>
+            <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
+              ผู้ซื้อกดซื้อได้ทันทีในราคานี้ ไม่มีการประมูล
+            </p>
           </div>
         )}
+
         {priceError && (
           <p className="mt-2 text-[12px]" style={{ color: "var(--danger)" }}>
-            กรอกราคาเริ่มต้นก่อนเผยแพร่ประกาศ
+            กรอกราคาก่อนเผยแพร่ประกาศ
           </p>
         )}
       </div>
 
-      <div className="mt-[22px] flex items-start gap-[10px] rounded-xl px-4 py-[13px]" style={{ background: "rgba(95,212,255,0.06)", border: "1px solid rgba(95,212,255,0.2)" }}>
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--cyan)", flexShrink: 0, marginTop: 1 }}>
-          <path d="M10 6.5v4M10 13.2v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
-        <p className="text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
-          <strong style={{ color: "var(--white)", fontWeight: 500 }}>รูปภาพจะถูกล็อกทันทีที่มีคนบิด</strong> — แก้ไขรูปหลังจากนั้นไม่ได้ เพื่อป้องกันการสลับการ์ดหลังปิดประมูล
-        </p>
-      </div>
+      {mode === "auction" && (
+        <div className="mt-[22px] flex items-start gap-[10px] rounded-xl px-4 py-[13px]" style={{ background: "rgba(95,212,255,0.06)", border: "1px solid rgba(95,212,255,0.2)" }}>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--cyan)", flexShrink: 0, marginTop: 1 }}>
+            <path d="M10 6.5v4M10 13.2v.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+          <p className="text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+            <strong style={{ color: "var(--white)", fontWeight: 500 }}>รูปภาพจะถูกล็อกทันทีที่มีคนบิด</strong> — แก้ไขรูปหลังจากนั้นไม่ได้ เพื่อป้องกันการสลับการ์ดหลังปิดประมูล
+          </p>
+        </div>
+      )}
 
       {submitError && (
         <p className="mt-3 text-[12.5px]" style={{ color: "var(--danger)" }}>

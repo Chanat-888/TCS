@@ -52,7 +52,10 @@ export async function POST(request: Request) {
     })
     .select()
     .single();
-  if (insertError || !listing) return NextResponse.json({ error: "เผยแพร่ประกาศไม่สำเร็จ ลองอีกครั้ง" }, { status: 500 });
+  if (insertError || !listing) {
+    console.error("listing insert failed", insertError);
+    return NextResponse.json({ error: "เผยแพร่ประกาศไม่สำเร็จ ลองอีกครั้ง" }, { status: 500 });
+  }
 
   const uploadOne = async (file: File, slot: "front" | "back") => {
     const ext = file.name.split(".").pop() ?? "jpg";
