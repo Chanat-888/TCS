@@ -117,7 +117,7 @@ function NavDropdown({ label, href, items }: { label: string; href: string; item
   );
 }
 
-export function SiteHeader() {
+export function SiteHeader({ userId }: { userId: string }) {
   return (
     <header
       className="sticky top-0 z-50"
@@ -146,7 +146,7 @@ export function SiteHeader() {
             </svg>
           </button>
           <Link
-            href="/profile"
+            href={`/profile/${userId}`}
             aria-label="บัญชีของฉัน"
             className="flex items-center justify-center rounded-full no-underline"
             style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}

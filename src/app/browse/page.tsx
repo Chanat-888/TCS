@@ -33,7 +33,7 @@ export default async function BrowsePage({
 
   return (
     <div style={{ "--wrap-max": "1240px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
-      <SiteHeader />
+      <SiteHeader userId={userId} />
 
       <main>
         {featured && (
