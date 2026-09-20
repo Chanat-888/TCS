@@ -83,9 +83,18 @@ export function ProductCard({
           >
             {listing.rarity}
           </span>
-          <svg className="w-[34%] h-[34%]" viewBox="0 0 32 32" aria-hidden="true">
-            <path d={crestFor(listing.id)} fill="var(--blue)" opacity={0.85} />
-          </svg>
+          {listing.photo_front_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={listing.photo_front_url}
+              alt={listing.name}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <svg className="w-[34%] h-[34%]" viewBox="0 0 32 32" aria-hidden="true">
+              <path d={crestFor(listing.id)} fill="var(--blue)" opacity={0.85} />
+            </svg>
+          )}
         </div>
 
         <div className="flex flex-1 flex-col gap-2 px-[14px] pb-[14px] pt-3">

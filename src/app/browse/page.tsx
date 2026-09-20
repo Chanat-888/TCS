@@ -109,14 +109,23 @@ export default async function BrowsePage({
                     }}
                   >
                     <span
-                      className="mono absolute right-[10px] top-[10px] rounded-full px-[7px] py-[2px] text-[10px]"
+                      className="mono absolute right-[10px] top-[10px] z-[1] rounded-full px-[7px] py-[2px] text-[10px]"
                       style={{ color: "var(--cyan)", background: "rgba(95, 212, 255, 0.1)", border: "1px solid rgba(95, 212, 255, 0.3)" }}
                     >
                       {featured.rarity}
                     </span>
-                    <svg width="30%" height="30%" viewBox="0 0 64 64" aria-hidden="true">
-                      <path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="var(--cyan)" />
-                    </svg>
+                    {featured.photo_front_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={featured.photo_front_url}
+                        alt={featured.name}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <svg width="30%" height="30%" viewBox="0 0 64 64" aria-hidden="true">
+                        <path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="var(--cyan)" />
+                      </svg>
+                    )}
                   </div>
                 </div>
               </div>
