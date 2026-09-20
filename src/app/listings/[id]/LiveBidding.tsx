@@ -99,10 +99,7 @@ export function LiveBidding({
     }
     setPrice(result.newPrice);
     setEndsAt(result.newEndsAt);
-    setBids((prev) => [
-      { id: crypto.randomUUID(), listing_id: listingId, bidder_id: currentUserId, amount: value, created_at: new Date().toISOString() },
-      ...prev,
-    ]);
+    setBids((prev) => (prev.some((b) => b.id === result.bid.id) ? prev : [result.bid, ...prev]));
     if (result.extended) {
       setShowExtend(true);
       if (extendTimeout.current) clearTimeout(extendTimeout.current);

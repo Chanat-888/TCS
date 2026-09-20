@@ -3,68 +3,37 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionUserId } from "@/lib/session";
 import { getActiveListings, getSellerSalesCountMap } from "@/lib/queries";
-import { Brand } from "@/components/Brand";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
 import { Footer } from "@/components/Footer";
 import { formatTHB } from "@/lib/format";
 import { CategoryTabs } from "./CategoryTabs";
 
-export default async function BrowsePage() {
+export default async function BrowsePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string; category?: string }>;
+}) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/login");
+
+  const { type, category } = await searchParams;
 
   const listings = await getActiveListings();
   const salesCounts = await getSellerSalesCountMap(listings.map((l) => l.seller_id));
 
   // eslint-disable-next-line react-hooks/purity -- server component, runs once per request
   const now = Date.now();
-  const featured =
-    listings
-      .filter((l) => l.buy_now_price == null && new Date(l.ends_at).getTime() > now)
-      .sort((a, b) => b.current_price - a.current_price)[0] ?? listings[0];
+  const featured = type
+    ? null
+    : listings
+        .filter((l) => l.buy_now_price == null && new Date(l.ends_at).getTime() > now)
+        .sort((a, b) => b.current_price - a.current_price)[0] ?? listings[0];
 
   return (
     <div style={{ "--wrap-max": "1240px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
-      <header
-        className="sticky top-0 z-50"
-        style={{
-          background: "rgba(10, 12, 16, 0.78)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(140, 147, 163, 0.1)",
-        }}
-      >
-        <div className="wrap flex items-center gap-5 py-[14px]">
-          <Brand />
-          <label
-            className="flex flex-1 items-center gap-[10px] rounded-xl px-[14px] transition-colors"
-            style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", height: 46 }}
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--steel)", flexShrink: 0 }}>
-              <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            <input
-              type="text"
-              placeholder="ค้นหาการ์ด ชื่อชุด หรือร้านค้า"
-              aria-label="ค้นหาการ์ด ชื่อชุด หรือร้านค้า"
-              className="flex-1 bg-transparent border-0 outline-none text-[15px]"
-              style={{ color: "var(--white)" }}
-            />
-          </label>
-          <button
-            type="button"
-            aria-label="ตัวกรอง"
-            className="flex flex-shrink-0 items-center justify-center rounded-xl"
-            style={{ width: 46, height: 46, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
-          >
-            <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M3 5h14M6 10h8M8.5 15h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         {featured && (
@@ -155,7 +124,13 @@ export default async function BrowsePage() {
           </section>
         )}
 
-        <CategoryTabs listings={listings} salesCounts={salesCounts} />
+        <CategoryTabs
+          key={`${type ?? "all"}-${category ?? "all"}`}
+          listings={listings}
+          salesCounts={salesCounts}
+          initialType={type}
+          initialCategory={category}
+        />
       </main>
 
       <Footer note="เอกสารแนวคิดฉบับพรีวิว — ข้อมูลสินค้าเป็นตัวอย่างประกอบการออกแบบ ไม่ใช่รายการขายจริง" />

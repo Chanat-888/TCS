@@ -30,6 +30,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
             sellerName={detail.seller.display_name}
             amount={detail.order.amount}
             paymentDeadlineAt={detail.order.payment_deadline_at ?? new Date().toISOString()}
+            isAuctionWin={detail.listing.buy_now_price == null}
           />
         </div>
       </main>

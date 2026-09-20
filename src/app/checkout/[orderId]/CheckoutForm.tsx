@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { ProvinceCombobox } from "@/components/ProvinceCombobox";
 import { formatTHB } from "@/lib/format";
 import type { PaymentMethod } from "@/lib/supabase/types";
 import { payOrder } from "./actions";
@@ -39,6 +40,7 @@ export function CheckoutForm({
   sellerName,
   amount,
   paymentDeadlineAt,
+  isAuctionWin,
 }: {
   orderId: string;
   listingName: string;
@@ -46,6 +48,7 @@ export function CheckoutForm({
   sellerName: string;
   amount: number;
   paymentDeadlineAt: string;
+  isAuctionWin: boolean;
 }) {
   const [recipient, setRecipient] = useState("");
   const [phone, setPhone] = useState("");
@@ -150,12 +153,13 @@ export function CheckoutForm({
             {listingName}
           </p>
           <p className="mt-1 text-[12.5px]" style={{ color: "var(--steel)" }}>
-            จาก <Link href={`/profile/${sellerId}`} style={{ color: "var(--steel)" }}>{sellerName}</Link> · คุณชนะการประมูลนี้
+            จาก <Link href={`/profile/${sellerId}`} style={{ color: "var(--steel)" }}>{sellerName}</Link>
+            {isAuctionWin ? " · คุณชนะการประมูลนี้" : " · ซื้อทันที"}
           </p>
         </div>
         <div className="flex-shrink-0 text-right">
           <p className="text-[11px]" style={{ color: "var(--steel-dim)" }}>
-            ราคาที่ชนะ
+            {isAuctionWin ? "ราคาที่ชนะ" : "ราคาซื้อ"}
           </p>
           <p className="mono mt-[2px] text-[18px]" style={{ color: "var(--white)" }}>
             {formatTHB(amount)}
@@ -197,7 +201,12 @@ export function CheckoutForm({
           </Field>
           <div className="mt-[14px] grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
             <Field label="จังหวัด">
-              <input style={inputStyle} value={province} onChange={(e) => { setProvince(e.target.value); setAddressError(false); }} placeholder="กรุงเทพมหานคร" />
+              <ProvinceCombobox
+                value={province}
+                onChange={(v) => { setProvince(v); setAddressError(false); }}
+                inputStyle={inputStyle}
+                placeholder="กรุงเทพมหานคร"
+              />
             </Field>
             <Field label="รหัสไปรษณีย์">
               <input className="mono" style={inputStyle} value={postcode} onChange={(e) => { setPostcode(e.target.value); setAddressError(false); }} placeholder="10XXX" />

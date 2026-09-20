@@ -15,13 +15,26 @@ const TABS = [
 export function CategoryTabs({
   listings,
   salesCounts,
+  initialType,
+  initialCategory,
 }: {
   listings: ListingWithSeller[];
   salesCounts: Record<string, number>;
+  initialType?: string;
+  initialCategory?: string;
 }) {
-  const [active, setActive] = useState<(typeof TABS)[number]["key"]>("all");
+  const validCategory = TABS.some((t) => t.key === initialCategory);
+  const [active, setActive] = useState<(typeof TABS)[number]["key"]>(
+    validCategory ? (initialCategory as (typeof TABS)[number]["key"]) : "all"
+  );
 
-  const visible = listings.filter((l) => {
+  const byType = listings.filter((l) => {
+    if (initialType === "auction") return l.buy_now_price == null;
+    if (initialType === "product") return l.buy_now_price != null;
+    return true;
+  });
+
+  const visible = byType.filter((l) => {
     if (active === "all") return true;
     if (active === "closing") return l.buy_now_price == null;
     return l.category === active;
@@ -30,13 +43,8 @@ export function CategoryTabs({
   return (
     <>
       <nav
-        className="sticky z-45"
         style={{
-          top: 74,
-          background: "rgba(10, 12, 16, 0.78)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(140, 147, 163, 0.08)",
+          background: "linear-gradient(90deg, rgba(25, 40, 66, 0.95) 0%, rgba(10, 12, 16, 0.92) 50%, rgba(30, 48, 74, 0.95) 100%)",
         }}
         aria-label="หมวดหมู่การ์ด"
       >

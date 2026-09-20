@@ -10,6 +10,7 @@ import { SellerRow } from "@/components/SellerRow";
 import { formatTHB } from "@/lib/format";
 import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
+import { BuyNowBox } from "./BuyNowBox";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -71,15 +72,24 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </p>
                 </div>
 
-                <LiveBidding
-                  listingId={listing.id}
-                  initialPrice={listing.current_price}
-                  initialEndsAt={listing.ends_at}
-                  initialSecondsLeft={secondsUntil(listing.ends_at)}
-                  initialBids={bids}
-                  currentUserId={userId}
-                  isOwner={listing.seller_id === userId}
-                />
+                {listing.buy_now_price != null ? (
+                  <BuyNowBox
+                    listingId={listing.id}
+                    price={listing.buy_now_price}
+                    isOwner={listing.seller_id === userId}
+                    isSold={listing.status !== "active"}
+                  />
+                ) : (
+                  <LiveBidding
+                    listingId={listing.id}
+                    initialPrice={listing.current_price}
+                    initialEndsAt={listing.ends_at}
+                    initialSecondsLeft={secondsUntil(listing.ends_at)}
+                    initialBids={bids}
+                    currentUserId={userId}
+                    isOwner={listing.seller_id === userId}
+                  />
+                )}
 
                 <SellerRow seller={listing.seller} stats={sellerStats} />
               </div>
