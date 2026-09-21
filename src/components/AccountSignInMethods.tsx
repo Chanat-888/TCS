@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/session";
-import { GoogleAuthButton } from "@/components/GoogleAuthButton";
+import { OAuthButton } from "@/components/OAuthButton";
 
 export async function AccountSignInMethods() {
   const user = await getSessionUser();
@@ -15,7 +15,7 @@ export async function AccountSignInMethods() {
           {phoneVerified ? "ยืนยันเบอร์โทรแล้ว" : "ยืนยันเบอร์โทรก่อนประมูล ซื้อ หรือลงขาย"}
         </p>
         {!phoneVerified && <Link href="/verify-phone" className="block mb-4" style={{ color: "var(--cyan)" }}>ยืนยันเบอร์โทร</Link>}
-        {googleLinked ? <p className="text-[13px]" style={{ color: "var(--cyan)" }}>เชื่อมบัญชี Google แล้ว</p> : <GoogleAuthButton link />}
+        {googleLinked ? <p className="text-[13px]" style={{ color: "var(--cyan)" }}>เชื่อมบัญชี Google แล้ว</p> : <OAuthButton provider="google" link />}
         <p className="text-[12px] mt-3" style={{ color: "var(--steel)" }}>เชื่อมช่องทางเข้าสู่ระบบกับบัญชีนี้ เพื่อใช้ประกาศและประวัติเดิม</p>
       </div>
     </section>
