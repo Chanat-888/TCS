@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 import type { PaymentMethod } from "@/lib/supabase/types";
 
 export interface PayOrderInput {
@@ -18,7 +18,7 @@ export interface PayOrderInput {
 // state machine from here on — only the literal payment call is simulated,
 // since the payment provider (Omise vs 2C2P) is still undecided (PRODUCT.md).
 export async function payOrder(orderId: string, input: PayOrderInput) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
 
   const supabase = createServiceClient();

@@ -2,6 +2,10 @@
 
 <!-- impeccable:product-schema 1 -->
 
+## Implementation update — Google and phone authentication
+
+Phone OTP now calls Supabase Auth, uses verified per-user sessions, supports resend and logout, and provisions profiles through migration 0006. SMS delivery and hosted verification still require project/provider configuration; see [auth setup](docs/auth-setup.md). Google OAuth now supports browsing without a verified phone. Trading mutations require phone verification; adding a phone to a Google account preserves its UUID. Phone-first users can link Google from their profile. Google provider setup and manual linking must be configured in Supabase before live use. The older surface inventory below describes design prototypes and is not a current implementation checklist. Payments remain simulated.
+
 ## Platform
 
 web

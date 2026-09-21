@@ -1,10 +1,10 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 
 export async function submitReview(orderId: string, rating: number, tags: string[], comment: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
   if (!rating) return { error: "เลือกจำนวนดาวก่อนส่งรีวิว" as const };
 

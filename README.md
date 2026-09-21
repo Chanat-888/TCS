@@ -1,3 +1,7 @@
+## TCS authentication
+
+See [phone login setup](docs/auth-setup.md) for required environment variables, database migration, SMS provider setup, and testing.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

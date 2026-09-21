@@ -6,14 +6,22 @@ export function OtpInput({
   value,
   onChange,
   onEnter,
+  disabled = false,
 }: {
   value: string[];
   onChange: (next: string[]) => void;
   onEnter?: () => void;
+  disabled?: boolean;
 }) {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   function setDigit(idx: number, raw: string) {
+    const code = raw.replace(/\D/g, "");
+    if (code.length > 1) {
+      onChange(Array.from({ length: value.length }, (_, i) => code[i] ?? ""));
+      refs.current[Math.min(code.length, value.length - 1)]?.focus();
+      return;
+    }
     const digit = raw.replace(/\D/g, "").slice(-1);
     const next = [...value];
     next[idx] = digit;
@@ -41,9 +49,18 @@ export function OtpInput({
             color: "var(--white)",
           }}
           inputMode="numeric"
-          maxLength={1}
+          disabled={disabled}
+          autoComplete={idx === 0 ? "one-time-code" : "off"}
+          maxLength={idx === 0 ? value.length : 1}
           aria-label={`หลักที่ ${idx + 1}`}
           value={digit}
+          onPaste={(event) => {
+            event.preventDefault();
+            const code = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, value.length);
+            if (!code) return;
+            onChange(Array.from({ length: value.length }, (_, i) => code[i] ?? ""));
+            refs.current[Math.min(code.length, value.length - 1)]?.focus();
+          }}
           onFocus={(e) => (e.currentTarget.style.borderColor = "var(--cyan)")}
           onBlur={(e) =>
             (e.currentTarget.style.borderColor = digit

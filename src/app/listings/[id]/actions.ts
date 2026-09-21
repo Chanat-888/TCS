@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 
 const BID_INCREMENT = 100;
 const ANTI_SNIPE_WINDOW_SECONDS = 120;
 const ANTI_SNIPE_EXTENSION_SECONDS = 120;
 
 export async function placeBid(listingId: string, amount: number) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อนบิด" as const };
 
   const supabase = createServiceClient();
@@ -59,7 +59,7 @@ function generateOrderCode() {
 }
 
 export async function buyNow(listingId: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อนซื้อ" as const };
 
   const supabase = createServiceClient();

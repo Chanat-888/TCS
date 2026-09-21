@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 import { getOrderDetail } from "@/lib/orders";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
@@ -8,7 +8,7 @@ import { CheckoutForm } from "./CheckoutForm";
 
 export default async function CheckoutPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) redirect("/login");
 
   const detail = await getOrderDetail(orderId, userId);

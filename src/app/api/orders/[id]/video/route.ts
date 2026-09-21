@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { getPhoneVerifiedUserId } from "@/lib/session";
 
 const AUTO_APPROVE_HOURS = 48;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: orderId } = await params;
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
+  const userId = await getPhoneVerifiedUserId();
+  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบและยืนยันเบอร์โทรก่อน", code: "PHONE_VERIFICATION_REQUIRED" }, { status: 403 });
 
   const supabase = createServiceClient();
   const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
