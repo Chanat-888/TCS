@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@/components/Brand";
+import { CartLink } from "@/components/CartLink";
 
 type NavItem = {
   href: string;
@@ -128,7 +129,7 @@ export function SiteHeader({ userId }: { userId: string }) {
     >
       <div className="wrap relative flex items-center gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
         <Brand />
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 max-[480px]:hidden">
           <NavDropdown label="Auction" href="/browse?type=auction" items={AUCTION_ITEMS} />
           <NavDropdown label="Product" href="/browse?type=product" items={PRODUCT_ITEMS} />
         </nav>
@@ -150,17 +151,62 @@ export function SiteHeader({ userId }: { userId: string }) {
               <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-          <Link
-            href={`/profile/${userId}`}
-            aria-label="บัญชีของฉัน"
-            className="flex items-center justify-center rounded-full no-underline"
-            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <circle cx="10" cy="6.8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M3.5 17c0.9-3.6 4-5.3 6.5-5.3s5.6 1.7 6.5 5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </Link>
+          <CartLink />
+          <div className="group relative">
+            <button
+              type="button"
+              aria-label="บัญชีของฉัน"
+              className="flex items-center justify-center rounded-full"
+              style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="6.8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M3.5 17c0.9-3.6 4-5.3 6.5-5.3s5.6 1.7 6.5 5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </button>
+            <div className="invisible absolute right-0 top-full z-10 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+              <div
+                className="flex w-[220px] flex-col gap-1 rounded-2xl p-2"
+                style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.16)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
+              >
+                <Link
+                  href={`/profile/${userId}`}
+                  className="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[rgba(140,147,163,0.08)]"
+                >
+                  <span
+                    className="flex flex-shrink-0 items-center justify-center rounded-[10px]"
+                    style={{ width: 34, height: 34, background: "var(--panel-2)", color: "var(--cyan)" }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <circle cx="10" cy="6.8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M3.5 17c0.9-3.6 4-5.3 6.5-5.3s5.6 1.7 6.5 5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>
+                    บัญชีของฉัน
+                  </span>
+                </Link>
+                <Link
+                  href="/orders"
+                  className="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[rgba(140,147,163,0.08)]"
+                >
+                  <span
+                    className="flex flex-shrink-0 items-center justify-center rounded-[10px]"
+                    style={{ width: 34, height: 34, background: "var(--panel-2)", color: "var(--cyan)" }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <path d="M3 6.5 L10 3 L17 6.5 L10 10 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                      <path d="M3 6.5 V14 L10 17.5 L17 14 V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                      <path d="M10 10 V17.5" stroke="currentColor" strokeWidth="1.3" />
+                    </svg>
+                  </span>
+                  <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>
+                    คำสั่งซื้อของฉัน
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>

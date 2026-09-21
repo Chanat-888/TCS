@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { formatTHB } from "@/lib/format";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { addToCart, isInCart, subscribeCart } from "@/lib/cart";
 import { buyNow } from "./actions";
 
 export function BuyNowBox({
@@ -11,15 +12,30 @@ export function BuyNowBox({
   price,
   isOwner,
   isSold,
+  name,
+  setName,
+  rarity,
+  photoUrl,
+  sellerId,
+  sellerName,
+  sellerVerified,
 }: {
   listingId: string;
   price: number;
   isOwner: boolean;
   isSold: boolean;
+  name: string;
+  setName: string;
+  rarity: string;
+  photoUrl: string | null;
+  sellerId: string;
+  sellerName: string;
+  sellerVerified: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const inCart = useSyncExternalStore(subscribeCart, () => isInCart(listingId), () => false);
 
   async function handleBuyNow() {
     setSubmitting(true);
@@ -57,10 +73,21 @@ export function BuyNowBox({
               {error}
             </p>
           )}
-          <div className="mt-[18px]">
+          <div className="mt-[18px] flex flex-col gap-[10px]">
             <PrimaryButton loading={submitting} onClick={handleBuyNow}>
               ซื้อทันที
             </PrimaryButton>
+            <button
+              type="button"
+              disabled={inCart}
+              onClick={() =>
+                addToCart({ listingId, name, setName, rarity, photoUrl, price, sellerId, sellerName, sellerVerified })
+              }
+              className="h-11 w-full rounded-[11px] text-[13.5px] font-medium disabled:opacity-50"
+              style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.22)", color: "var(--white)" }}
+            >
+              {inCart ? "อยู่ในตะกร้าแล้ว" : "เพิ่มลงตะกร้า"}
+            </button>
           </div>
         </>
       )}

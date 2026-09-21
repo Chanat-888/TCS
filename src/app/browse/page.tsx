@@ -1,4 +1,3 @@
-import { PhoneVerificationNotice } from "@/components/PhoneVerificationNotice";
 import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -35,11 +34,10 @@ export default async function BrowsePage({
   return (
     <div style={{ "--wrap-max": "1240px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
       <SiteHeader userId={userId} />
-      <PhoneVerificationNotice />
 
       <main>
         {featured && (
-          <section className="pb-2 pt-8">
+          <section className="pb-2 pt-5">
             <div className="wrap">
               <div
                 className="relative grid gap-8 overflow-hidden rounded-[20px] p-10 max-[800px]:grid-cols-1 max-[800px]:gap-6 max-[800px]:p-[28px_22px]"
