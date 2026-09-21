@@ -80,6 +80,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     price={listing.buy_now_price}
                     isOwner={listing.seller_id === userId}
                     isSold={listing.status !== "active"}
+                    name={listing.name}
+                    setName={listing.set_name}
+                    rarity={listing.rarity}
+                    photoUrl={listing.photo_front_url}
+                    sellerId={listing.seller_id}
+                    sellerName={listing.seller.display_name}
+                    sellerVerified={listing.seller.verified}
                   />
                 ) : (
                   <LiveBidding
