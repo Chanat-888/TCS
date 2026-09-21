@@ -134,6 +134,11 @@ export function SiteHeader({ userId }: { userId: string }) {
         </nav>
         <div className="flex-1" />
         <div className="flex flex-shrink-0 items-center gap-[10px]">
+          <form action="/logout" method="post">
+            <button type="submit" className="text-[12px] cursor-pointer" style={{ color: "var(--steel)" }}>
+              ออกจากระบบ
+            </button>
+          </form>
           <button
             type="button"
             aria-label="ค้นหา"

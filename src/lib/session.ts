@@ -1,30 +1,29 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cache } from "react";
+import { redirect } from "next/navigation";
+import { createAuthClient } from "@/lib/supabase/server";
 
-// Stub auth: real phone-OTP / Supabase Auth is not wired up yet (see
-// PRODUCT.md "Open/undecided product facts"). "Logging in" just sets a
-// cookie flag; the identity behind it is always this one seeded dev profile.
-// Swap this file for real Supabase Auth session lookup once that lands.
-export const DEV_USER_ID = "a0000000-0000-0000-0000-000000000001";
-
-const SESSION_COOKIE = "tcs_session";
+// Read identity from Auth, never from client metadata or a cookie flag.
+export const getSessionUser = cache(async () => {
+  const supabase = await createAuthClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user || user.is_anonymous) return null;
+  return user.phone_confirmed_at || user.email_confirmed_at ? user : null;
+});
 
 export async function getSessionUserId(): Promise<string | null> {
-  const store = await cookies();
-  return store.get(SESSION_COOKIE)?.value === "1" ? DEV_USER_ID : null;
+  return (await getSessionUser())?.id ?? null;
 }
 
-export async function setSession() {
-  const store = await cookies();
-  store.set(SESSION_COOKIE, "1", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
+export async function getPhoneVerifiedUserId(): Promise<string | null> {
+  const user = await getSessionUser();
+  return user?.phone && user.phone_confirmed_at ? user.id : null;
 }
 
-export async function clearSession() {
-  const store = await cookies();
-  store.delete(SESSION_COOKIE);
+// Server actions and selling/checkout pages enforce this independently of UI.
+export async function requirePhoneVerifiedUserId(): Promise<string> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (!user.phone || !user.phone_confirmed_at) redirect("/verify-phone");
+  return user.id;
 }

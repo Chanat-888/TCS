@@ -6,20 +6,26 @@ import { BrandMark } from "@/components/icons/BrandMark";
 import { DecoField } from "@/components/DecoField";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OtpInput } from "@/components/ui/OtpInput";
-import { completeLogin } from "./actions";
+import { sendPhoneOtp, verifyPhoneOtp } from "./actions";
+import { normalizeThaiPhone } from "@/lib/phone";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
+import { sendVerificationOtp, verifyAccountPhone } from "@/app/verify-phone/actions";
 
 type Step = "phone" | "otp" | "success";
 
-export function LoginForm() {
+export function LoginForm({ verifyPhone = false }: { verifyPhone?: boolean }) {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [phoneError, setPhoneError] = useState(false);
+  const [error, setError] = useState("");
+  const [sentPhone, setSentPhone] = useState("");
+  const busy = useRef(false);
   const [sending, setSending] = useState(false);
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [resendSeconds, setResendSeconds] = useState(30);
+  const [resendSeconds, setResendSeconds] = useState(0);
 
   useEffect(() => {
     if (step !== "otp" || resendSeconds <= 0) return;
@@ -27,35 +33,61 @@ export function LoginForm() {
     return () => clearInterval(t);
   }, [step, resendSeconds]);
 
-  function handleSendOtp() {
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 8) {
+  async function handleSendOtp() {
+    if (busy.current || resendSeconds > 0) return;
+    const normalized = normalizeThaiPhone(phone);
+    if (!normalized) {
       setPhoneError(true);
       return;
     }
+    busy.current = true;
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    setError("");
+    try {
+      const result = await (verifyPhone ? sendVerificationOtp(normalized) : sendPhoneOtp(normalized));
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setSentPhone(normalized);
+      setOtp(["", "", "", "", "", ""]);
+      setOtpError(false);
       setStep("otp");
-      setResendSeconds(30);
-    }, 600);
+      setResendSeconds(60);
+    } catch {
+      setError("เชื่อมต่อไม่ได้ กรุณาลองอีกครั้ง");
+    } finally {
+      busy.current = false;
+      setSending(false);
+    }
   }
 
   async function handleVerifyOtp() {
+    if (busy.current) return;
     const code = otp.join("");
-    if (code.length < 6) {
+    if (!/^\d{6}$/.test(code)) {
       setOtpError(true);
       return;
     }
+    busy.current = true;
     setVerifying(true);
-    await completeLogin();
-    setTimeout(() => {
-      setVerifying(false);
+    setError("");
+    try {
+      const result = await (verifyPhone ? verifyAccountPhone(sentPhone, code) : verifyPhoneOtp(sentPhone, code));
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       setStep("success");
-    }, 600);
+    } catch {
+      setError("เชื่อมต่อไม่ได้ กรุณาลองอีกครั้ง");
+    } finally {
+      busy.current = false;
+      setVerifying(false);
+    }
   }
 
-  const resendLabel = `00:${String(resendSeconds).padStart(2, "0")}`;
+  const resendLabel = `${String(Math.floor(resendSeconds / 60)).padStart(2, "0")}:${String(resendSeconds % 60).padStart(2, "0")}`;
 
   return (
     <>
@@ -78,13 +110,20 @@ export function LoginForm() {
             padding: "32px 28px",
           }}
         >
+          {error && <p role="alert" className="mb-4 text-[13px]" style={{ color: "var(--danger)" }}>{error}</p>}
           {step === "phone" && (
             <div className="flex flex-col">
-              <h1 className="text-[1.4rem]">เข้าสู่ระบบ TCS</h1>
+              <h1 className="text-[1.4rem]">{verifyPhone ? "ยืนยันเบอร์โทรศัพท์" : "เข้าสู่ระบบ TCS"}</h1>
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
-                ใช้เบอร์โทรศัพท์เดียว เป็นหนึ่งบัญชี — ไม่ต้องตั้งรหัสผ่าน เราจะส่งรหัสยืนยันให้ทาง SMS
+                {verifyPhone ? "ยืนยันเบอร์โทรกับบัญชีนี้ ก่อนประมูล ซื้อ หรือลงขาย — ประวัติและประกาศของคุณยังอยู่ในบัญชีเดิม" : "เข้าใช้ด้วย Google หรือรับรหัส OTP ทาง SMS โดยไม่ต้องตั้งรหัสผ่าน"}
               </p>
 
+              {!verifyPhone && (
+                <div className="mt-6">
+                  <GoogleAuthButton disabled={sending} />
+                  <p className="text-center mt-5 text-[12px]" style={{ color: "var(--steel)" }}>หรือใช้เบอร์โทรศัพท์</p>
+                </div>
+              )}
               <div className="mt-6">
                 <label className="block text-[12.5px] mb-2" style={{ color: "var(--steel)" }} htmlFor="phone">
                   เบอร์โทรศัพท์
@@ -105,7 +144,8 @@ export function LoginForm() {
                     type="tel"
                     inputMode="numeric"
                     placeholder="81 234 5678"
-                    maxLength={12}
+                    maxLength={18}
+                    disabled={sending}
                     autoComplete="tel"
                     className="mono flex-1 bg-transparent border-0 outline-none text-[16px]"
                     style={{ color: "var(--white)" }}
@@ -119,7 +159,7 @@ export function LoginForm() {
                 </div>
                 {phoneError && (
                   <p className="mt-[7px] text-[12.5px]" style={{ color: "var(--danger)" }}>
-                    กรอกเบอร์โทรศัพท์ให้ครบก่อนดำเนินการต่อ
+                    กรุณากรอกเบอร์มือถือไทยให้ถูกต้อง เช่น 081 234 5678
                   </p>
                 )}
               </div>
@@ -138,7 +178,7 @@ export function LoginForm() {
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
                 เราส่งรหัส 6 หลักไปที่{" "}
                 <strong className="mono" style={{ color: "var(--white)", fontWeight: 500 }}>
-                  +66 {phone}
+                  {sentPhone}
                 </strong>
               </p>
 
@@ -146,7 +186,7 @@ export function LoginForm() {
                 <label className="block text-[12.5px] mb-2" style={{ color: "var(--steel)" }}>
                   รหัส OTP
                 </label>
-                <OtpInput value={otp} onChange={(next) => { setOtp(next); setOtpError(false); }} onEnter={handleVerifyOtp} />
+                <OtpInput disabled={verifying || sending} value={otp} onChange={(next) => { setOtp(next); setOtpError(false); }} onEnter={handleVerifyOtp} />
                 {otpError && (
                   <p className="mt-[7px] text-[12.5px]" style={{ color: "var(--danger)" }}>
                     กรอกรหัสให้ครบ 6 หลักก่อนยืนยัน
@@ -155,7 +195,7 @@ export function LoginForm() {
               </div>
 
               <div className="mt-[22px]">
-                <PrimaryButton loading={verifying} onClick={handleVerifyOtp}>
+                <PrimaryButton loading={verifying} disabled={sending} onClick={handleVerifyOtp}>
                   ยืนยัน
                 </PrimaryButton>
               </div>
@@ -170,10 +210,8 @@ export function LoginForm() {
                     type="button"
                     className="border-0 bg-transparent p-0 text-[13px] font-medium cursor-pointer"
                     style={{ color: "var(--cyan)" }}
-                    onClick={() => {
-                      setOtp(["", "", "", "", "", ""]);
-                      setResendSeconds(30);
-                    }}
+                    disabled={sending || verifying}
+                    onClick={handleSendOtp}
                   >
                     ส่งรหัสอีกครั้ง
                   </button>
@@ -185,7 +223,8 @@ export function LoginForm() {
                   type="button"
                   className="inline-flex items-center gap-[5px] border-0 bg-transparent p-0 text-[13px] cursor-pointer"
                   style={{ color: "var(--steel)" }}
-                  onClick={() => setStep("phone")}
+                  disabled={sending || verifying}
+                  onClick={() => { setStep("phone"); setError(""); setOtpError(false); setResendSeconds(0); }}
                 >
                   <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                     <path
@@ -224,57 +263,20 @@ export function LoginForm() {
                   />
                 </svg>
               </div>
-              <h1 className="text-[1.4rem]">ยินดีต้อนรับสู่ TCS</h1>
+              <h1 className="text-[1.4rem]">{verifyPhone ? "ยืนยันเบอร์โทรสำเร็จ" : "ยินดีต้อนรับสู่ TCS"}</h1>
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
                 เข้าสู่ระบบสำเร็จ — เริ่มเลือกซื้อหรือลงประกาศขายการ์ดได้ทันที
               </p>
 
-              <div
-                className="mt-[26px] w-full rounded-[13px] p-[18px] text-left"
-                style={{ background: "var(--panel-2)", border: "1px solid rgba(95, 212, 255, 0.18)" }}
-              >
-                <div className="flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--cyan)" }}>
-                    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4" />
-                    <path
-                      d="M6.5 10.2 L9 12.6 L13.5 7.6"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>
-                    รับป้ายยืนยันตัวตน
-                  </span>
-                </div>
-                <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-                  ผูกบัญชีธนาคารที่ชื่อตรงกับโปรไฟล์ของคุณ เพื่อรับป้ายยืนยันตัวตนและเปิดสิทธิ์รับเงินจากการขาย ทำตอนนี้หรือทีหลังก็ได้
-                </p>
-                <div className="mt-[14px] flex gap-[10px]">
-                  <Link
-                    href="/profile"
-                    className="flex-1 text-center no-underline rounded-[9px] py-[10px] text-[13px] font-medium"
-                    style={{ background: "var(--blue)", color: "#071523" }}
-                  >
-                    ยืนยันตอนนี้
-                  </Link>
-                  <Link
-                    href="/browse"
-                    className="flex-1 text-center no-underline rounded-[9px] py-[10px] text-[13px] font-medium"
-                    style={{ background: "transparent", border: "1px solid rgba(140,147,163,0.25)", color: "var(--steel)" }}
-                  >
-                    ข้ามไปก่อน
-                  </Link>
-                </div>
-              </div>
+              <Link href="/browse" prefetch={false} className="mt-6 w-full rounded-[11px] py-3 no-underline font-semibold" style={{ background: "var(--blue)", color: "#071523" }}>เริ่มเลือกซื้อการ์ด</Link>
+              <p className="mt-4 text-[12px]" style={{ color: "var(--steel)" }}>ยืนยันเบอร์โทรแล้ว การยืนยันตัวตนผู้ขายเป็นขั้นตอนแยกต่างหาก</p>
             </div>
           )}
         </div>
       </div>
 
       <p className="relative z-[1] text-center text-[12px] px-5 pb-7" style={{ color: "var(--steel-dim)" }}>
-        เอกสารแนวคิดฉบับพรีวิว — ขั้นตอน OTP จำลองไว้เพื่อสาธิตการออกแบบ ยังไม่เชื่อมระบบส่ง SMS จริง
+        อย่าเปิดเผยรหัส OTP ให้ผู้อื่น รวมถึงผู้ที่อ้างว่าเป็นทีมงาน TCS
       </p>
     </>
   );

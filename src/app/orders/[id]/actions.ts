@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 
 export async function approveOrder(orderId: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
 
   const supabase = createServiceClient();
@@ -26,7 +26,7 @@ export async function approveOrder(orderId: string) {
 }
 
 export async function sendOrderMessage(orderId: string, body: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId || !body.trim()) return { error: "ส่งข้อความไม่สำเร็จ" as const };
 
   const supabase = createServiceClient();

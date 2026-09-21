@@ -1,3 +1,4 @@
+import { PhoneVerificationNotice } from "@/components/PhoneVerificationNotice";
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
@@ -31,6 +32,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <div style={{ "--wrap-max": "1160px" } as CSSProperties}>
       <BackHeader href="/browse" title={listing.name} />
+      <PhoneVerificationNotice />
 
       <main>
         <section className="pb-2 pt-8">

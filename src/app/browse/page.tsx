@@ -1,3 +1,4 @@
+import { PhoneVerificationNotice } from "@/components/PhoneVerificationNotice";
 import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +35,7 @@ export default async function BrowsePage({
   return (
     <div style={{ "--wrap-max": "1240px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
       <SiteHeader userId={userId} />
+      <PhoneVerificationNotice />
 
       <main>
         {featured && (

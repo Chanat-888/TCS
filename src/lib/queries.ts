@@ -63,6 +63,18 @@ export interface SellerStats {
   avgRating: number;
 }
 
+/** Profile pages already fetch reviews, so request only the missing sales total. */
+export async function getCompletedSales(sellerId: string): Promise<number> {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("seller_public_stats")
+    .select("completed_sales")
+    .eq("seller_id", sellerId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.completed_sales ?? 0;
+}
+
 /** Public trust stats (seller row on browse/auction/profile). Dispute count
  * is owner-only info — see getOwnerDisputeCount in orders.ts. */
 export async function getSellerStats(sellerId: string): Promise<SellerStats> {
@@ -96,11 +108,13 @@ export async function getSellerSalesCountMap(sellerIds: string[]): Promise<Recor
 
 export async function hasEverBid(userId: string): Promise<boolean> {
   const supabase = createPublicClient();
-  const { count } = await supabase
+  const { data, error } = await supabase
     .from("bids")
-    .select("id", { count: "exact", head: true })
-    .eq("bidder_id", userId);
-  return (count ?? 0) > 0;
+    .select("id")
+    .eq("bidder_id", userId)
+    .limit(1);
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export type ReviewWithRater = Review & { rater: Profile };

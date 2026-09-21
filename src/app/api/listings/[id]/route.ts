@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { getPhoneVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
+  const userId = await getPhoneVerifiedUserId();
+  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบและยืนยันเบอร์โทรก่อน", code: "PHONE_VERIFICATION_REQUIRED" }, { status: 403 });
 
   const supabase = createServiceClient();
   const { data: listing } = await supabase.from("listings").select("*").eq("id", id).maybeSingle();

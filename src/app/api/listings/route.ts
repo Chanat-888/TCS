@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { getPhoneVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 
 const DURATIONS_DAYS = [1, 3, 5, 7];
 
 export async function POST(request: Request) {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน" }, { status: 401 });
+  const userId = await getPhoneVerifiedUserId();
+  if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบและยืนยันเบอร์โทรก่อน", code: "PHONE_VERIFICATION_REQUIRED" }, { status: 403 });
 
   const formData = await request.formData();
   const front = formData.get("front");

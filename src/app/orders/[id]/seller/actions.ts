@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 
 export async function confirmShipment(orderId: string, courier: string, trackingNumber: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
   if (!courier || !trackingNumber.trim()) return { error: "เลือกบริษัทขนส่งและกรอกเลขพัสดุก่อนยืนยัน" as const };
 

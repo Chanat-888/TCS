@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePhoneVerifiedUserId } from "@/lib/session";
 import type { DisputeReason } from "@/lib/supabase/types";
 
 export async function fileDispute(orderId: string, reason: DisputeReason, description: string) {
-  const userId = await getSessionUserId();
+  const userId = await requirePhoneVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
 
   const supabase = createServiceClient();
