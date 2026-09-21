@@ -164,9 +164,17 @@ sign in; while Developing, only accounts listed under Roles can.
 
 TCS requests the `openid profile` scopes. LINE users may have no email, so
 `getSessionUser` also accepts a `custom:line` identity (read from the Auth
-server's identities, never from user-editable metadata). Buying and selling
-still require a verified phone until the team decides what unlocks trading
-for LINE users (see PRODUCT.md).
+server's identities, never from user-editable metadata). Any confirmed sign-in
+(LINE, Google or phone) can trade; a phone number is optional. Before real
+users arrive, add a seller check (for example a bank-account name that matches
+the profile) because this is the only gate on who can sell.
+
+Google is only a backup for getting back into a LINE account. The login page
+shows LINE as the one button plus a small Google link. Users link Google from
+their profile while signed in with LINE. That needs **Allow manual linking**
+turned on (Authentication > Sign In / Providers). Without it linking fails with
+`manual_linking_disabled`. Signing in with a Google account that was never
+linked creates a separate new account.
 
 Phone sign-in is hidden on the login page unless `NEXT_PUBLIC_PHONE_LOGIN=true`
 because it needs a paid SMS provider. Adding a phone to an existing account is

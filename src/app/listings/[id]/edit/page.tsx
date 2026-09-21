@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
-import { requirePhoneVerifiedUserId } from "@/lib/session";
+import { requireVerifiedUserId } from "@/lib/session";
 import { getListingById, getBidsForListing } from "@/lib/queries";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
@@ -8,7 +8,7 @@ import { EditListingForm } from "./EditListingForm";
 
 export default async function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const userId = await requirePhoneVerifiedUserId();
+  const userId = await requireVerifiedUserId();
   if (!userId) redirect("/login");
 
   const listing = await getListingById(id);

@@ -1,7 +1,9 @@
+import { Avatar } from "./Avatar";
 import { Stars } from "./Stars";
 
 export function ReviewItem({
   raterInitial,
+  raterAvatarUrl,
   raterName,
   rating,
   date,
@@ -11,6 +13,7 @@ export function ReviewItem({
   isFirst,
 }: {
   raterInitial: string;
+  raterAvatarUrl?: string | null;
   raterName: string;
   rating: number;
   date: string;
@@ -24,12 +27,12 @@ export function ReviewItem({
       className="flex gap-[14px] py-[18px] text-left"
       style={!isFirst ? { borderTop: "1px solid rgba(140,147,163,0.1)" } : undefined}
     >
-      <div
-        className="flex flex-shrink-0 items-center justify-center rounded-full text-[13px] font-semibold"
-        style={{ width: 38, height: 38, background: "var(--panel-2)", color: "var(--steel)", fontFamily: "var(--font-display)" }}
-      >
-        {raterInitial}
-      </div>
+      <Avatar
+        url={raterAvatarUrl}
+        initial={raterInitial}
+        className="text-[13px] font-semibold"
+        style={{ width: 38, height: 38, color: "var(--steel)" }}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-[10px]">
           <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>

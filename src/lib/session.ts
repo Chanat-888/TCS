@@ -21,15 +21,16 @@ export async function getSessionUserId(): Promise<string | null> {
   return (await getSessionUser())?.id ?? null;
 }
 
-export async function getPhoneVerifiedUserId(): Promise<string | null> {
-  const user = await getSessionUser();
-  return user?.phone && user.phone_confirmed_at ? user.id : null;
+// Trading needs a verified sign-in (LINE, Google, or phone). A phone number is
+// optional while SMS login is off; getSessionUser already rejects anonymous and
+// unconfirmed sessions.
+export async function getVerifiedUserId(): Promise<string | null> {
+  return getSessionUserId();
 }
 
 // Server actions and selling/checkout pages enforce this independently of UI.
-export async function requirePhoneVerifiedUserId(): Promise<string> {
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (!user.phone || !user.phone_confirmed_at) redirect("/verify-phone");
-  return user.id;
+export async function requireVerifiedUserId(): Promise<string> {
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/login");
+  return userId;
 }
