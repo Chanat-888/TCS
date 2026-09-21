@@ -8,10 +8,14 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OtpInput } from "@/components/ui/OtpInput";
 import { sendPhoneOtp, verifyPhoneOtp } from "./actions";
 import { normalizeThaiPhone } from "@/lib/phone";
-import { GoogleAuthButton } from "@/components/GoogleAuthButton";
+import { OAuthButton } from "@/components/OAuthButton";
 import { sendVerificationOtp, verifyAccountPhone } from "@/app/verify-phone/actions";
 
 type Step = "phone" | "otp" | "success";
+
+// Phone sign-in needs a paid SMS provider. It stays built but hidden until one is set up
+// (set NEXT_PUBLIC_PHONE_LOGIN=true). Adding a phone to an existing account is unaffected.
+const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "true";
 
 export function LoginForm({ verifyPhone = false }: { verifyPhone?: boolean }) {
   const [step, setStep] = useState<Step>("phone");
@@ -115,15 +119,19 @@ export function LoginForm({ verifyPhone = false }: { verifyPhone?: boolean }) {
             <div className="flex flex-col">
               <h1 className="text-[1.4rem]">{verifyPhone ? "ยืนยันเบอร์โทรศัพท์" : "เข้าสู่ระบบ TCS"}</h1>
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
-                {verifyPhone ? "ยืนยันเบอร์โทรกับบัญชีนี้ ก่อนประมูล ซื้อ หรือลงขาย — ประวัติและประกาศของคุณยังอยู่ในบัญชีเดิม" : "เข้าใช้ด้วย Google หรือรับรหัส OTP ทาง SMS โดยไม่ต้องตั้งรหัสผ่าน"}
+                {verifyPhone ? "ยืนยันเบอร์โทรกับบัญชีนี้ ก่อนประมูล ซื้อ หรือลงขาย — ประวัติและประกาศของคุณยังอยู่ในบัญชีเดิม" : PHONE_LOGIN ? "เข้าใช้ด้วย LINE, Google หรือรับรหัส OTP ทาง SMS โดยไม่ต้องตั้งรหัสผ่าน" : "เข้าใช้ด้วย LINE หรือ Google โดยไม่ต้องตั้งรหัสผ่าน"}
               </p>
 
               {!verifyPhone && (
                 <div className="mt-6">
-                  <GoogleAuthButton disabled={sending} />
-                  <p className="text-center mt-5 text-[12px]" style={{ color: "var(--steel)" }}>หรือใช้เบอร์โทรศัพท์</p>
+                  <div className="flex flex-col gap-3">
+                    <OAuthButton provider="line" disabled={sending} />
+                    <OAuthButton provider="google" disabled={sending} />
+                  </div>
+                  <p hidden={!PHONE_LOGIN} className="text-center mt-5 text-[12px]" style={{ color: "var(--steel)" }}>หรือใช้เบอร์โทรศัพท์</p>
                 </div>
               )}
+              {(verifyPhone || PHONE_LOGIN) && (<>
               <div className="mt-6">
                 <label className="block text-[12.5px] mb-2" style={{ color: "var(--steel)" }} htmlFor="phone">
                   เบอร์โทรศัพท์
@@ -169,6 +177,7 @@ export function LoginForm({ verifyPhone = false }: { verifyPhone?: boolean }) {
                   ส่งรหัส OTP
                 </PrimaryButton>
               </div>
+              </>)}
             </div>
           )}
 

@@ -142,3 +142,32 @@ this verifies the token locally and adds no Auth round trip to page loads.
 On a project still using the legacy shared secret, `getClaims()` falls back to
 a network call to Supabase Auth (same cost as before, never slower or less
 safe). Pages and server actions still confirm identity with `getUser()`.
+
+## LINE login (primary) and Google (backup)
+
+LINE is added to Supabase as a **custom OAuth2 provider** with identifier
+`custom:line` (Authentication > custom providers). OIDC mode does not work for
+LINE web login because its ID tokens use HS256 and Supabase custom OIDC accepts
+ES256 only, so use **Manual configuration**:
+
+- Authorization URL: `https://access.line.me/oauth2/v2.1/authorize`
+- Token URL: `https://api.line.me/oauth2/v2.1/token`
+- Userinfo URL: `https://api.line.me/oauth2/v2.1/userinfo`
+- Client ID / secret: the LINE Login channel's Channel ID and Channel secret
+  (enter the secret only in Supabase, never in the repo or chat)
+- JWKS URI: blank. Turn on **Allow users without an email**.
+
+In the LINE Developers Console, add the Supabase callback
+(`https://<project-ref>.supabase.co/auth/v1/callback`) under the channel's
+LINE Login tab. The channel must be **Published** before ordinary users can
+sign in; while Developing, only accounts listed under Roles can.
+
+TCS requests the `openid profile` scopes. LINE users may have no email, so
+`getSessionUser` also accepts a `custom:line` identity (read from the Auth
+server's identities, never from user-editable metadata). Buying and selling
+still require a verified phone until the team decides what unlocks trading
+for LINE users (see PRODUCT.md).
+
+Phone sign-in is hidden on the login page unless `NEXT_PUBLIC_PHONE_LOGIN=true`
+because it needs a paid SMS provider. Adding a phone to an existing account is
+unaffected.

@@ -14,6 +14,7 @@ function load(path, dependencies = {}, env = {}) {
   vm.runInNewContext(code, {
     exports, URL, Request, Response, Headers, process: { env },
     require(name) {
+      if (name === "@/lib/authLog") return { logAuthError() {} };
       if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name);
       return dependencies[name];
     },
