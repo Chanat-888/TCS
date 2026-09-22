@@ -135,7 +135,18 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                 </p>
               </div>
 
-              {isOwner && <EditProfileButton displayName={profile.display_name} bio={profile.bio} highlight={needsName} />}
+              {isOwner && (
+                <EditProfileButton
+                  displayName={profile.display_name}
+                  bio={profile.bio}
+                  highlight={needsName}
+                  avatarEditor={
+                    <Suspense fallback={<Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[24px] font-bold" style={{ width: 72, height: 72, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }} />}>
+                      <OwnerAvatarEditor avatarUrl={profile.avatar_url} initial={profile.avatar_initial} size={72} />
+                    </Suspense>
+                  }
+                />
+              )}
             </div>
           </div>
         </section>

@@ -49,6 +49,17 @@ async function startOAuth(provider: OAuthProvider, link: boolean) {
     } else {
       store.delete("tcs_link_user");
     }
+    // Google is only ever a backup into an *existing* account, never a way to
+    // create one — otherwise anyone could skip LINE entirely and register a
+    // second account. Flag this specific flow so the callback can tell "signed
+    // into an existing account" apart from "just created a brand new one".
+    if (provider === "google" && !link) {
+      store.set("tcs_google_recovery", "1", {
+        httpOnly: true, sameSite: "lax", secure: site.protocol === "https:", path: "/", maxAge: 600,
+      });
+    } else {
+      store.delete("tcs_google_recovery");
+    }
     return { url: data.url };
   } catch (e) {
     logAuthError(`start ${name} auth exception`, e);

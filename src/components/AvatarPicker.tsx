@@ -112,6 +112,15 @@ export function AvatarPicker({
             <path d="M4 15.5V17h1.5l8.4-8.4-1.5-1.5L4 15.5Zm11.7-8.5a1 1 0 0 0 0-1.4l-1.3-1.3a1 1 0 0 0-1.4 0l-1.1 1.1 2.7 2.7 1.1-1.1Z" fill="#fff" />
           </svg>
         </span>
+        {/* Always visible, not just on hover — a phone has no hover state to reveal the pencil overlay above. */}
+        <span
+          className="pointer-events-none absolute flex items-center justify-center rounded-full"
+          style={{ width: 26, height: 26, right: -2, bottom: -2, background: "var(--blue)", border: "2px solid var(--panel)", color: "#071523" }}
+        >
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M13.5 3.5 L16.5 6.5 L7 16 L3.5 16.5 L4 13 Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+          </svg>
+        </span>
       </button>
 
       <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFile} />

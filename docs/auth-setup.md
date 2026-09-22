@@ -173,8 +173,21 @@ Google is only a backup for getting back into a LINE account. The login page
 shows LINE as the one button plus a small Google link. Users link Google from
 their profile while signed in with LINE. That needs **Allow manual linking**
 turned on (Authentication > Sign In / Providers). Without it linking fails with
-`manual_linking_disabled`. Signing in with a Google account that was never
-linked creates a separate new account.
+`manual_linking_disabled`.
+
+The login page's Google button only ever signs into an *existing* account —
+it can never create one, otherwise someone could skip LINE entirely and stand
+up a second account. `src/app/auth/google/actions.ts` flags this specific flow
+with a short-lived cookie, and `src/app/auth/callback/route.ts` checks whether
+the row Supabase just signed into was created moments ago (Supabase's normal
+sign-in flow provisions a new user the first time it sees an unrecognized
+identity). If so, the session is signed out and that row is deleted via the
+admin API, so a stranger trying this never gets an account and failed
+attempts don't leave orphans behind. It does **not** require the account to
+already have LINE linked — several real accounts (including the team's)
+predate LINE and are Google-only by design, and there is currently no way for
+them to add LINE to that same account themselves (linking only runs the other
+direction: Google onto an existing LINE session).
 
 Phone sign-in is hidden on the login page unless `NEXT_PUBLIC_PHONE_LOGIN=true`
 because it needs a paid SMS provider. Adding a phone to an existing account is
