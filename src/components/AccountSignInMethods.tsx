@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/session";
 import { OAuthButton } from "@/components/OAuthButton";
+import { UnlinkGoogleButton } from "@/components/UnlinkGoogleButton";
 
 const PHONE_LOGIN = process.env.NEXT_PUBLIC_PHONE_LOGIN === "true";
 
@@ -21,7 +22,12 @@ export async function AccountSignInMethods() {
             {!phoneVerified && <Link href="/verify-phone" className="block mb-4" style={{ color: "var(--cyan)" }}>ยืนยันเบอร์โทร</Link>}
           </>
         )}
-        {googleLinked ? <p className="text-[13px]" style={{ color: "var(--cyan)" }}>เชื่อมบัญชี Google สำรองแล้ว</p> : <OAuthButton provider="google" link />}
+        {googleLinked ? (
+          <>
+            <p className="text-[13px]" style={{ color: "var(--cyan)" }}>เชื่อมบัญชี Google สำรองแล้ว</p>
+            {(user.identities?.length ?? 0) > 1 && <UnlinkGoogleButton />}
+          </>
+        ) : <OAuthButton provider="google" link />}
         <p className="text-[12px] mt-3" style={{ color: "var(--steel)" }}>เชื่อม Google ไว้เป็นบัญชีสำรอง เผื่อเข้าสู่ระบบด้วย LINE ไม่ได้ ประกาศและประวัติจะอยู่ในบัญชีเดิม</p>
       </div>
     </section>
