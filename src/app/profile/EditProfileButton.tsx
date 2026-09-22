@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { BIO_MAX, NAME_MAX } from "@/lib/profileName";
 import { updateProfile } from "./actions";
@@ -11,7 +11,20 @@ const fieldStyle = {
   color: "var(--white)",
 } as const;
 
-export function EditProfileButton({ displayName, bio, highlight = false }: { displayName: string; bio: string; highlight?: boolean }) {
+export function EditProfileButton({
+  displayName,
+  bio,
+  highlight = false,
+  avatarEditor,
+}: {
+  displayName: string;
+  bio: string;
+  highlight?: boolean;
+  /** Rendered above the name field — a server component streamed in from the
+   * parent, so the picture picker can read the session without this client
+   * component needing to. */
+  avatarEditor?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(displayName);
   const [about, setAbout] = useState(bio);
@@ -85,7 +98,15 @@ export function EditProfileButton({ displayName, bio, highlight = false }: { dis
             }}
           >
             <h2 id="edit-profile-title" className="text-[1.2rem]">แก้ไขโปรไฟล์</h2>
-            <p className="mt-2 text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+
+            {avatarEditor && (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                {avatarEditor}
+                <p className="text-[12px]" style={{ color: "var(--steel)" }}>แตะรูปเพื่อเปลี่ยนรูปโปรไฟล์</p>
+              </div>
+            )}
+
+            <p className="mt-4 text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
               ชื่อนี้จะแสดงกับผู้ซื้อ ผู้ขาย และในรีวิวของคุณ
             </p>
 

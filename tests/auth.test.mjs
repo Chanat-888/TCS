@@ -303,9 +303,12 @@ test("phone verification cannot switch to another account or confirm a different
   }
 });
 
-function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfile = true } = {}) {
+function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfile = true, googleRecovery = false, deleteError = null } = {}) {
   const calls = [];
-  const jar = new Map(expectedId ? [["tcs_link_user", expectedId]] : []);
+  const jar = new Map([
+    ...(expectedId ? [["tcs_link_user", expectedId]] : []),
+    ...(googleRecovery ? [["tcs_google_recovery", "1"]] : []),
+  ]);
   const store = {
     get: (key) => jar.has(key) ? { value: jar.get(key) } : undefined,
     set: (key, value) => jar.set(key, value),
@@ -329,6 +332,9 @@ function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfil
         from: () => ({ select: () => ({ eq: () => ({
           maybeSingle: async () => ({ data: hasProfile ? { id: user?.id } : null, error: null }),
         }) }) }),
+      }),
+      createServiceClient: () => ({
+        auth: { admin: { deleteUser: async (id) => { calls.push(["deleteUser", id]); return { error: deleteError }; } } },
       }),
     },
   };
@@ -392,4 +398,40 @@ test("linked Google returns to the same profile; missing profiles and mismatches
     assert.equal(fixture.jar.has("tcs_link_user"), false);
     if (!success) assert.ok(fixture.calls.some(([name]) => name === "signout"));
   }
+});
+test("Google recovery signs into an existing account, LINE-linked or not", async () => {
+  for (const identities of [
+    [{ provider: "custom:line" }, { provider: "google" }],
+    [{ provider: "google" }], // an old, Google-only account (e.g. one that predates LINE) keeps working
+  ]) {
+    const fixture = oauthFixture({
+      user: { id: "u1", identities, created_at: "2020-01-01T00:00:00Z" },
+      googleRecovery: true,
+    });
+    const route = load("src/app/auth/callback/route.ts", fixture.dependencies);
+    const result = await route.GET(new Request("https://tcs.test/auth/callback?code=test"));
+    assert.equal(result.headers.get("Location"), "https://tcs.test/browse");
+    assert.equal(fixture.jar.has("tcs_google_recovery"), false);
+    assert.ok(!fixture.calls.some(([name]) => name === "signout" || name === "deleteUser"));
+  }
+});
+test("a brand-new account created by a Google-only recovery attempt is refused and deleted", async () => {
+  const fixture = oauthFixture({
+    user: { id: "orphan", identities: [{ provider: "google" }], created_at: new Date().toISOString() },
+    googleRecovery: true,
+  });
+  const route = load("src/app/auth/callback/route.ts", fixture.dependencies);
+  const result = await route.GET(new Request("https://tcs.test/auth/callback?code=test"));
+  assert.equal(result.headers.get("Location"), "https://tcs.test/auth/error?reason=no_account");
+  assert.ok(fixture.calls.some(([name]) => name === "signout"));
+  assert.deepEqual(fixture.calls.find(([name]) => name === "deleteUser"), ["deleteUser", "orphan"]);
+});
+test("linking Google from the profile page is unaffected by the recovery-only rule", async () => {
+  const fixture = oauthFixture({
+    user: { id: "u2", identities: [{ provider: "google" }], created_at: new Date().toISOString() },
+    expectedId: "u2",
+  });
+  const route = load("src/app/auth/callback/route.ts", fixture.dependencies);
+  const result = await route.GET(new Request("https://tcs.test/auth/callback?code=test"));
+  assert.equal(result.headers.get("Location"), "https://tcs.test/profile");
 });

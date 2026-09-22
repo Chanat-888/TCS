@@ -7,7 +7,7 @@ type Option = { provider: "line" | "google"; url: string; label: string };
 /** Private: render only after the caller has verified the session user is the
  * profile owner (ProfileView gates this on isOwner). Uploading is always
  * available; provider photos are offered too when a linked identity has one. */
-export async function OwnerAvatarEditor({ avatarUrl, initial }: { avatarUrl: string | null; initial: string }) {
+export async function OwnerAvatarEditor({ avatarUrl, initial, size }: { avatarUrl: string | null; initial: string; size?: number }) {
   const user = await getSessionUser();
   const options: Option[] = user
     ? [
@@ -16,5 +16,5 @@ export async function OwnerAvatarEditor({ avatarUrl, initial }: { avatarUrl: str
       ].filter((o): o is Option => o.url !== null)
     : [];
 
-  return <AvatarPicker avatarUrl={avatarUrl} initial={initial} options={options} />;
+  return <AvatarPicker avatarUrl={avatarUrl} initial={initial} options={options} size={size} />;
 }
