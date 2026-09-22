@@ -185,17 +185,33 @@ export function SiteHeader({ userId }: { userId: string }) {
               ออกจากระบบ
             </button>
           </form>
-          <button
-            type="button"
+          <form action="/search" method="get" className="hidden min-[860px]:block">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2" style={{ color: "var(--steel)" }}>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <input
+                name="q"
+                placeholder="ค้นหาการ์ด"
+                className="h-11 rounded-full pl-[38px] pr-4 text-[13.5px] outline-none transition-colors focus:border-[rgba(95,212,255,0.6)]"
+                style={{ width: 200, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
+              />
+            </div>
+          </form>
+          <Link
+            href="/search"
             aria-label="ค้นหา"
-            className="flex items-center justify-center rounded-full"
+            className="flex items-center justify-center rounded-full no-underline min-[860px]:hidden"
             style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
               <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-          </button>
+          </Link>
           <CartLink />
           <div className="group relative">
             <button

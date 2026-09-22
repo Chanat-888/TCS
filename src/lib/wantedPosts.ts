@@ -15,6 +15,27 @@ export async function getActiveWantedPosts(): Promise<WantedPostWithPoster[]> {
   return data as unknown as WantedPostWithPoster[];
 }
 
+/** Matches active wanted posts whose name or set contains `query` (case-insensitive). */
+export async function searchWantedPosts(query: string): Promise<WantedPostWithPoster[]> {
+  const supabase = createPublicClient();
+  const pattern = `%${query.trim()}%`;
+  const [byName, bySet] = await Promise.all([
+    supabase.from("wanted_posts").select("*, poster:profiles(*)").eq("status", "active").ilike("name", pattern).order("created_at", { ascending: false }),
+    supabase.from("wanted_posts").select("*, poster:profiles(*)").eq("status", "active").ilike("set_name", pattern).order("created_at", { ascending: false }),
+  ]);
+  if (byName.error) throw byName.error;
+  if (bySet.error) throw bySet.error;
+
+  const seen = new Set<string>();
+  const merged: WantedPostWithPoster[] = [];
+  for (const row of [...(byName.data ?? []), ...(bySet.data ?? [])] as unknown as WantedPostWithPoster[]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  return merged;
+}
+
 export async function getWantedPostsByPoster(posterId: string): Promise<WantedPost[]> {
   const supabase = createPublicClient();
   const { data, error } = await supabase

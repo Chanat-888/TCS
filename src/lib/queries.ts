@@ -15,6 +15,27 @@ export async function getActiveListings(): Promise<ListingWithSeller[]> {
   return data as unknown as ListingWithSeller[];
 }
 
+/** Matches active listings whose name or set contains `query` (case-insensitive). */
+export async function searchListings(query: string): Promise<ListingWithSeller[]> {
+  const supabase = createPublicClient();
+  const pattern = `%${query.trim()}%`;
+  const [byName, bySet] = await Promise.all([
+    supabase.from("listings").select("*, seller:profiles(*)").eq("status", "active").ilike("name", pattern).order("created_at", { ascending: false }),
+    supabase.from("listings").select("*, seller:profiles(*)").eq("status", "active").ilike("set_name", pattern).order("created_at", { ascending: false }),
+  ]);
+  if (byName.error) throw byName.error;
+  if (bySet.error) throw bySet.error;
+
+  const seen = new Set<string>();
+  const merged: ListingWithSeller[] = [];
+  for (const row of [...(byName.data ?? []), ...(bySet.data ?? [])] as unknown as ListingWithSeller[]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    merged.push(row);
+  }
+  return merged;
+}
+
 export async function getListingById(id: string): Promise<ListingWithSeller | null> {
   const supabase = createPublicClient();
   const { data, error } = await supabase
