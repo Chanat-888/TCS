@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { Stars } from "@/components/Stars";
 import { ReviewItem } from "@/components/ReviewItem";
 import { ProductCard } from "@/components/ProductCard";
+import { WantedPostCard } from "@/components/WantedPostCard";
 import { DEFAULT_DISPLAY_NAME } from "@/lib/profileName";
 import { Avatar } from "@/components/Avatar";
 import { EditProfileButton } from "./EditProfileButton";
@@ -18,7 +19,7 @@ import { OwnerAvatarEditor } from "./OwnerAvatarEditor";
 /** viewerId must come from the verified server session, never request input.
  * data is passed as a promise so callers can load it while the session is verified. */
 export async function ProfileView({ id, viewerId, data }: { id: string; viewerId: string; data: Promise<ProfileData> }) {
-  const { profile, stats, reviews, listings, everBid } = await data;
+  const { profile, stats, reviews, listings, everBid, wantedPosts } = await data;
   if (!profile) notFound();
   const isOwner = viewerId === id;
 
@@ -34,6 +35,13 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
   const editIcon = (
     <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
       <path d="M13.5 3.5 L16.5 6.5 L7 16 L3.5 16.5 L4 13 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+
+  const logoutIcon = (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M8 3.5 H4.5 A1 1 0 0 0 3.5 4.5 V15.5 A1 1 0 0 0 4.5 16.5 H8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.5 10 H17 M17 10 L13.5 6.5 M17 10 L13.5 13.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 
@@ -190,7 +198,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           </div>
         </section>
 
-        <section className="section">
+        <section className="section pt-10">
           <div className="wrap">
             <div className="mb-[18px] flex items-baseline justify-between gap-3">
               <h2 className="text-[1.15rem]">ความสำเร็จ</h2>
@@ -235,7 +243,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           </div>
         </section>
 
-        <section className="section">
+        <section className="section pt-10">
           <div className="wrap">
             <div className="mb-[18px] flex items-baseline justify-between gap-3">
               <h2 className="text-[1.15rem]">รีวิว</h2>
@@ -269,7 +277,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           </div>
         </section>
 
-        <section className="section" style={{ paddingBottom: 8 }}>
+        <section className="section pt-10" style={{ paddingBottom: 8 }}>
           <div className="wrap">
             <div className="mb-[18px] flex flex-wrap items-center gap-3">
               <h2 className="text-[1.15rem]">ประกาศขายปัจจุบัน</h2>
@@ -309,18 +317,57 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
             </div>
           </div>
         </section>
+        <section className="section pt-10">
+          <div className="wrap">
+            <div className="mb-[18px] flex flex-wrap items-center gap-3">
+              <h2 className="text-[1.15rem]">ประกาศหา</h2>
+              <span className="mono text-[12.5px]" style={{ color: "var(--steel)" }}>
+                {wantedPosts.length} รายการ
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-[18px] max-[1024px]:grid-cols-3 max-[720px]:grid-cols-2 max-[720px]:gap-3">
+              {wantedPosts.map((post) => (
+                <WantedPostCard key={post.id} post={post} posterThreadsHref={isOwner ? `/wanted/${post.id}/threads` : undefined} />
+              ))}
+              {isOwner && (
+                <Link
+                  href="/wanted/new"
+                  className="flex min-h-full flex-col items-center justify-center gap-[10px] rounded-2xl no-underline"
+                  style={{ border: "1.5px dashed rgba(140,147,163,0.25)", color: "var(--steel)" }}
+                >
+                  <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>
+                    <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span className="text-[12.5px] font-medium">ลงประกาศหา</span>
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
         {isOwner && (
           <Suspense fallback={<AddressBookSkeleton />}>
             <OwnerAddressBook userId={id} />
           </Suspense>
         )}
-        {isOwner && <AccountSignInMethods />}
         {isOwner && (
-          <form action="/logout" method="post" className="mt-8">
-            <button type="submit" className="text-[13px] cursor-pointer" style={{ color: "var(--steel)" }}>
-              ออกจากระบบ
-            </button>
-          </form>
+          <div className="mt-10">
+            <AccountSignInMethods />
+            <div className="wrap flex justify-center" style={{ paddingTop: 32, paddingBottom: 56 }}>
+              <form action="/logout" method="post">
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-[8px] rounded-full px-6 text-[13.5px] font-medium cursor-pointer transition-colors hover:border-[rgba(232,102,79,0.4)] hover:text-[var(--danger)]"
+                  style={{ height: 44, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+                >
+                  {logoutIcon}
+                  ออกจากระบบ
+                </button>
+              </form>
+            </div>
+          </div>
         )}
       </main>
 

@@ -232,11 +232,10 @@ export function OrderSellerView({
           แชทกับผู้ซื้อ
         </h2>
         <ChatPanel
-          orderId={order.id}
           initialMessages={messages}
           currentUserId={currentUserId}
           avatarFor={(senderId, isMe) => (isMe ? "คุณ" : maskUserLabel(senderId).slice(-3))}
-          onSend={sendOrderMessage}
+          onSend={(body) => sendOrderMessage(order.id, body)}
         />
       </div>
     </>
