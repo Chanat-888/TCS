@@ -30,11 +30,11 @@ function sessionFor(user, error = null) {
   });
 }
 
-test("a LINE user without an email or phone is signed in, but cannot trade yet", async () => {
+test("a LINE user without an email or phone can sign in and trade", async () => {
   const line = sessionFor({ id: "line-user", identities: [{ provider: "custom:line" }] });
   assert.equal(await line.getSessionUserId(), "line-user");
-  assert.equal(await line.getPhoneVerifiedUserId(), null);
-  await assert.rejects(line.requirePhoneVerifiedUserId(), /redirect:\/verify-phone/);
+  assert.equal(await line.getVerifiedUserId(), "line-user");
+  assert.equal(await line.requireVerifiedUserId(), "line-user");
 });
 test("user-editable metadata can never pass for a LINE (or any) identity", async () => {
   for (const user of [

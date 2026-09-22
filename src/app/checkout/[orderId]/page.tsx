@@ -1,14 +1,16 @@
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
-import { requirePhoneVerifiedUserId } from "@/lib/session";
+import { requireVerifiedUserId } from "@/lib/session";
 import { getOrderDetail } from "@/lib/orders";
+import { listAddresses } from "@/lib/addressBook";
+import type { SavedAddress } from "@/lib/addresses";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import { CheckoutForm } from "./CheckoutForm";
 
 export default async function CheckoutPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
-  const userId = await requirePhoneVerifiedUserId();
+  const userId = await requireVerifiedUserId();
   if (!userId) redirect("/login");
 
   const detail = await getOrderDetail(orderId, userId);
@@ -16,6 +18,15 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
 
   if (detail.order.status !== "PENDING_PAYMENT") {
     redirect(`/orders/${orderId}`);
+  }
+
+  // The address book is a convenience: if it cannot load, checkout still works
+  // with a typed-in address.
+  let savedAddresses: SavedAddress[] = [];
+  try {
+    savedAddresses = await listAddresses(userId);
+  } catch (e) {
+    console.error("[checkout] address book unavailable", (e as { code?: string }).code);
   }
 
   return (
@@ -31,6 +42,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
             amount={detail.order.amount}
             paymentDeadlineAt={detail.order.payment_deadline_at ?? new Date().toISOString()}
             isAuctionWin={detail.listing.buy_now_price == null}
+            savedAddresses={savedAddresses}
           />
         </div>
       </main>

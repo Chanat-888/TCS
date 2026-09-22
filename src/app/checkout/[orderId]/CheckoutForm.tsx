@@ -7,8 +7,9 @@ import { secondsUntil } from "@/lib/countdown";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { ProvinceCombobox } from "@/components/ProvinceCombobox";
 import { formatTHB } from "@/lib/format";
+import { MAX_ADDRESSES, type SavedAddress } from "@/lib/addresses";
 import type { PaymentMethod } from "@/lib/supabase/types";
-import { payOrder } from "./actions";
+import { payOrder, type DeliveryChoice } from "./actions";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -33,6 +34,33 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+type DeliveryKind = "saved" | "other" | "meetup";
+
+function ChoiceCard({ selected, onSelect, title, sub }: { selected: boolean; onSelect: () => void; title: string; sub: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex items-center gap-3 rounded-xl px-[15px] py-[14px] text-left"
+      style={{
+        background: selected ? "rgba(95,212,255,0.05)" : "var(--panel-2)",
+        border: `1.5px solid ${selected ? "var(--cyan)" : "rgba(140,147,163,0.18)"}`,
+      }}
+    >
+      <span
+        className="flex flex-shrink-0 items-center justify-center rounded-full"
+        style={{ width: 18, height: 18, border: `1.5px solid ${selected ? "var(--cyan)" : "rgba(140,147,163,0.4)"}` }}
+      >
+        {selected && <span className="rounded-full" style={{ width: 9, height: 9, background: "var(--cyan)" }} />}
+      </span>
+      <div>
+        <p className="text-[14px] font-medium" style={{ color: "var(--white)" }}>{title}</p>
+        <p className="mt-[1px] text-[11.5px]" style={{ color: "var(--steel-dim)" }}>{sub}</p>
+      </div>
+    </button>
+  );
+}
+
 export function CheckoutForm({
   orderId,
   listingName,
@@ -41,6 +69,7 @@ export function CheckoutForm({
   amount,
   paymentDeadlineAt,
   isAuctionWin,
+  savedAddresses,
 }: {
   orderId: string;
   listingName: string;
@@ -49,7 +78,12 @@ export function CheckoutForm({
   amount: number;
   paymentDeadlineAt: string;
   isAuctionWin: boolean;
+  savedAddresses: SavedAddress[];
 }) {
+  const defaultSaved = savedAddresses.find((a) => a.is_default) ?? savedAddresses[0];
+  const [delivery, setDelivery] = useState<DeliveryKind>(defaultSaved ? "saved" : "other");
+  const [savedId, setSavedId] = useState(defaultSaved?.id ?? "");
+  const [saveNew, setSaveNew] = useState(true);
   const [recipient, setRecipient] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -60,18 +94,33 @@ export function CheckoutForm({
   const [cardExp, setCardExp] = useState("");
   const [cardCvv, setCardCvv] = useState("");
 
-  const [addressError, setAddressError] = useState(false);
+  const [addressError, setAddressError] = useState("");
   const [methodError, setMethodError] = useState(false);
+  const [payError, setPayError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<null | "ship" | "meetup">(null);
+
+  const canSaveNew = savedAddresses.length < MAX_ADDRESSES;
 
   async function handlePay() {
-    const addressOk = recipient.trim() && phone.trim() && address.trim() && province.trim() && postcode.trim();
-    if (!addressOk) {
-      setAddressError(true);
-      return;
+    setPayError("");
+    let choice: DeliveryChoice;
+    if (delivery === "meetup") {
+      choice = { type: "meetup" };
+    } else if (delivery === "saved") {
+      if (!savedId) {
+        setAddressError("เลือกที่อยู่จัดส่งก่อนดำเนินการต่อ");
+        return;
+      }
+      choice = { type: "saved", addressId: savedId };
+    } else {
+      if (!(recipient.trim() && phone.trim() && address.trim() && province.trim() && postcode.trim())) {
+        setAddressError("กรอกที่อยู่จัดส่งให้ครบก่อนดำเนินการต่อ");
+        return;
+      }
+      choice = { type: "other", address: { recipient, phone, address, province, postcode }, save: saveNew && canSaveNew };
     }
-    setAddressError(false);
+    setAddressError("");
     if (method === "card" && (!cardNumber.trim() || !cardExp.trim() || !cardCvv.trim())) {
       setMethodError(true);
       return;
@@ -79,11 +128,20 @@ export function CheckoutForm({
     setMethodError(false);
 
     setSubmitting(true);
-    const result = await payOrder(orderId, { recipient, phone, address, province, postcode, method });
-    setSubmitting(false);
-    if ("error" in result) return;
-    setDone(true);
-    window.scrollTo({ top: 0 });
+    try {
+      const result = await payOrder(orderId, { method, delivery: choice });
+      if ("error" in result) {
+        // Address problems are shown next to the address; anything else at the button.
+        setPayError(result.error ?? "ชำระเงินไม่สำเร็จ ลองอีกครั้ง");
+        return;
+      }
+      setDone(result.deliveryMethod);
+      window.scrollTo({ top: 0 });
+    } catch {
+      setPayError("เชื่อมต่อไม่ได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (done) {
@@ -113,8 +171,10 @@ export function CheckoutForm({
         </span>
         <div className="mt-[26px] rounded-2xl p-[18px] text-left" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
           <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-            <strong style={{ color: "var(--white)", fontWeight: 500 }}>ต่อไป:</strong> {sellerName} จะเริ่มแพ็คการ์ดและใส่เลขพัสดุ
-            คุณจะได้รับแจ้งเตือนทันทีที่มีการจัดส่ง จากนั้นถ่ายวิดีโอตอนแกะกล่องก่อนกดรับการ์ดทุกครั้ง
+            <strong style={{ color: "var(--white)", fontWeight: 500 }}>ต่อไป:</strong>{" "}
+            {done === "meetup"
+              ? <>นัดสถานที่และเวลากับ {sellerName} ในแชทของคำสั่งซื้อ แนะนำให้นัดในที่สาธารณะ และถ่ายวิดีโอแกะกล่องต่อหน้าก่อนกดรับการ์ดทุกครั้ง</>
+              : <>{sellerName} จะเริ่มแพ็คการ์ดและใส่เลขพัสดุ คุณจะได้รับแจ้งเตือนทันทีที่มีการจัดส่ง จากนั้นถ่ายวิดีโอตอนแกะกล่องก่อนกดรับการ์ดทุกครั้ง</>}
           </p>
         </div>
         <div className="mt-[22px] flex flex-wrap justify-center gap-[10px]">
@@ -181,40 +241,91 @@ export function CheckoutForm({
       </div>
 
       <div className="mt-[22px]">
-        <h2 className="mb-3 text-[14px] font-medium" style={{ color: "var(--steel)" }}>
-          ที่อยู่จัดส่ง
-        </h2>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-[14px] font-medium" style={{ color: "var(--steel)" }}>
+            วิธีรับสินค้า
+          </h2>
+          <Link href="/profile" className="text-[12px]" style={{ color: "var(--cyan)" }}>จัดการที่อยู่ในโปรไฟล์</Link>
+        </div>
         <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-          <Field label="ชื่อผู้รับ">
-            <input style={inputStyle} value={recipient} onChange={(e) => { setRecipient(e.target.value); setAddressError(false); }} placeholder="ชื่อ-นามสกุล" />
-          </Field>
-          <Field label="เบอร์โทรศัพท์">
-            <input className="mono" style={inputStyle} value={phone} onChange={(e) => { setPhone(e.target.value); setAddressError(false); }} placeholder="08X-XXX-XXXX" />
-          </Field>
-          <Field label="ที่อยู่">
-            <textarea
-              style={{ ...inputStyle, height: "auto", minHeight: 64, padding: "11px 13px", resize: "vertical" }}
-              value={address}
-              onChange={(e) => { setAddress(e.target.value); setAddressError(false); }}
-              placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ"
-            />
-          </Field>
-          <div className="mt-[14px] grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
-            <Field label="จังหวัด">
-              <ProvinceCombobox
-                value={province}
-                onChange={(v) => { setProvince(v); setAddressError(false); }}
-                inputStyle={inputStyle}
-                placeholder="กรุงเทพมหานคร"
-              />
-            </Field>
-            <Field label="รหัสไปรษณีย์">
-              <input className="mono" style={inputStyle} value={postcode} onChange={(e) => { setPostcode(e.target.value); setAddressError(false); }} placeholder="10XXX" />
-            </Field>
+          <div className="flex flex-col gap-[10px]">
+            {savedAddresses.length > 0 && (
+              <ChoiceCard selected={delivery === "saved"} onSelect={() => { setDelivery("saved"); setAddressError(""); }} title="ส่งไปที่อยู่ที่บันทึกไว้" sub="เลือกจากที่อยู่ในโปรไฟล์ของคุณ" />
+            )}
+            <ChoiceCard selected={delivery === "other"} onSelect={() => { setDelivery("other"); setAddressError(""); }} title={savedAddresses.length > 0 ? "ส่งไปที่อยู่อื่น" : "กรอกที่อยู่จัดส่ง"} sub="กรอกที่อยู่สำหรับคำสั่งซื้อนี้" />
+            <ChoiceCard selected={delivery === "meetup"} onSelect={() => { setDelivery("meetup"); setAddressError(""); }} title="นัดรับสินค้า" sub="นัดสถานที่และเวลากับผู้ขายในแชท ไม่ต้องกรอกที่อยู่" />
           </div>
+
+          {delivery === "saved" && (
+            <div className="mt-[14px] flex flex-col gap-[10px]" role="radiogroup" aria-label="ที่อยู่ที่บันทึกไว้">
+              {savedAddresses.map((a) => (
+                <label
+                  key={a.id}
+                  className="flex cursor-pointer items-start gap-3 rounded-xl px-[15px] py-[13px]"
+                  style={{ background: savedId === a.id ? "rgba(95,212,255,0.05)" : "var(--panel-2)", border: `1px solid ${savedId === a.id ? "var(--cyan)" : "rgba(140,147,163,0.18)"}` }}
+                >
+                  <input type="radio" name="saved-address" checked={savedId === a.id} onChange={() => { setSavedId(a.id); setAddressError(""); }} className="mt-1" />
+                  <span className="text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+                    <strong style={{ color: "var(--white)", fontWeight: 500 }}>{a.label}</strong>
+                    {a.is_default && <span className="ml-2 text-[11px]" style={{ color: "var(--cyan)" }}>ค่าเริ่มต้น</span>}
+                    <br />
+                    {a.recipient} · <span className="mono">{a.phone}</span>
+                    <br />
+                    {a.address} {a.province} <span className="mono">{a.postcode}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          {delivery === "other" && (
+            <div className="mt-[14px]">
+              <Field label="ชื่อผู้รับ">
+                <input style={inputStyle} value={recipient} onChange={(e) => { setRecipient(e.target.value); setAddressError(""); }} placeholder="ชื่อ-นามสกุล" autoComplete="name" />
+              </Field>
+              <Field label="เบอร์โทรศัพท์">
+                <input className="mono" style={inputStyle} value={phone} onChange={(e) => { setPhone(e.target.value); setAddressError(""); }} placeholder="08X-XXX-XXXX" inputMode="tel" autoComplete="tel" />
+              </Field>
+              <Field label="ที่อยู่">
+                <textarea
+                  style={{ ...inputStyle, height: "auto", minHeight: 64, padding: "11px 13px", resize: "vertical" }}
+                  value={address}
+                  onChange={(e) => { setAddress(e.target.value); setAddressError(""); }}
+                  placeholder="บ้านเลขที่ ถนน แขวง/ตำบล เขต/อำเภอ"
+                />
+              </Field>
+              <div className="mt-[14px] grid grid-cols-2 gap-3 max-[480px]:grid-cols-1">
+                <Field label="จังหวัด">
+                  <ProvinceCombobox
+                    value={province}
+                    onChange={(v) => { setProvince(v); setAddressError(""); }}
+                    inputStyle={inputStyle}
+                    placeholder="กรุงเทพมหานคร"
+                  />
+                </Field>
+                <Field label="รหัสไปรษณีย์">
+                  <input className="mono" style={inputStyle} value={postcode} onChange={(e) => { setPostcode(e.target.value.replace(/\D/g, "")); setAddressError(""); }} placeholder="10XXX" inputMode="numeric" maxLength={5} autoComplete="postal-code" />
+                </Field>
+              </div>
+              {canSaveNew && (
+                <label className="mt-[14px] flex cursor-pointer items-center gap-2 text-[13px]" style={{ color: "var(--steel)" }}>
+                  <input type="checkbox" checked={saveNew} onChange={(e) => setSaveNew(e.target.checked)} />
+                  บันทึกที่อยู่นี้ไว้ในโปรไฟล์ของฉัน
+                </label>
+              )}
+            </div>
+          )}
+
+          {delivery === "meetup" && (
+            <div className="mt-[14px] rounded-xl px-4 py-[13px] text-[13px] leading-relaxed" style={{ background: "rgba(232,184,79,0.06)", border: "1px solid rgba(232,184,79,0.25)", color: "var(--steel)" }}>
+              <strong style={{ color: "var(--white)", fontWeight: 500 }}>ยังมีระบบพักเงินเหมือนเดิม</strong> เงินอยู่กับ TCS จนกว่าคุณจะกดรับการ์ด
+              แนะนำให้นัดในที่สาธารณะ และถ่ายวิดีโอแกะกล่องต่อหน้าก่อนกดรับ เพราะเป็นหลักฐานเดียวหากมีข้อพิพาท
+            </div>
+          )}
+
           {addressError && (
-            <p className="mt-[6px] text-[12px]" style={{ color: "var(--danger)" }}>
-              กรอกที่อยู่จัดส่งให้ครบก่อนดำเนินการต่อ
+            <p role="alert" className="mt-[10px] text-[12px]" style={{ color: "var(--danger)" }}>
+              {addressError}
             </p>
           )}
         </div>
@@ -232,31 +343,7 @@ export function CheckoutForm({
                 { key: "card" as const, label: "บัตรเครดิต / เดบิต", sub: "Visa, Mastercard, JCB" },
               ]
             ).map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => { setMethod(opt.key); setMethodError(false); }}
-                className="flex items-center gap-3 rounded-xl px-[15px] py-[14px] text-left"
-                style={{
-                  background: method === opt.key ? "rgba(95,212,255,0.05)" : "var(--panel-2)",
-                  border: `1.5px solid ${method === opt.key ? "var(--cyan)" : "rgba(140,147,163,0.18)"}`,
-                }}
-              >
-                <span
-                  className="flex flex-shrink-0 items-center justify-center rounded-full"
-                  style={{ width: 18, height: 18, border: `1.5px solid ${method === opt.key ? "var(--cyan)" : "rgba(140,147,163,0.4)"}` }}
-                >
-                  {method === opt.key && <span className="rounded-full" style={{ width: 9, height: 9, background: "var(--cyan)" }} />}
-                </span>
-                <div>
-                  <p className="text-[14px] font-medium" style={{ color: "var(--white)" }}>
-                    {opt.label}
-                  </p>
-                  <p className="mt-[1px] text-[11.5px]" style={{ color: "var(--steel-dim)" }}>
-                    {opt.sub}
-                  </p>
-                </div>
-              </button>
+              <ChoiceCard key={opt.key} selected={method === opt.key} onSelect={() => { setMethod(opt.key); setMethodError(false); }} title={opt.label} sub={opt.sub} />
             ))}
           </div>
 
@@ -306,6 +393,11 @@ export function CheckoutForm({
         </span>
       </div>
 
+      {payError && (
+        <p role="alert" className="mt-[14px] text-[13px]" style={{ color: "var(--danger)" }}>
+          {payError}
+        </p>
+      )}
       <div className="mt-[18px]">
         <PrimaryButton height={52} loading={submitting} onClick={handlePay}>
           ชำระเงินตอนนี้

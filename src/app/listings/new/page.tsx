@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
-import { requirePhoneVerifiedUserId } from "@/lib/session";
+import { requireVerifiedUserId } from "@/lib/session";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import { CreateListingForm } from "./CreateListingForm";
 
 export default async function NewListingPage() {
-  const userId = await requirePhoneVerifiedUserId();
+  const userId = await requireVerifiedUserId();
   if (!userId) redirect("/login");
 
   return (

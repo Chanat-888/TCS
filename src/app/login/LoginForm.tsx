@@ -119,14 +119,16 @@ export function LoginForm({ verifyPhone = false }: { verifyPhone?: boolean }) {
             <div className="flex flex-col">
               <h1 className="text-[1.4rem]">{verifyPhone ? "ยืนยันเบอร์โทรศัพท์" : "เข้าสู่ระบบ TCS"}</h1>
               <p className="mt-2 text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
-                {verifyPhone ? "ยืนยันเบอร์โทรกับบัญชีนี้ ก่อนประมูล ซื้อ หรือลงขาย — ประวัติและประกาศของคุณยังอยู่ในบัญชีเดิม" : PHONE_LOGIN ? "เข้าใช้ด้วย LINE, Google หรือรับรหัส OTP ทาง SMS โดยไม่ต้องตั้งรหัสผ่าน" : "เข้าใช้ด้วย LINE หรือ Google โดยไม่ต้องตั้งรหัสผ่าน"}
+                {verifyPhone ? "ยืนยันเบอร์โทรกับบัญชีนี้ ก่อนประมูล ซื้อ หรือลงขาย — ประวัติและประกาศของคุณยังอยู่ในบัญชีเดิม" : PHONE_LOGIN ? "เข้าใช้ด้วย LINE หรือรับรหัส OTP ทาง SMS โดยไม่ต้องตั้งรหัสผ่าน" : "เข้าใช้ด้วย LINE โดยไม่ต้องตั้งรหัสผ่าน"}
               </p>
 
               {!verifyPhone && (
                 <div className="mt-6">
                   <div className="flex flex-col gap-3">
                     <OAuthButton provider="line" disabled={sending} />
-                    <OAuthButton provider="google" disabled={sending} />
+                  </div>
+                  <div className="mt-4 text-center">
+                    <OAuthButton provider="google" quiet disabled={sending} />
                   </div>
                   <p hidden={!PHONE_LOGIN} className="text-center mt-5 text-[12px]" style={{ color: "var(--steel)" }}>หรือใช้เบอร์โทรศัพท์</p>
                 </div>

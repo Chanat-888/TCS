@@ -215,13 +215,11 @@ function sessionFor(user, error = null) {
     },
   });
 }
-test("Google users can browse but need a verified phone to trade", async () => {
+test("a Google user with a confirmed email can trade without a phone", async () => {
   const session = sessionFor({ id: "google-user", email_confirmed_at: "yes", phone: "" });
   assert.equal(await session.getSessionUserId(), "google-user");
-  assert.equal(await session.getPhoneVerifiedUserId(), null);
-  await assert.rejects(session.requirePhoneVerifiedUserId(), /redirect:\/verify-phone/);
-  const verified = sessionFor({ id: "google-user", phone: "66812345678", phone_confirmed_at: "yes" });
-  assert.equal(await verified.requirePhoneVerifiedUserId(), "google-user");
+  assert.equal(await session.getVerifiedUserId(), "google-user");
+  assert.equal(await session.requireVerifiedUserId(), "google-user");
 });
 test("anonymous users and forged confirmation metadata cannot trade", async () => {
   for (const user of [
@@ -230,28 +228,28 @@ test("anonymous users and forged confirmation metadata cannot trade", async () =
   ]) {
     const session = sessionFor(user);
     assert.equal(await session.getSessionUserId(), null);
-    await assert.rejects(session.requirePhoneVerifiedUserId(), /redirect:\/login/);
+    await assert.rejects(session.requireVerifiedUserId(), /redirect:\/login/);
   }
 });
-test("direct bids and purchases enforce phone verification before database writes", async () => {
-  const session = sessionFor({ id: "google", email_confirmed_at: "yes" });
+test("direct bids and purchases require a signed-in user before database writes", async () => {
+  const session = sessionFor(null);
   const actions = load("src/app/listings/[id]/actions.ts", {
     "next/cache": { revalidatePath() {} },
     "@/lib/session": session,
     "@/lib/supabase/server": { createServiceClient() { throw new Error("Database must not be touched"); } },
   });
-  await assert.rejects(actions.placeBid("listing", 100), /redirect:\/verify-phone/);
-  await assert.rejects(actions.buyNow("listing"), /redirect:\/verify-phone/);
+  await assert.rejects(actions.placeBid("listing", 100), /redirect:\/login/);
+  await assert.rejects(actions.buyNow("listing"), /redirect:\/login/);
 });
-test("listing API rejects an unverified Google session before accepting uploads", async () => {
+test("listing API rejects a signed-out request before accepting uploads", async () => {
   const route = load("src/app/api/listings/route.ts", {
     "next/server": { NextResponse: Response },
-    "@/lib/session": sessionFor({ id: "google", email_confirmed_at: "yes" }),
+    "@/lib/session": sessionFor(null),
     "@/lib/supabase/server": { createServiceClient() { throw new Error("Database must not be touched"); } },
   });
   const result = await route.POST(new Request("https://tcs.test/api/listings", { method: "POST" }));
   assert.equal(result.status, 403);
-  assert.equal((await result.json()).code, "PHONE_VERIFICATION_REQUIRED");
+  assert.equal((await result.json()).code, "LOGIN_REQUIRED");
 });
 
 function phoneVerificationFixture(overrides = {}) {

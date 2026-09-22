@@ -9,8 +9,10 @@ import { Stars } from "@/components/Stars";
 import { ReviewItem } from "@/components/ReviewItem";
 import { ProductCard } from "@/components/ProductCard";
 import { DEFAULT_DISPLAY_NAME } from "@/lib/profileName";
+import { Avatar } from "@/components/Avatar";
 import { EditProfileButton } from "./EditProfileButton";
 import { DisputeTile, OwnerDisputeTile } from "./OwnerDisputeTile";
+import { AddressBookSkeleton, OwnerAddressBook } from "./OwnerAddressBook";
 
 /** viewerId must come from the verified server session, never request input.
  * data is passed as a promise so callers can load it while the session is verified. */
@@ -67,12 +69,12 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           <div className="wrap">
             <div className="flex items-start gap-6 max-[640px]:flex-col max-[640px]:items-center max-[640px]:text-center">
               <div className="relative flex-shrink-0">
-                <div
-                  className="flex items-center justify-center rounded-full text-[30px] font-bold"
-                  style={{ width: 92, height: 92, background: "var(--panel-2)", border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)", fontFamily: "var(--font-display)" }}
-                >
-                  {profile.avatar_initial}
-                </div>
+                <Avatar
+                  url={profile.avatar_url}
+                  initial={profile.avatar_initial}
+                  className="text-[30px] font-bold"
+                  style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }}
+                />
               </div>
 
               <div className="min-w-0 flex-1">
@@ -231,6 +233,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                     key={r.id}
                     isFirst={i === 0}
                     raterInitial={r.rater.avatar_initial}
+                    raterAvatarUrl={r.rater.avatar_url}
                     raterName={r.rater.display_name}
                     rating={r.rating}
                     date={formatThaiMonthYear(r.created_at)}
@@ -284,6 +287,11 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
             </div>
           </div>
         </section>
+        {isOwner && (
+          <Suspense fallback={<AddressBookSkeleton />}>
+            <OwnerAddressBook userId={id} />
+          </Suspense>
+        )}
         {isOwner && <AccountSignInMethods />}
         {isOwner && (
           <form action="/logout" method="post" className="mt-8">

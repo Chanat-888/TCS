@@ -17,6 +17,7 @@ export interface Profile {
   id: string;
   display_name: string;
   avatar_initial: string;
+  avatar_url: string | null;
   bio: string;
   phone: string | null;
   verified: boolean;
@@ -69,6 +70,8 @@ export interface Order {
   shipping_address: string | null;
   shipping_province: string | null;
   shipping_postcode: string | null;
+  /** Absent on rows read before migration 0010 is applied; treat as "ship". */
+  delivery_method?: "ship" | "meetup";
   payment_deadline_at: string | null;
   paid_at: string | null;
   courier: string | null;

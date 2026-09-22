@@ -6,7 +6,7 @@ import { StatusPill } from "@/components/StatusPill";
 import { ChatPanel } from "@/components/ChatPanel";
 import { formatTHB, maskUserLabel, formatRelativeTime } from "@/lib/format";
 import type { Message, Order } from "@/lib/supabase/types";
-import { confirmShipment } from "./actions";
+import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 
 const COURIERS = ["Flash Express", "Kerry Express", "ไปรษณีย์ไทย (EMS)", "J&T Express"];
@@ -46,10 +46,23 @@ export function OrderSellerView({
     setShipped(true);
   }
 
+  async function handleHandover() {
+    setSubmitting(true);
+    setError("");
+    const result = await confirmHandover(order.id);
+    setSubmitting(false);
+    if ("error" in result) {
+      setError(result.error ?? "เกิดข้อผิดพลาด ลองอีกครั้ง");
+      return;
+    }
+    setShipped(true);
+  }
+
+  const isMeetup = order.delivery_method === "meetup";
   const isDone = order.status === "COMPLETED";
   const steps: TimelineStep[] = [
     { label: "เงินถูกพักไว้", state: "done", meta: <>ผู้ซื้อชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
-    { label: "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></> : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง" },
+    { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง") },
     { label: "ถึงมือผู้ซื้อ", state: order.delivered_at ? "done" : "pending", meta: "อัปเดตอัตโนมัติเมื่อผู้ซื้อยืนยันว่าได้รับพัสดุ" },
     { label: "ผู้ซื้อยืนยันรับการ์ด", state: isDone ? "done" : "pending", meta: "ผู้ซื้อถ่ายวิดีโอแกะกล่องแล้วกดรับ หรือระบบอนุมัติอัตโนมัติภายใน 48 ชม." },
     { label: "เงินโอนเข้าบัญชีคุณ", state: isDone ? "done" : "pending", meta: <>{formatTHB(order.amount)} โอนเข้าบัญชีที่ยืนยันตัวตนไว้</> },
@@ -93,7 +106,51 @@ export function OrderSellerView({
       </div>
 
       <div className="section">
-        {!shipped ? (
+        <h2 className="mb-[14px] text-[14px] font-medium" style={{ color: "var(--steel)" }}>
+          {isMeetup ? "การรับสินค้า" : "ที่อยู่จัดส่ง"}
+        </h2>
+        <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
+          {isMeetup ? (
+            <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              <strong style={{ color: "var(--white)", fontWeight: 500 }}>ผู้ซื้อเลือกนัดรับ</strong> ไม่มีที่อยู่จัดส่ง
+              นัดสถานที่และเวลาในแชทด้านล่าง แนะนำให้นัดในที่สาธารณะ
+            </p>
+          ) : order.shipping_address ? (
+            <p className="text-[13.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              <strong style={{ color: "var(--white)", fontWeight: 500 }}>{order.shipping_recipient}</strong> · <span className="mono">{order.shipping_phone}</span>
+              <br />
+              {order.shipping_address} {order.shipping_province} <span className="mono">{order.shipping_postcode}</span>
+            </p>
+          ) : (
+            <p className="text-[13.5px]" style={{ color: "var(--steel)" }}>ยังไม่มีที่อยู่จัดส่งในคำสั่งซื้อนี้ สอบถามผู้ซื้อในแชท</p>
+          )}
+        </div>
+      </div>
+
+      <div className="section">
+        {!shipped && isMeetup ? (
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(95,212,255,0.2)" }}>
+            <h3 className="text-[15px] font-medium">ยืนยันการส่งมอบ</h3>
+            <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              กดหลังจากที่คุณส่งมอบการ์ดให้ผู้ซื้อแล้วเท่านั้น ผู้ซื้อจะถ่ายวิดีโอแกะกล่องแล้วกดรับ
+              หากมีปัญหาผู้ซื้อยังเปิดข้อพิพาทได้ตามปกติ
+            </p>
+            {error && (
+              <p className="mt-[10px] text-[12px]" style={{ color: "var(--danger)" }}>
+                {error}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleHandover}
+              disabled={submitting}
+              className="mt-[18px] h-12 w-full rounded-[11px] text-[14.5px] font-semibold"
+              style={{ background: "var(--blue)", color: "#071523" }}
+            >
+              {submitting ? "..." : "ยืนยันส่งมอบแล้ว"}
+            </button>
+          </div>
+        ) : !shipped ? (
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(95,212,255,0.2)" }}>
             <h3 className="text-[15px] font-medium">ยืนยันการจัดส่ง</h3>
             <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
@@ -159,7 +216,7 @@ export function OrderSellerView({
                   ยืนยันการจัดส่งแล้ว
                 </p>
                 <p className="mono mt-[2px] text-[12px]" style={{ color: "var(--steel)" }}>
-                  {shippedInfo.courier} · {shippedInfo.tracking}
+                  {isMeetup ? "ส่งมอบแล้ว · นัดรับ" : `${shippedInfo.courier} · ${shippedInfo.tracking}`}
                 </p>
               </div>
             </div>

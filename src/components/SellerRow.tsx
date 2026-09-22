@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Profile } from "@/lib/supabase/types";
+import { Avatar } from "./Avatar";
 import type { SellerStats } from "@/lib/queries";
 
 export function SellerRow({ seller, stats }: { seller: Profile; stats: SellerStats }) {
@@ -9,12 +10,12 @@ export function SellerRow({ seller, stats }: { seller: Profile; stats: SellerSta
       className="mt-[22px] flex items-center gap-[13px] rounded-2xl px-4 py-[15px] no-underline"
       style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)", color: "inherit" }}
     >
-      <div
-        className="flex flex-shrink-0 items-center justify-center rounded-full text-[15px] font-bold"
-        style={{ width: 44, height: 44, background: "var(--panel-2)", border: "1.5px solid rgba(95,212,255,0.3)", color: "var(--cyan)", fontFamily: "var(--font-display)" }}
-      >
-        {seller.avatar_initial}
-      </div>
+      <Avatar
+        url={seller.avatar_url}
+        initial={seller.avatar_initial}
+        className="text-[15px] font-bold"
+        style={{ width: 44, height: 44, border: "1.5px solid rgba(95,212,255,0.3)", color: "var(--cyan)" }}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-[7px]">
           <span className="text-[14.5px] font-medium" style={{ color: "var(--white)" }}>

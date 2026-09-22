@@ -95,10 +95,10 @@ export function OrderView({
       icon: TRUCK_ICON,
       meta: order.shipped_at ? (
         <>
-          {order.courier} · เลขพัสดุ <span className="mono">{order.tracking_number}</span> · <span className="mono">{formatRelativeTime(order.shipped_at)}</span>
+          {order.delivery_method === "meetup" ? "ส่งมอบแล้ว (นัดรับ)" : <>{order.courier} · เลขพัสดุ <span className="mono">{order.tracking_number}</span></>} · <span className="mono">{formatRelativeTime(order.shipped_at)}</span>
         </>
       ) : (
-        "รอผู้ขายจัดส่งสินค้า"
+        order.delivery_method === "meetup" ? "นัดสถานที่และเวลากับผู้ขายในแชท แล้วรอผู้ขายกดยืนยันส่งมอบ" : "รอผู้ขายจัดส่งสินค้า"
       ),
     },
     {
