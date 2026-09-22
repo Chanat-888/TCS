@@ -5,12 +5,73 @@ import { ProductCard } from "@/components/ProductCard";
 import type { ListingWithSeller } from "@/lib/queries";
 
 const TABS = [
-  { key: "all", label: "ทั้งหมด" },
-  { key: "new", label: "บูสเตอร์ใหม่" },
-  { key: "deck", label: "เด็คพร้อมเล่น" },
-  { key: "rare", label: "การ์ดหายาก" },
-  { key: "closing", label: "ใกล้ปิดประมูล" },
+  { key: "all", label: "ทั้งหมด", icon: "grid" },
+  { key: "new", label: "บูสเตอร์ใหม่", icon: "gift" },
+  { key: "deck", label: "เด็คพร้อมเล่น", icon: "layers" },
+  { key: "rare", label: "การ์ดหายาก", icon: "star" },
+  { key: "closing", label: "ใกล้ปิดประมูล", icon: "clock" },
 ] as const;
+
+function TabIcon({ name }: { name: (typeof TABS)[number]["icon"] }) {
+  const props = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 20 20",
+    fill: "none" as const,
+    "aria-hidden": true as const,
+  };
+  switch (name) {
+    case "grid":
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="11" y="3" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="3" y="11" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+          <rect x="11" y="11" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      );
+    case "gift":
+      return (
+        <svg {...props}>
+          <rect x="3" y="8" width="14" height="9" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M3 8h14v3H3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d="M10 8v9" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M10 8C10 8 7 8 6.2 6.6A2 2 0 118 3.8C9.4 4.6 10 8 10 8zM10 8c0 0 3 0 3.8-1.4a2 2 0 10-1.8-2.8C10.6 4.6 10 8 10 8z"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "layers":
+      return (
+        <svg {...props}>
+          <path d="M10 3l7 3.6-7 3.6-7-3.6L10 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+          <path d="M3 10.6l7 3.6 7-3.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3 14.2l7 3.6 7-3.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "star":
+      return (
+        <svg {...props}>
+          <path
+            d="M10 2.8l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7L10 2.8z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    case "clock":
+      return (
+        <svg {...props}>
+          <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M10 6v4.2l3 1.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+  }
+}
 
 export function CategoryTabs({
   listings,
@@ -49,7 +110,7 @@ export function CategoryTabs({
         aria-label="หมวดหมู่การ์ด"
       >
         <div className="wrap">
-          <div className="flex gap-2 overflow-x-auto py-3" style={{ scrollbarWidth: "none" }}>
+          <div className="flex gap-1 overflow-x-auto py-4" style={{ scrollbarWidth: "none" }}>
             {TABS.map((tab) => {
               const isActive = tab.key === active;
               return (
@@ -57,14 +118,22 @@ export function CategoryTabs({
                   key={tab.key}
                   type="button"
                   onClick={() => setActive(tab.key)}
-                  className="flex-shrink-0 whitespace-nowrap rounded-full px-4 py-[9px] text-[13.5px] font-medium transition-all"
-                  style={
-                    isActive
-                      ? { background: "var(--blue)", border: "1px solid var(--blue)", color: "#071523" }
-                      : { background: "transparent", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }
-                  }
+                  className="flex flex-shrink-0 flex-col items-center gap-2 whitespace-nowrap px-3 py-1 transition-all"
+                  style={{ color: isActive ? "var(--blue)" : "var(--steel)" }}
                 >
-                  {tab.label}
+                  <span
+                    className="flex items-center justify-center rounded-full transition-all"
+                    style={{
+                      width: 52,
+                      height: 52,
+                      background: isActive ? "rgba(58, 138, 255, 0.15)" : "var(--panel)",
+                      border: isActive ? "1px solid var(--blue)" : "1px solid rgba(140, 147, 163, 0.2)",
+                      color: isActive ? "var(--blue)" : "var(--steel)",
+                    }}
+                  >
+                    <TabIcon name={tab.icon} />
+                  </span>
+                  <span className="text-[12.5px] font-medium">{tab.label}</span>
                 </button>
               );
             })}
