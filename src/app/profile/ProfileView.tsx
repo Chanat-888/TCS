@@ -13,6 +13,7 @@ import { Avatar } from "@/components/Avatar";
 import { EditProfileButton } from "./EditProfileButton";
 import { DisputeTile, OwnerDisputeTile } from "./OwnerDisputeTile";
 import { AddressBookSkeleton, OwnerAddressBook } from "./OwnerAddressBook";
+import { OwnerAvatarEditor } from "./OwnerAvatarEditor";
 
 /** viewerId must come from the verified server session, never request input.
  * data is passed as a promise so callers can load it while the session is verified. */
@@ -69,12 +70,22 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           <div className="wrap">
             <div className="flex items-start gap-6 max-[640px]:flex-col max-[640px]:items-center max-[640px]:text-center">
               <div className="relative flex-shrink-0">
-                <Avatar
-                  url={profile.avatar_url}
-                  initial={profile.avatar_initial}
-                  className="text-[30px] font-bold"
-                  style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }}
-                />
+                {isOwner ? (
+                  <Suspense
+                    fallback={
+                      <Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[30px] font-bold" style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }} />
+                    }
+                  >
+                    <OwnerAvatarEditor avatarUrl={profile.avatar_url} initial={profile.avatar_initial} />
+                  </Suspense>
+                ) : (
+                  <Avatar
+                    url={profile.avatar_url}
+                    initial={profile.avatar_initial}
+                    className="text-[30px] font-bold"
+                    style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }}
+                  />
+                )}
               </div>
 
               <div className="min-w-0 flex-1">
