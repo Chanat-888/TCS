@@ -307,11 +307,10 @@ export function OrderView({
           แชทกับผู้ขาย
         </h2>
         <ChatPanel
-          orderId={order.id}
           initialMessages={messages}
           currentUserId={currentUserId}
           avatarFor={(senderId, isMe) => (isMe ? "คุณ" : sellerName.slice(0, 2).toUpperCase())}
-          onSend={sendOrderMessage}
+          onSend={(body) => sendOrderMessage(order.id, body)}
         />
       </div>
     </>

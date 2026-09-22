@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
 import { getActiveListings, getSellerSalesCountMap } from "@/lib/queries";
+import { getActiveWantedPosts } from "@/lib/wantedPosts";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
 import { CategoryTabs } from "./CategoryTabs";
@@ -21,6 +22,7 @@ export default async function BrowsePage({
 
   const listings = await getActiveListings();
   const salesCounts = await getSellerSalesCountMap(listings.map((l) => l.seller_id));
+  const wantedPosts = type === "wanted" ? await getActiveWantedPosts() : [];
 
   // eslint-disable-next-line react-hooks/purity -- server component, runs once per request
   const now = Date.now();
@@ -40,6 +42,7 @@ export default async function BrowsePage({
           key={`${type ?? "all"}-${category ?? "all"}`}
           listings={listings}
           salesCounts={salesCounts}
+          wantedPosts={wantedPosts}
           initialType={type}
           initialCategory={category}
         />

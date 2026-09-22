@@ -1,21 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import type { Message } from "@/lib/supabase/types";
+
+type ChatMessage = { id: string; sender_id: string; body: string; created_at: string };
 
 export function ChatPanel({
-  orderId,
   initialMessages,
   currentUserId,
   avatarFor,
   onSend,
   readOnly,
 }: {
-  orderId: string;
-  initialMessages: Message[];
+  initialMessages: ChatMessage[];
   currentUserId: string;
   avatarFor: (senderId: string, isMe: boolean) => string;
-  onSend: (orderId: string, body: string) => Promise<{ error?: string; success?: boolean }>;
+  onSend: (body: string) => Promise<{ error?: string; success?: boolean }>;
   readOnly?: boolean;
 }) {
   const [messages, setMessages] = useState(initialMessages);
@@ -25,15 +24,14 @@ export function ChatPanel({
     const body = input.trim();
     if (!body) return;
     setInput("");
-    const optimistic: Message = {
+    const optimistic: ChatMessage = {
       id: crypto.randomUUID(),
-      order_id: orderId,
       sender_id: currentUserId,
       body,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
-    await onSend(orderId, body);
+    await onSend(body);
   }
 
   return (

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
+import { WantedPostCard } from "@/components/WantedPostCard";
 import type { ListingWithSeller } from "@/lib/queries";
+import type { WantedPostWithPoster } from "@/lib/wantedPosts";
 
 const TABS = [
   { key: "all", label: "ทั้งหมด", icon: "grid" },
@@ -76,14 +78,17 @@ function TabIcon({ name }: { name: (typeof TABS)[number]["icon"] }) {
 export function CategoryTabs({
   listings,
   salesCounts,
+  wantedPosts,
   initialType,
   initialCategory,
 }: {
   listings: ListingWithSeller[];
   salesCounts: Record<string, number>;
+  wantedPosts?: WantedPostWithPoster[];
   initialType?: string;
   initialCategory?: string;
 }) {
+  const isWanted = initialType === "wanted";
   const validCategory = TABS.some((t) => t.key === initialCategory);
   const [active, setActive] = useState<(typeof TABS)[number]["key"]>(
     validCategory ? (initialCategory as (typeof TABS)[number]["key"]) : "all"
@@ -100,6 +105,8 @@ export function CategoryTabs({
     if (active === "closing") return l.buy_now_price == null;
     return l.category === active;
   });
+
+  const visibleWanted = (wantedPosts ?? []).filter((p) => active === "all" || active === "closing" || p.category === active);
 
   return (
     <>
@@ -144,13 +151,25 @@ export function CategoryTabs({
       <section className="pb-20 pt-11">
         <div className="wrap">
           <div className="mb-[22px] flex items-baseline justify-between gap-4">
-            <h2 className="text-[1.3rem]">การ์ดที่เปิดขาย</h2>
+            <h2 className="text-[1.3rem]">{isWanted ? "ประกาศหาการ์ด" : "การ์ดที่เปิดขาย"}</h2>
             <span className="mono text-[12.5px]" style={{ color: "var(--steel)" }}>
-              {visible.length} รายการ
+              {(isWanted ? visibleWanted.length : visible.length)} รายการ
             </span>
           </div>
 
-          {visible.length === 0 ? (
+          {isWanted ? (
+            visibleWanted.length === 0 ? (
+              <p className="py-[60px] text-center text-[14px]" style={{ color: "var(--steel)" }}>
+                ไม่มีประกาศหาในหมวดนี้ตอนนี้
+              </p>
+            ) : (
+              <div className="grid grid-cols-4 gap-[18px] max-[1024px]:grid-cols-3 max-[720px]:grid-cols-2 max-[720px]:gap-3">
+                {visibleWanted.map((post) => (
+                  <WantedPostCard key={post.id} post={post} poster={post.poster} />
+                ))}
+              </div>
+            )
+          ) : visible.length === 0 ? (
             <p className="py-[60px] text-center text-[14px]" style={{ color: "var(--steel)" }}>
               ไม่มีการ์ดในหมวดนี้ตอนนี้
             </p>

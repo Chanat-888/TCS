@@ -70,6 +70,13 @@ const BagIcon = (
   </svg>
 );
 
+const SearchIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const AUCTION_ITEMS: NavItem[] = [
   { href: "/browse?type=auction", label: "ทั้งหมด", desc: "ดูประมูลทั้งหมดที่เปิดอยู่ตอนนี้", icon: GridIcon },
   { href: "/browse?type=auction&category=closing", label: "ใกล้ปิดประมูล", desc: "ประมูลที่กำลังจะปิดเร็ว ๆ นี้", icon: ClockIcon },
@@ -80,6 +87,11 @@ const PRODUCT_ITEMS: NavItem[] = [
   { href: "/browse?type=product", label: "ทั้งหมด", desc: "สินค้าซื้อทันทีทั้งหมด", icon: GridIcon },
   { href: "/browse?type=product&category=new", label: "บูสเตอร์ใหม่", desc: "กล่อง/ซองบูสเตอร์ชุดใหม่ล่าสุด", icon: BoxIcon },
   { href: "/browse?type=product&category=deck", label: "เด็คพร้อมเล่น", desc: "เด็คสำเร็จรูป พร้อมลงสนามทันที", icon: StackIcon },
+];
+
+const WANTED_ITEMS: NavItem[] = [
+  { href: "/browse?type=wanted", label: "ทั้งหมด", desc: "ดูประกาศหาการ์ดทั้งหมด", icon: GridIcon },
+  { href: "/browse?type=wanted&category=rare", label: "การ์ดหายาก", desc: "คนกำลังตามหาการ์ดหายาก", icon: StarIcon },
 ];
 
 function NavDropdown({
@@ -164,6 +176,7 @@ export function SiteHeader({ userId }: { userId: string }) {
         <nav className="flex items-center gap-1 max-[480px]:hidden">
           <NavDropdown label="Auction" href="/browse?type=auction" icon={GavelIcon} items={AUCTION_ITEMS} />
           <NavDropdown label="Product" href="/browse?type=product" icon={BagIcon} items={PRODUCT_ITEMS} />
+          <NavDropdown label="ประกาศหา" href="/browse?type=wanted" icon={SearchIcon} items={WANTED_ITEMS} />
         </nav>
         <div className="flex-1" />
         <div className="flex flex-shrink-0 items-center gap-[10px]">
