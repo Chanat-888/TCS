@@ -10,7 +10,7 @@ export type OrderStatus =
   | "CANCELLED"
   | "REFUNDED";
 export type PaymentMethod = "promptpay" | "card";
-export type DisputeReason = "condition" | "wrong" | "authenticity" | "other";
+export type DisputeReason = "condition" | "wrong" | "authenticity" | "other" | "not_received";
 export type DisputeDecision = "refund" | "release";
 
 export interface Profile {

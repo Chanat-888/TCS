@@ -13,6 +13,7 @@ import { Avatar } from "@/components/Avatar";
 import { EditProfileButton } from "./EditProfileButton";
 import { DisputeTile, OwnerDisputeTile } from "./OwnerDisputeTile";
 import { AddressBookSkeleton, OwnerAddressBook } from "./OwnerAddressBook";
+import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 import { OwnerAvatarEditor } from "./OwnerAvatarEditor";
 
 /** viewerId must come from the verified server session, never request input.
@@ -315,12 +316,22 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           </Suspense>
         )}
         {isOwner && <AccountSignInMethods />}
+        {isOwner && profile.is_admin && (
+          <Link href="/admin" className="mt-6 inline-block text-[13px]" style={{ color: "var(--gold)" }}>
+            แดชบอร์ดแอดมิน
+          </Link>
+        )}
         {isOwner && (
           <form action="/logout" method="post" className="mt-8">
             <button type="submit" className="text-[13px] cursor-pointer" style={{ color: "var(--steel)" }}>
               ออกจากระบบ
             </button>
           </form>
+        )}
+        {isOwner && (
+          <div className="mt-4">
+            <DeleteAccountButton />
+          </div>
         )}
       </main>
 

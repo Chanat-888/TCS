@@ -1,4 +1,5 @@
 export const DEFAULT_DISPLAY_NAME = "นักสะสม";
+export const DELETED_DISPLAY_NAME = "ผู้ใช้ที่ถูกลบ";
 export const NAME_MIN = 2;
 export const NAME_MAX = 30;
 export const BIO_MAX = 200;
