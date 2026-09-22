@@ -348,9 +348,11 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           </div>
         </section>
         {isOwner && (
-          <Suspense fallback={<AddressBookSkeleton />}>
-            <OwnerAddressBook userId={id} />
-          </Suspense>
+          <div className="mt-10">
+            <Suspense fallback={<AddressBookSkeleton />}>
+              <OwnerAddressBook userId={id} />
+            </Suspense>
+          </div>
         )}
         {isOwner && (
           <div className="mt-10">
