@@ -23,7 +23,7 @@ test("slow profile lookup does not delay the other queries, and ratings are fetc
     getListingsBySeller: async () => { started.push("listings"); return []; },
     hasEverBid: async () => { started.push("bid"); return true; },
   };
-  const loadProfile = load({ "server-only": {}, "@/lib/queries": queries });
+  const loadProfile = load({ "server-only": {}, "@/lib/queries": queries, "@/lib/wantedPosts": { getWantedPostsByPoster: async () => [] } });
   const resultPromise = loadProfile("seller");
   assert.deepEqual(started, ["profile", "sales", "reviews", "listings", "bid"]);
   resolveProfile({ id: "seller" });
@@ -44,6 +44,7 @@ test("public profile data never reads private order data, and new profiles have 
       getListingsBySeller: async () => [],
       hasEverBid: async () => false,
     },
+    "@/lib/wantedPosts": { getWantedPostsByPoster: async () => [] },
   });
   const result = await loadProfile("seller");
   assert.equal("disputeCount" in result, false);
@@ -61,6 +62,7 @@ test("query failures are not disguised as a successful empty profile", async () 
       getListingsBySeller: async () => [],
       hasEverBid: async () => false,
     },
+    "@/lib/wantedPosts": { getWantedPostsByPoster: async () => [] },
   });
   await assert.rejects(loadProfile("seller"), /database unavailable/);
 });

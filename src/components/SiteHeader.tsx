@@ -51,6 +51,32 @@ const StackIcon = (
   </svg>
 );
 
+const GavelIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <rect x="7.3" y="1.5" width="6.2" height="2.2" rx="1.1" transform="rotate(48 10.4 2.6)" />
+    <rect x="5.1" y="4.5" width="5.2" height="5.2" rx="0.5" transform="rotate(48 7.7 7.1)" />
+    <rect x="2.6" y="7.5" width="6.2" height="2.2" rx="1.1" transform="rotate(48 5.7 8.6)" />
+    <line x1="9.5" y1="9.2" x2="16.3" y2="16.2" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+    <rect x="1.7" y="15.4" width="8.2" height="1.5" rx="0.75" />
+    <rect x="0.9" y="16.9" width="9.8" height="1.2" rx="0.5" />
+  </svg>
+);
+
+const BagIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M5.5 6.5 L6.5 3.6 A2 2 0 0 1 8.4 2.2 H11.6 A2 2 0 0 1 13.5 3.6 L14.5 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    <rect x="3.2" y="6.5" width="13.6" height="11.3" rx="1.6" stroke="currentColor" strokeWidth="1.4" />
+    <path d="M7 9.5 A3 3 0 0 0 13 9.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+  </svg>
+);
+
+const SearchIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const AUCTION_ITEMS: NavItem[] = [
   { href: "/browse?type=auction", label: "ทั้งหมด", desc: "ดูประมูลทั้งหมดที่เปิดอยู่ตอนนี้", icon: GridIcon },
   { href: "/browse?type=auction&category=closing", label: "ใกล้ปิดประมูล", desc: "ประมูลที่กำลังจะปิดเร็ว ๆ นี้", icon: ClockIcon },
@@ -63,14 +89,32 @@ const PRODUCT_ITEMS: NavItem[] = [
   { href: "/browse?type=product&category=deck", label: "เด็คพร้อมเล่น", desc: "เด็คสำเร็จรูป พร้อมลงสนามทันที", icon: StackIcon },
 ];
 
-function NavDropdown({ label, href, items }: { label: string; href: string; items: NavItem[] }) {
+const WANTED_ITEMS: NavItem[] = [
+  { href: "/browse?type=wanted", label: "ทั้งหมด", desc: "ดูประกาศหาการ์ดทั้งหมด", icon: GridIcon },
+  { href: "/browse?type=wanted&category=rare", label: "การ์ดหายาก", desc: "คนกำลังตามหาการ์ดหายาก", icon: StarIcon },
+];
+
+function NavDropdown({
+  label,
+  href,
+  icon,
+  items,
+}: {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  items: NavItem[];
+}) {
   return (
     <div className="group relative">
       <Link
         href={href}
-        className="flex items-center gap-[6px] rounded-lg px-3 py-2 text-[14.5px] font-medium no-underline transition-colors"
+        className="flex items-center gap-[7px] rounded-lg px-3 py-2 text-[14.5px] font-medium no-underline transition-colors"
         style={{ color: "var(--white)" }}
       >
+        <span className="flex items-center justify-center" style={{ color: "var(--cyan)" }}>
+          {icon}
+        </span>
         {label}
         <svg
           width="11"
@@ -130,8 +174,9 @@ export function SiteHeader({ userId }: { userId: string }) {
       <div className="wrap relative flex items-center gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
         <Brand />
         <nav className="flex items-center gap-1 max-[480px]:hidden">
-          <NavDropdown label="Auction" href="/browse?type=auction" items={AUCTION_ITEMS} />
-          <NavDropdown label="Product" href="/browse?type=product" items={PRODUCT_ITEMS} />
+          <NavDropdown label="Auction" href="/browse?type=auction" icon={GavelIcon} items={AUCTION_ITEMS} />
+          <NavDropdown label="Product" href="/browse?type=product" icon={BagIcon} items={PRODUCT_ITEMS} />
+          <NavDropdown label="ประกาศหา" href="/browse?type=wanted" icon={SearchIcon} items={WANTED_ITEMS} />
         </nav>
         <div className="flex-1" />
         <div className="flex flex-shrink-0 items-center gap-[10px]">
@@ -140,17 +185,33 @@ export function SiteHeader({ userId }: { userId: string }) {
               ออกจากระบบ
             </button>
           </form>
-          <button
-            type="button"
+          <form action="/search" method="get" className="hidden min-[860px]:block">
+            <div className="relative">
+              <span className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2" style={{ color: "var(--steel)" }}>
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <input
+                name="q"
+                placeholder="ค้นหาการ์ด"
+                className="h-11 rounded-full pl-[38px] pr-4 text-[13.5px] outline-none transition-colors focus:border-[rgba(95,212,255,0.6)]"
+                style={{ width: 200, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
+              />
+            </div>
+          </form>
+          <Link
+            href="/search"
             aria-label="ค้นหา"
-            className="flex items-center justify-center rounded-full"
+            className="flex items-center justify-center rounded-full no-underline min-[860px]:hidden"
             style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
               <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-          </button>
+          </Link>
           <CartLink />
           <div className="group relative">
             <button

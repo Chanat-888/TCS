@@ -97,7 +97,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
 
   return (
     <section className="wrap py-6">
-      <div className="max-w-2xl rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)" }}>
+      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)" }}>
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-lg">ที่อยู่จัดส่ง</h2>

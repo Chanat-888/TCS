@@ -18,7 +18,7 @@ export async function OwnerAddressBook({ userId }: { userId: string }) {
 export function AddressBookSkeleton() {
   return (
     <section className="wrap py-6" aria-busy="true">
-      <div className="h-32 max-w-2xl rounded-2xl motion-safe:animate-pulse" style={{ background: "var(--panel)" }} />
+      <div className="h-32 max-w-md rounded-2xl motion-safe:animate-pulse" style={{ background: "var(--panel)" }} />
     </section>
   );
 }

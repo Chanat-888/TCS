@@ -119,3 +119,26 @@ export interface Message {
   body: string;
   created_at: string;
 }
+
+export type WantedPostStatus = "active" | "closed";
+
+export interface WantedPost {
+  id: string;
+  poster_id: string;
+  name: string;
+  set_name: string;
+  category: ListingCategory;
+  max_price: number;
+  note: string;
+  status: WantedPostStatus;
+  created_at: string;
+}
+
+export interface WantedPostMessage {
+  id: string;
+  wanted_post_id: string;
+  responder_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
