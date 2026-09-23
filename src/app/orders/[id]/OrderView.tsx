@@ -11,6 +11,7 @@ import { secondsUntil } from "@/lib/countdown";
 import { formatTHB, formatRelativeTime } from "@/lib/format";
 import type { Message, Order } from "@/lib/supabase/types";
 import { approveOrder, sendOrderMessage } from "./actions";
+import { reportMeetupNoShow } from "./dispute/actions";
 
 const TRUCK_ICON = (
   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -51,10 +52,16 @@ export function OrderView({
   const [uploadError, setUploadError] = useState("");
   const [approving, setApproving] = useState(false);
   const [approveError, setApproveError] = useState("");
+  const [noShowOpen, setNoShowOpen] = useState(false);
+  const [noShowText, setNoShowText] = useState("");
+  const [noShowSubmitting, setNoShowSubmitting] = useState(false);
+  const [noShowError, setNoShowError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
 
   const hasVideo = Boolean(videoUrl);
   const awaitingDecision = status === "DELIVERED" && hasVideo;
+  const isMeetup = order.delivery_method === "meetup";
+  const canReportNoShow = isMeetup && !hasVideo && (status === "PAID_HELD" || status === "SHIPPED");
 
   async function handleFile(file: File) {
     setUploading(true);
@@ -73,6 +80,22 @@ export function OrderView({
     setAutoApproveAt(json.autoApproveAt);
     setDeliveredAt(json.deliveredAt);
     setStatus("DELIVERED");
+  }
+
+  async function handleReportNoShow() {
+    if (noShowText.trim().length < 10) {
+      setNoShowError("อธิบายเหตุการณ์ที่เกิดขึ้นอย่างน้อย 10 ตัวอักษร");
+      return;
+    }
+    setNoShowSubmitting(true);
+    setNoShowError("");
+    const result = await reportMeetupNoShow(order.id, noShowText);
+    setNoShowSubmitting(false);
+    if ("error" in result) {
+      setNoShowError(result.error ?? "เกิดข้อผิดพลาด ลองอีกครั้ง");
+      return;
+    }
+    setStatus("DISPUTED");
   }
 
   async function handleApprove() {
@@ -160,6 +183,62 @@ export function OrderView({
         </h2>
         <OrderTimeline steps={steps} />
       </div>
+
+      {canReportNoShow && (
+        <div className="section">
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(232,102,79,0.25)" }}>
+            {!noShowOpen ? (
+              <button
+                type="button"
+                onClick={() => setNoShowOpen(true)}
+                className="text-[13px] font-medium underline"
+                style={{ color: "var(--danger)" }}
+              >
+                {isMeetup && !order.shipped_at ? "ผู้ขายยังไม่มา หรือติดต่อไม่ได้?" : "ยังไม่ได้รับสินค้าจากการนัดรับ?"}
+              </button>
+            ) : (
+              <>
+                <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>แจ้งปัญหาการนัดรับ</h3>
+                <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+                  ใช้เมื่อผู้ขายไม่มาตามนัด หรืออ้างว่าส่งมอบแล้วแต่คุณไม่ได้รับการ์ด เงินยังคงถูกพักไว้ที่ TCS
+                  และแอดมินจะตรวจสอบก่อนตัดสินใจคืนเงินหรือโอนให้ผู้ขาย
+                </p>
+                <textarea
+                  value={noShowText}
+                  onChange={(e) => { setNoShowText(e.target.value); setNoShowError(""); }}
+                  maxLength={500}
+                  placeholder="อธิบายว่าเกิดอะไรขึ้น เช่น นัดเวลาใด ผู้ขายไม่มาหรือติดต่อไม่ได้อย่างไร"
+                  className="mt-[14px] w-full resize-y rounded-[10px] p-[11px] text-[14px] leading-relaxed outline-none"
+                  style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)", minHeight: 88 }}
+                />
+                {noShowError && (
+                  <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>{noShowError}</p>
+                )}
+                <div className="mt-[14px] flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setNoShowOpen(false); setNoShowText(""); setNoShowError(""); }}
+                    disabled={noShowSubmitting}
+                    className="h-11 flex-1 cursor-pointer rounded-[10px] text-[13.5px] disabled:opacity-40"
+                    style={{ background: "transparent", border: "1px solid rgba(140,147,163,0.3)", color: "var(--steel)" }}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleReportNoShow}
+                    disabled={noShowSubmitting}
+                    className="h-11 flex-1 rounded-[10px] text-[13.5px] font-semibold disabled:opacity-60"
+                    style={{ background: "var(--danger)", color: "#2a0d08" }}
+                  >
+                    {noShowSubmitting ? "..." : "ส่งเรื่องข้อพิพาท"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {!hasVideo && order.shipped_at && status !== "DISPUTED" && (
         <div className="section">

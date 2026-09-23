@@ -60,6 +60,7 @@ export function OrderSellerView({
 
   const isMeetup = order.delivery_method === "meetup";
   const isDone = order.status === "COMPLETED";
+  const isDisputed = order.status === "DISPUTED";
   const steps: TimelineStep[] = [
     { label: "เงินถูกพักไว้", state: "done", meta: <>ผู้ซื้อชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
     { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง") },
@@ -84,7 +85,15 @@ export function OrderSellerView({
             ผู้ซื้อ <span className="mono">{maskUserLabel(order.buyer_id).replace("ผู้ใช้ ", "")}</span> · {formatTHB(order.amount)}
           </p>
         </div>
-        {isDone ? <StatusPill tone="done" label="เสร็จสมบูรณ์" /> : shipped ? <StatusPill tone="wait" label="จัดส่งแล้ว" /> : <StatusPill tone="wait" label="รอจัดส่ง" />}
+        {isDone ? (
+          <StatusPill tone="done" label="เสร็จสมบูรณ์" />
+        ) : isDisputed ? (
+          <StatusPill tone="danger" label="อยู่ระหว่างข้อพิพาท" />
+        ) : shipped ? (
+          <StatusPill tone="wait" label="จัดส่งแล้ว" />
+        ) : (
+          <StatusPill tone="wait" label="รอจัดส่ง" />
+        )}
       </div>
 
       <div className="mt-[14px] flex items-start gap-[10px] rounded-xl px-4 py-[13px]" style={{ background: "rgba(95,212,255,0.06)", border: "1px solid rgba(95,212,255,0.2)" }}>
@@ -128,7 +137,17 @@ export function OrderSellerView({
       </div>
 
       <div className="section">
-        {!shipped && isMeetup ? (
+        {isDisputed ? (
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(232,102,79,0.3)" }}>
+            <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>
+              ผู้ซื้อเปิดข้อพิพาทสำหรับคำสั่งขายนี้
+            </h3>
+            <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              เงิน {formatTHB(order.amount)} ยังคงถูกพักไว้ที่ TCS แอดมินจะตรวจสอบและติดต่อทั้งสองฝ่ายผ่านแชทด้านล่าง
+              คุณไม่ต้องดำเนินการอะไรเพิ่มในตอนนี้
+            </p>
+          </div>
+        ) : !shipped && isMeetup ? (
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(95,212,255,0.2)" }}>
             <h3 className="text-[15px] font-medium">ยืนยันการส่งมอบ</h3>
             <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
