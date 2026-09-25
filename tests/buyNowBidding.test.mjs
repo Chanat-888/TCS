@@ -247,3 +247,16 @@ test("a bid that keeps losing the race gives up after a few tries and records no
   assert.equal(calls.updates.length, 3);
   assert.equal(calls.bids.length, 0);
 });
+
+test("ending early refuses to act on a bid that is mid-landing (price and bid list disagree)", async () => {
+  // Price already raised to 1500 but the new bid isn't saved yet: top bid is still 1000.
+  const stale = fixture({ ...base, buy_now_price: null, current_price: 1500 }, { userId: "seller-1", topBidder: "bidder-9", topAmount: 1000 });
+  assert.ok((await stale.actions.endAuctionNow("l1")).error);
+  assert.equal(stale.calls.updates.length, 0);
+  assert.equal(stale.calls.orders.length, 0);
+
+  // Price raised past the start but no bid visible yet: must not be cancelled.
+  const first = fixture({ ...base, buy_now_price: null, current_price: 1100 }, { userId: "seller-1" });
+  assert.ok((await first.actions.endAuctionNow("l1")).error);
+  assert.equal(first.calls.updates.length, 0);
+});

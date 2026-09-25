@@ -43,6 +43,11 @@ export function LiveBidding({
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState("");
+  const cancelEndRef = useRef<HTMLButtonElement | null>(null);
+  // Move focus into the confirm step (on the safe "cancel" choice) when it opens.
+  useEffect(() => {
+    if (confirmEnd) cancelEndRef.current?.focus();
+  }, [confirmEnd]);
   const [price, setPrice] = useState(initialPrice);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
   const [bids, setBids] = useState(initialBids);
@@ -205,7 +210,7 @@ export function LiveBidding({
                 ประกาศนี้ปิดการประมูลแล้ว
               </p>
             ) : confirmEnd ? (
-              <div className="mt-3 rounded-[11px] p-[14px]" style={{ background: "rgba(255,90,90,0.06)", border: "1px solid rgba(255,90,90,0.25)" }}>
+              <div className="mt-3 rounded-[11px] p-[14px]" style={{ background: "var(--danger-tint)", border: "1px solid var(--danger-line)" }}>
                 <p className="text-[13px] leading-relaxed" style={{ color: "var(--white)" }}>
                   {bids.length > 0
                     ? `ปิดประมูลตอนนี้และขายให้ผู้บิดสูงสุดที่ ${formatTHB(price)} ทันที ระบบจะสร้างคำสั่งซื้อให้ผู้ชนะ ย้อนกลับไม่ได้`
@@ -221,7 +226,7 @@ export function LiveBidding({
                     type="button"
                     disabled={ending}
                     onClick={handleEndNow}
-                    className="rounded-[9px] px-4 py-2 text-[13px] font-semibold disabled:opacity-60"
+                    className="min-h-11 rounded-[9px] px-4 text-[13px] font-semibold disabled:opacity-60"
                     style={{ background: "var(--danger)", color: "#fff" }}
                   >
                     {ending ? "กำลังปิด…" : "ยืนยันปิดประมูล"}
@@ -230,7 +235,8 @@ export function LiveBidding({
                     type="button"
                     disabled={ending}
                     onClick={() => { setConfirmEnd(false); setEndError(""); }}
-                    className="rounded-[9px] px-4 py-2 text-[13px]"
+                    ref={cancelEndRef}
+                    className="min-h-11 rounded-[9px] px-4 text-[13px]"
                     style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
                   >
                     ยกเลิก
@@ -241,8 +247,8 @@ export function LiveBidding({
               <button
                 type="button"
                 onClick={() => setConfirmEnd(true)}
-                className="mt-3 rounded-[9px] px-4 py-2 text-[13px]"
-                style={{ background: "transparent", border: "1px solid rgba(255,90,90,0.4)", color: "var(--danger)" }}
+                className="mt-3 min-h-11 rounded-[9px] px-4 text-[13px]"
+                style={{ background: "transparent", border: "1px solid var(--danger-line)", color: "var(--danger)" }}
               >
                 ปิดประมูลตอนนี้
               </button>

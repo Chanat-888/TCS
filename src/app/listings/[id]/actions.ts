@@ -206,6 +206,13 @@ export async function endAuctionNow(listingId: string) {
     .limit(1)
     .maybeSingle();
 
+  // A bid raises the listing price first and is saved a moment later. If we read
+  // in that gap the price and the bid list disagree; closing now could sell to the
+  // previous top bidder at the old price, or cancel a listing whose first bid is
+  // landing. Only proceed when the two agree.
+  const consistent = topBid ? topBid.amount === listing.current_price : listing.current_price === listing.start_price;
+  if (!consistent) return { error: "มีการบิดเข้ามาใหม่ กรุณาลองอีกครั้ง" as const };
+
   const nextStatus = topBid ? "sold" : "cancelled";
   const { data: claimed, error: claimError } = await supabase
     .from("listings")
