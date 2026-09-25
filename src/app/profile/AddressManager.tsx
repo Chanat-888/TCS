@@ -9,7 +9,7 @@ import { deleteAddress, saveAddress, setDefaultAddress } from "./addressActions"
 const inputStyle: CSSProperties = {
   width: "100%",
   background: "var(--panel-2)",
-  border: "1px solid rgba(140,147,163,0.2)",
+  border: "1px solid var(--line)",
   borderRadius: 10,
   height: 44,
   padding: "0 13px",
@@ -97,7 +97,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
 
   return (
     <section className="wrap py-6">
-      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)" }}>
+      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-lg">ที่อยู่จัดส่ง</h2>
@@ -110,14 +110,14 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
             onClick={() => open("new")}
             disabled={atLimit}
             className="cursor-pointer rounded-[10px] px-4 py-[9px] text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: "var(--panel-2)", border: "1px solid rgba(95,212,255,0.3)", color: "var(--white)" }}
+            style={{ background: "var(--panel-2)", border: "1px solid var(--cyan-line)", color: "var(--white)" }}
           >
             + เพิ่มที่อยู่
           </button>
         </div>
 
         {atLimit && (
-          <p className="mt-3 text-[12px]" style={{ color: "var(--steel-dim)" }}>
+          <p className="mt-3 text-[12px]" style={{ color: "var(--steel)" }}>
             บันทึกครบ {MAX_ADDRESSES} ที่อยู่แล้ว ลบอันเก่าก่อนเพิ่มใหม่
           </p>
         )}
@@ -130,11 +130,11 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
             {addresses.map((a) => (
-              <li key={a.id} className="rounded-xl p-4" style={{ background: "var(--panel-2)", border: `1px solid ${a.is_default ? "rgba(95,212,255,0.35)" : "rgba(140,147,163,0.14)"}` }}>
+              <li key={a.id} className="rounded-xl p-4" style={{ background: "var(--panel-2)", border: `1px solid ${a.is_default ? "var(--cyan-line)" : "var(--line-soft)"}` }}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[14px] font-medium" style={{ color: "var(--white)" }}>{a.label}</span>
                   {a.is_default && (
-                    <span className="rounded-full px-2 py-[2px] text-[10.5px]" style={{ background: "rgba(95,212,255,0.1)", border: "1px solid rgba(95,212,255,0.3)", color: "var(--cyan)" }}>
+                    <span className="rounded-full px-2 py-[2px] text-[10.5px]" style={{ background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)", color: "var(--cyan)" }}>
                       ค่าเริ่มต้น
                     </span>
                   )}
@@ -185,7 +185,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
             aria-modal="true"
             aria-labelledby="address-dialog-title"
             className="w-full rounded-[18px] text-left"
-            style={{ maxWidth: 460, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.18)", padding: "26px 22px" }}
+            style={{ maxWidth: 460, background: "var(--panel)", border: "1px solid var(--line)", padding: "26px 22px" }}
             onSubmit={(e) => { e.preventDefault(); save(); }}
           >
             <h2 id="address-dialog-title" className="text-[1.2rem]">{editing === "new" ? "เพิ่มที่อยู่จัดส่ง" : "แก้ไขที่อยู่"}</h2>
@@ -196,7 +196,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
                 <input id="addr-label" ref={firstField} style={inputStyle} value={form.label} maxLength={20} disabled={busy} onChange={(e) => set("label", e.target.value)} placeholder="เช่น บ้าน" />
                 <div className="mt-2 flex flex-wrap gap-2">
                   {LABEL_SUGGESTIONS.map((s) => (
-                    <button key={s} type="button" disabled={busy} className="cursor-pointer rounded-full px-3 py-1 text-[12px]" style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }} onClick={() => set("label", s)}>
+                    <button key={s} type="button" disabled={busy} className="cursor-pointer rounded-full px-3 py-1 text-[12px]" style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--steel)" }} onClick={() => set("label", s)}>
                       {s}
                     </button>
                   ))}
@@ -222,7 +222,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
             </div>
 
             <div className="mt-5 flex gap-3">
-              <button type="button" onClick={() => setEditing(null)} disabled={busy} className="h-[46px] flex-1 cursor-pointer rounded-[11px] text-[14px] disabled:opacity-40" style={{ background: "transparent", border: "1px solid rgba(140,147,163,0.3)", color: "var(--steel)" }}>
+              <button type="button" onClick={() => setEditing(null)} disabled={busy} className="h-[46px] flex-1 cursor-pointer rounded-[11px] text-[14px] disabled:opacity-40" style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--steel)" }}>
                 ยกเลิก
               </button>
               <div className="flex-1">

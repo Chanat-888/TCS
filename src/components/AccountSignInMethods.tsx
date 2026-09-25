@@ -12,7 +12,7 @@ export async function AccountSignInMethods() {
   const phoneVerified = Boolean(user.phone && user.phone_confirmed_at);
   return (
     <section className="wrap py-6">
-      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)" }}>
+      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
         <h2 className="text-lg mb-3">ช่องทางเข้าสู่ระบบ</h2>
         {PHONE_LOGIN && (
           <>

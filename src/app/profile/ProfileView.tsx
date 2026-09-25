@@ -25,10 +25,42 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
   const isOwner = viewerId === id;
 
   const achievements = [
-    { name: "ประมูลครั้งแรก", unlocked: everBid },
-    { name: "ขายครั้งแรก", unlocked: stats.completedSales >= 1 },
-    { name: "ปิดดีลครบ 100 ครั้ง", unlocked: stats.completedSales >= 100, progress: stats.completedSales, target: 100 },
-    { name: "ปิดดีลครบ 500 ครั้ง", unlocked: stats.completedSales >= 500, progress: stats.completedSales, target: 500 },
+    {
+      name: "ประมูลครั้งแรก",
+      unlocked: everBid,
+      // Same gavel as the Auction item in SiteHeader.
+      icon: (
+        <>
+          <g fill="currentColor" stroke="none">
+            <rect x="7.3" y="1.5" width="6.2" height="2.2" rx="1.1" transform="rotate(48 10.4 2.6)" />
+            <rect x="5.1" y="4.5" width="5.2" height="5.2" rx="0.5" transform="rotate(48 7.7 7.1)" />
+            <rect x="2.6" y="7.5" width="6.2" height="2.2" rx="1.1" transform="rotate(48 5.7 8.6)" />
+            <rect x="1.7" y="15.4" width="8.2" height="1.5" rx="0.75" />
+            <rect x="0.9" y="16.9" width="9.8" height="1.2" rx="0.5" />
+          </g>
+          <line x1="9.5" y1="9.2" x2="16.3" y2="16.2" strokeWidth="2.3" />
+        </>
+      ),
+    },
+    {
+      name: "ขายครั้งแรก",
+      unlocked: stats.completedSales >= 1,
+      icon: (<><path d="M3.5 10.2 V4.5 A1 1 0 0 1 4.5 3.5 H10.2 L16.5 9.8 L10.2 16.1 Z" /><circle cx="7" cy="7" r="1" /></>),
+    },
+    {
+      name: "ปิดดีลครบ 100 ครั้ง",
+      unlocked: stats.completedSales >= 100,
+      progress: stats.completedSales,
+      target: 100,
+      icon: (<><circle cx="10" cy="10" r="7" /><path d="M6.8 10.2 L9 12.4 L13.2 7.8" /></>),
+    },
+    {
+      name: "ปิดดีลครบ 500 ครั้ง",
+      unlocked: stats.completedSales >= 500,
+      progress: stats.completedSales,
+      target: 500,
+      icon: (<><path d="M6 3.5 H14 V8 A4 4 0 0 1 6 8 Z" /><path d="M6 5 H3.5 V6.5 A2.5 2.5 0 0 0 6 9" /><path d="M14 5 H16.5 V6.5 A2.5 2.5 0 0 1 14 9" /><path d="M10 12 V15 M7 16.5 H13" /></>),
+    },
   ];
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const needsName = isOwner && profile.display_name === DEFAULT_DISPLAY_NAME;
@@ -54,7 +86,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           background: "rgba(10, 12, 16, 0.78)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(140, 147, 163, 0.1)",
+          borderBottom: "1px solid var(--line-soft)",
         }}
       >
         <div className="wrap flex items-center gap-[14px] py-[14px]">
@@ -62,7 +94,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
             href="/browse"
             aria-label="ย้อนกลับ"
             className="flex flex-shrink-0 items-center justify-center rounded-[10px] no-underline"
-            style={{ width: 40, height: 40, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -82,7 +114,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                 {isOwner ? (
                   <Suspense
                     fallback={
-                      <Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[30px] font-bold" style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }} />
+                      <Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[30px] font-bold" style={{ width: 92, height: 92, border: "2px solid var(--cyan-line)", color: "var(--cyan)" }} />
                     }
                   >
                     <OwnerAvatarEditor avatarUrl={profile.avatar_url} initial={profile.avatar_initial} />
@@ -92,7 +124,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                     url={profile.avatar_url}
                     initial={profile.avatar_initial}
                     className="text-[30px] font-bold"
-                    style={{ width: 92, height: 92, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }}
+                    style={{ width: 92, height: 92, border: "2px solid var(--cyan-line)", color: "var(--cyan)" }}
                   />
                 )}
               </div>
@@ -106,7 +138,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                   {profile.verified && (
                     <span
                       className="inline-flex items-center gap-[6px] rounded-full px-3 py-[5px] text-[12.5px] font-medium"
-                      style={{ background: "rgba(95,212,255,0.1)", border: "1px solid rgba(95,212,255,0.3)", color: "var(--cyan)" }}
+                      style={{ background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)", color: "var(--cyan)" }}
                     >
                       <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                         <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1.4" />
@@ -118,7 +150,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                   {profile.tier && (
                     <span
                       className="inline-flex items-center gap-[6px] rounded-full px-3 py-[5px] text-[12.5px] font-medium"
-                      style={{ background: "rgba(232,184,79,0.1)", border: "1px solid rgba(232,184,79,0.3)", color: "var(--gold)" }}
+                      style={{ background: "var(--gold-tint)", border: "1px solid var(--gold-line)", color: "var(--gold)" }}
                     >
                       <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                         <path d="M10 2 L12.2 7.4 L18 8 L13.6 11.8 L15 17.5 L10 14.2 L5 17.5 L6.4 11.8 L2 8 L7.8 7.4 Z" fill="currentColor" />
@@ -139,7 +171,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                     {profile.bio}
                   </p>
                 )}
-                <p className="mono mt-[10px] text-[12.5px]" style={{ color: "var(--steel-dim)" }}>
+                <p className="mono mt-[10px] text-[12.5px]" style={{ color: "var(--steel)" }}>
                   เข้าร่วมเมื่อ {formatThaiMonthYear(profile.created_at)}
                 </p>
               </div>
@@ -150,7 +182,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                   bio={profile.bio}
                   highlight={needsName}
                   avatarEditor={
-                    <Suspense fallback={<Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[24px] font-bold" style={{ width: 72, height: 72, border: "2px solid rgba(95,212,255,0.35)", color: "var(--cyan)" }} />}>
+                    <Suspense fallback={<Avatar url={profile.avatar_url} initial={profile.avatar_initial} className="text-[24px] font-bold" style={{ width: 72, height: 72, border: "2px solid var(--cyan-line)", color: "var(--cyan)" }} />}>
                       <OwnerAvatarEditor avatarUrl={profile.avatar_url} initial={profile.avatar_initial} size={72} />
                     </Suspense>
                   }
@@ -164,7 +196,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
           <div className="wrap">
             <div
               className="grid gap-px overflow-hidden rounded-2xl max-[720px]:grid-cols-2"
-              style={{ gridTemplateColumns: "repeat(4, 1fr)", background: "rgba(140,147,163,0.12)", border: "1px solid rgba(140,147,163,0.12)" }}
+              style={{ gridTemplateColumns: "repeat(4, 1fr)", background: "var(--line-soft)", border: "1px solid var(--line-soft)" }}
             >
               <div className="px-5 py-[18px]" style={{ background: "var(--panel)" }}>
                 <div className="mono text-[22px]" style={{ color: "var(--cyan)" }}>
@@ -209,13 +241,13 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
             </div>
             <div className="grid grid-cols-4 gap-[14px] max-[900px]:grid-cols-2">
               {achievements.map((a) => (
-                <div key={a.name} className="flex flex-col gap-[10px] rounded-2xl p-4" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.12)" }}>
+                <div key={a.name} className="flex flex-col gap-[10px] rounded-2xl p-4" style={{ background: "var(--panel)", border: "1px solid var(--line-soft)" }}>
                   <div
                     className="flex items-center justify-center rounded-[10px]"
-                    style={{ width: 38, height: 38, background: a.unlocked ? "rgba(95,212,255,0.12)" : "rgba(140,147,163,0.1)", color: a.unlocked ? "var(--cyan)" : "var(--steel-dim)" }}
+                    style={{ width: 38, height: 38, background: a.unlocked ? "var(--cyan-tint)" : "var(--line-soft)", color: a.unlocked ? "var(--cyan)" : "var(--steel-dim)" }}
                   >
-                    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <path d="M10 2 L12.2 7.4 L18 8 L13.6 11.8 L15 17.5 L10 14.2 L5 17.5 L6.4 11.8 L2 8 L7.8 7.4 Z" fill="currentColor" />
+                    <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      {a.icon}
                     </svg>
                   </div>
                   <p className="text-[13.5px] font-medium" style={{ color: a.unlocked ? "var(--white)" : "var(--steel)" }}>
@@ -223,18 +255,18 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                   </p>
                   {a.target ? (
                     <>
-                      <div className="h-1 overflow-hidden rounded-full" style={{ background: "rgba(140,147,163,0.15)" }}>
+                      <div className="h-1 overflow-hidden rounded-full" style={{ background: "var(--line-soft)" }}>
                         <span
                           className="block h-full rounded-full"
                           style={{ width: `${Math.min(100, ((a.progress ?? 0) / a.target) * 100)}%`, background: a.unlocked ? "var(--cyan)" : "var(--steel-dim)" }}
                         />
                       </div>
-                      <p className="mono text-[11px]" style={{ color: a.unlocked ? "var(--cyan)" : "var(--steel-dim)" }}>
+                      <p className="mono text-[11px]" style={{ color: a.unlocked ? "var(--cyan)" : "var(--steel)" }}>
                         {a.progress} / {a.target}
                       </p>
                     </>
                   ) : (
-                    <p className="mono text-[11px]" style={{ color: a.unlocked ? "var(--cyan)" : "var(--steel-dim)" }}>
+                    <p className="mono text-[11px]" style={{ color: a.unlocked ? "var(--cyan)" : "var(--steel)" }}>
                       {a.unlocked ? "ปลดล็อกแล้ว" : "ยังไม่ปลดล็อก"}
                     </p>
                   )}
@@ -288,8 +320,8 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
               {isOwner && (
                 <Link
                   href="/profile/listings"
-                  className="ml-auto inline-flex items-center gap-[7px] rounded-[9px] px-4 py-[9px] text-[13px] font-medium no-underline"
-                  style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+                  className="ml-auto inline-flex min-h-11 items-center gap-[7px] rounded-[9px] px-4 text-[13px] font-medium no-underline"
+                  style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
                 >
                   {editIcon}
                   จัดการประกาศ
@@ -305,7 +337,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                 <Link
                   href="/listings/new"
                   className="flex min-h-full flex-col items-center justify-center gap-[10px] rounded-2xl no-underline"
-                  style={{ border: "1.5px dashed rgba(140,147,163,0.25)", color: "var(--steel)" }}
+                  style={{ border: "1.5px dashed var(--line)", color: "var(--steel)" }}
                 >
                   <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>
                     <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -335,7 +367,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                 <Link
                   href="/wanted/new"
                   className="flex min-h-full flex-col items-center justify-center gap-[10px] rounded-2xl no-underline"
-                  style={{ border: "1.5px dashed rgba(140,147,163,0.25)", color: "var(--steel)" }}
+                  style={{ border: "1.5px dashed var(--line)", color: "var(--steel)" }}
                 >
                   <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>
                     <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -369,8 +401,8 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
               <form action="/logout" method="post">
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-[8px] rounded-full px-6 text-[13.5px] font-medium cursor-pointer transition-colors hover:border-[rgba(232,102,79,0.4)] hover:text-[var(--danger)]"
-                  style={{ height: 44, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+                  className="inline-flex items-center gap-[8px] rounded-full px-6 text-[13.5px] font-medium cursor-pointer transition-colors hover:border-[var(--danger-line)] hover:text-[var(--danger)]"
+                  style={{ height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
                 >
                   {logoutIcon}
                   ออกจากระบบ
