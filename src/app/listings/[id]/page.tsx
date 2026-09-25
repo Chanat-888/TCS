@@ -38,7 +38,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       <main>
         <section className="pb-2 pt-8">
           <div className="wrap">
-            <div className="grid gap-10 max-[900px]:grid-cols-1 max-[900px]:gap-7" style={{ gridTemplateColumns: "0.95fr 1.05fr" }}>
+            <div className="grid grid-cols-[0.95fr_1.05fr] grid-rows-[auto_1fr] gap-x-10 gap-y-9 max-[900px]:grid-cols-1 max-[900px]:grid-rows-none max-[900px]:gap-7">
               <PhotoViewer
                 name={listing.name}
                 setName={listing.set_name}
@@ -47,14 +47,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                 backUrl={listing.photo_back_url}
               />
 
-              <div>
+              <div className="min-[901px]:col-start-2 min-[901px]:row-span-2 min-[901px]:row-start-1">
                 <h1 className="text-[clamp(1.35rem,2.6vw,1.7rem)] leading-tight">{listing.name}</h1>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {["Cardfight!! Vanguard", conditionTag, listing.set_name].map((tag) => (
                     <span
                       key={tag}
                       className="rounded-full px-[11px] py-1 text-[12px] font-medium"
-                      style={{ background: "rgba(140,147,163,0.1)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+                      style={{ background: "var(--line-soft)", border: "1px solid var(--line)", color: "var(--steel)" }}
                     >
                       {tag}
                     </span>
@@ -63,7 +63,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
                 <div
                   className="mt-5 flex items-start gap-[10px] rounded-xl px-[15px] py-[13px]"
-                  style={{ background: "rgba(95,212,255,0.06)", border: "1px solid rgba(95,212,255,0.2)" }}
+                  style={{ background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--cyan)", flexShrink: 0, marginTop: 1 }}>
                     <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.4" />
@@ -121,44 +121,40 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     }
                   />
                 )}
-
-                <SellerRow seller={listing.seller} stats={sellerStats} />
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="wrap">
-            <h2 className="text-[1.1rem]">รายละเอียดการ์ด</h2>
-            <p className="mt-[14px] max-w-[68ch] text-[14.5px] leading-loose" style={{ color: "var(--steel)" }}>
-              {listing.description}
-            </p>
-            <div
-              className="mt-4 grid gap-px overflow-hidden rounded-xl max-[560px]:grid-cols-1"
-              style={{ gridTemplateColumns: "1fr 1fr", background: "rgba(140,147,163,0.1)", border: "1px solid rgba(140,147,163,0.1)" }}
-            >
-              {[
-                ["ชุด", listing.set_name],
-                ["ความหายาก", listing.rarity],
-                ["สภาพ", listing.condition],
-                ["ราคาเริ่มต้น", formatTHB(listing.start_price)],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-3 px-4 py-3" style={{ background: "var(--panel)" }}>
-                  <span className="text-[12.5px]" style={{ color: "var(--steel)" }}>
-                    {k}
-                  </span>
-                  <span className="text-[13px] font-medium" style={{ color: "var(--white)" }}>
-                    {v}
-                  </span>
+              <section className="min-w-0 min-[901px]:col-start-1 min-[901px]:row-start-2">
+                <h2 className="text-[1.1rem]">รายละเอียดการ์ด</h2>
+                <p className="mt-[14px] max-w-[68ch] text-[14.5px] leading-loose" style={{ color: "var(--steel)" }}>
+                  {listing.description}
+                </p>
+                <div
+                  className="mt-4 grid gap-px overflow-hidden rounded-xl"
+                  style={{ background: "var(--line-soft)", border: "1px solid var(--line-soft)" }}
+                >
+                  {[
+                    ["ชุด", listing.set_name],
+                    ["ความหายาก", listing.rarity],
+                    ["สภาพ", listing.condition],
+                    ["ราคาเริ่มต้น", formatTHB(listing.start_price)],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between gap-3 px-4 py-3" style={{ background: "var(--panel)" }}>
+                      <span className="text-[12.5px]" style={{ color: "var(--steel)" }}>
+                        {k}
+                      </span>
+                      <span className="text-[13px] font-medium" style={{ color: "var(--white)" }}>
+                        {v}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <SellerRow seller={listing.seller} stats={sellerStats} />
+              </section>
             </div>
           </div>
         </section>
 
         {otherListings.length > 0 && (
-          <section className="section pb-[60px]">
+          <section className="mt-14 pb-[60px]">
             <div className="wrap">
               <h2 className="text-[1.1rem]">ประกาศอื่นจาก {listing.seller.display_name}</h2>
               <div className="mt-4 grid grid-cols-4 gap-[18px] max-[1024px]:grid-cols-3 max-[720px]:grid-cols-2 max-[720px]:gap-3">
