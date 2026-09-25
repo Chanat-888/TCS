@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { BrandMark } from "./icons/BrandMark";
 
-export function Footer({ note }: { note: string }) {
+export function Footer({ note }: { note?: string }) {
   return (
     <footer
       className="mt-8 py-8"
-      style={{ borderTop: "1px solid rgba(140, 147, 163, 0.12)" }}
+      style={{ borderTop: "1px solid var(--line-soft)" }}
     >
       <div className="wrap flex flex-wrap items-center justify-between gap-[14px]">
         <Link href="/browse" className="flex items-center gap-2 no-underline">
@@ -14,9 +14,11 @@ export function Footer({ note }: { note: string }) {
             TCS
           </span>
         </Link>
-        <p className="text-[12.5px]" style={{ color: "var(--steel-dim)" }}>
-          {note}
-        </p>
+        {note && (
+          <p className="text-[12.5px]" style={{ color: "var(--steel)" }}>
+            {note}
+          </p>
+        )}
       </div>
     </footer>
   );

@@ -37,6 +37,7 @@ export default async function BrowsePage({
       <SiteHeader userId={userId} />
 
       <main>
+        <h1 className="sr-only">TCS ตลาดซื้อขายการ์ด</h1>
         <FeaturedCarousel listings={featuredList} />
 
         <CategoryTabs
@@ -49,7 +50,7 @@ export default async function BrowsePage({
         />
       </main>
 
-      <Footer note="เอกสารแนวคิดฉบับพรีวิว — ข้อมูลสินค้าเป็นตัวอย่างประกอบการออกแบบ ไม่ใช่รายการขายจริง" />
+      <Footer />
     </div>
   );
 }

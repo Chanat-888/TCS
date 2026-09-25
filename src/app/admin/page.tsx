@@ -1,3 +1,4 @@
+import { BackHeader } from "@/components/BackHeader";
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -23,30 +24,14 @@ export default async function AdminOverviewPage() {
 
   return (
     <div style={{ "--wrap-max": "980px" } as CSSProperties}>
-      <header
-        className="sticky top-0 z-50"
-        style={{ background: "rgba(10, 12, 16, 0.78)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", borderBottom: "1px solid rgba(140, 147, 163, 0.1)" }}
-      >
-        <div className="wrap flex items-center gap-[14px] py-[14px]">
-          <Link
-            href="/browse"
-            aria-label="กลับ"
-            className="flex flex-shrink-0 items-center justify-center rounded-[10px] no-underline"
-            style={{ width: 40, height: 40, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-          <p style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 14.5, color: "var(--white)" }}>แดชบอร์ดแอดมิน</p>
+      <BackHeader href="/browse" title="แดชบอร์ดแอดมิน" right={
           <span
-            className="mono ml-auto flex-shrink-0 rounded-full px-[10px] py-1 text-[10.5px]"
-            style={{ color: "var(--gold)", background: "rgba(232,184,79,0.1)", border: "1px solid rgba(232,184,79,0.3)" }}
+            className="mono flex-shrink-0 rounded-full px-[10px] py-1 text-[10.5px]"
+            style={{ color: "var(--gold)", background: "var(--gold-tint)", border: "1px solid var(--gold-line)" }}
           >
             ADMIN
           </span>
-        </div>
-      </header>
+        } />
 
       <main className="py-7 pb-[70px]">
         <div className="wrap">

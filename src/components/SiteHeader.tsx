@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { CartLink } from "@/components/CartLink";
+import { AccountMenu, MobileMenu } from "@/components/HeaderMenus";
 
 type NavItem = {
   href: string;
@@ -129,16 +130,16 @@ function NavDropdown({
         </svg>
       </Link>
 
-      <div className="invisible absolute left-0 top-full z-10 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+      <div className="invisible absolute left-0 top-full z-10 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         <div
           className="flex w-[280px] flex-col gap-1 rounded-2xl p-2"
-          style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.16)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
+          style={{ background: "var(--panel)", border: "1px solid var(--line)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
         >
           {items.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className="flex items-start gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[rgba(140,147,163,0.08)]"
+              className="flex items-start gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[var(--line-soft)]"
             >
               <span
                 className="flex flex-shrink-0 items-center justify-center rounded-[10px]"
@@ -168,24 +169,19 @@ export function SiteHeader({ userId }: { userId: string }) {
       className="sticky top-0 z-50"
       style={{
         background: "var(--bg)",
-        borderBottom: "1px solid rgba(140, 147, 163, 0.14)",
+        borderBottom: "1px solid var(--line-soft)",
       }}
     >
-      <div className="wrap relative flex items-center gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
+      <div className="wrap relative flex items-center gap-4 min-[860px]:gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
         <Brand />
-        <nav className="flex items-center gap-1 max-[480px]:hidden">
+        <nav className="flex items-center gap-1 max-[640px]:hidden">
           <NavDropdown label="Auction" href="/browse?type=auction" icon={GavelIcon} items={AUCTION_ITEMS} />
           <NavDropdown label="Product" href="/browse?type=product" icon={BagIcon} items={PRODUCT_ITEMS} />
           <NavDropdown label="ประกาศหา" href="/browse?type=wanted" icon={SearchIcon} items={WANTED_ITEMS} />
         </nav>
         <div className="flex-1" />
         <div className="flex flex-shrink-0 items-center gap-[10px]">
-          <form action="/logout" method="post">
-            <button type="submit" className="text-[12px] cursor-pointer" style={{ color: "var(--steel)" }}>
-              ออกจากระบบ
-            </button>
-          </form>
-          <form action="/search" method="get" className="hidden min-[860px]:block">
+          <form action="/search" method="get" role="search" className="hidden min-[860px]:block">
             <div className="relative">
               <span className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2" style={{ color: "var(--steel)" }}>
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -195,9 +191,10 @@ export function SiteHeader({ userId }: { userId: string }) {
               </span>
               <input
                 name="q"
+                aria-label="ค้นหาการ์ด"
                 placeholder="ค้นหาการ์ด"
-                className="h-11 rounded-full pl-[38px] pr-4 text-[13.5px] outline-none transition-colors focus:border-[rgba(95,212,255,0.6)]"
-                style={{ width: 200, background: "var(--panel)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
+                className="h-11 rounded-full pl-[38px] pr-4 text-[13.5px] outline-none transition-colors focus:border-[var(--cyan)]"
+                style={{ width: 200, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--white)" }}
               />
             </div>
           </form>
@@ -205,7 +202,7 @@ export function SiteHeader({ userId }: { userId: string }) {
             href="/search"
             aria-label="ค้นหา"
             className="flex items-center justify-center rounded-full no-underline min-[860px]:hidden"
-            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
+            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
@@ -213,61 +210,8 @@ export function SiteHeader({ userId }: { userId: string }) {
             </svg>
           </Link>
           <CartLink />
-          <div className="group relative">
-            <button
-              type="button"
-              aria-label="บัญชีของฉัน"
-              className="flex items-center justify-center rounded-full"
-              style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
-            >
-              <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <circle cx="10" cy="6.8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M3.5 17c0.9-3.6 4-5.3 6.5-5.3s5.6 1.7 6.5 5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </button>
-            <div className="invisible absolute right-0 top-full z-10 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
-              <div
-                className="flex w-[220px] flex-col gap-1 rounded-2xl p-2"
-                style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.16)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
-              >
-                <Link
-                  href={`/profile/${userId}`}
-                  className="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[rgba(140,147,163,0.08)]"
-                >
-                  <span
-                    className="flex flex-shrink-0 items-center justify-center rounded-[10px]"
-                    style={{ width: 34, height: 34, background: "var(--panel-2)", color: "var(--cyan)" }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <circle cx="10" cy="6.8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M3.5 17c0.9-3.6 4-5.3 6.5-5.3s5.6 1.7 6.5 5.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </span>
-                  <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>
-                    บัญชีของฉัน
-                  </span>
-                </Link>
-                <Link
-                  href="/orders"
-                  className="flex items-center gap-3 rounded-xl p-3 no-underline transition-colors hover:bg-[rgba(140,147,163,0.08)]"
-                >
-                  <span
-                    className="flex flex-shrink-0 items-center justify-center rounded-[10px]"
-                    style={{ width: 34, height: 34, background: "var(--panel-2)", color: "var(--cyan)" }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                      <path d="M3 6.5 L10 3 L17 6.5 L10 10 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                      <path d="M3 6.5 V14 L10 17.5 L17 14 V6.5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                      <path d="M10 10 V17.5" stroke="currentColor" strokeWidth="1.3" />
-                    </svg>
-                  </span>
-                  <span className="text-[13.5px] font-medium" style={{ color: "var(--white)" }}>
-                    คำสั่งซื้อของฉัน
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </div>
+          <AccountMenu userId={userId} />
+          <MobileMenu />
         </div>
       </div>
     </header>
