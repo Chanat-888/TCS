@@ -33,73 +33,77 @@ export function ProductCard({
   const isBuyNow = listing.buy_now_price != null;
   const price = isBuyNow ? listing.buy_now_price! : listing.current_price;
 
+  const chip = "mono absolute top-[10px] z-[1] rounded-full px-2 py-[3px] text-[10.5px] backdrop-blur-[6px]";
+
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-[14px] transition-[border-color,transform] duration-150 hover:-translate-y-0.5"
-      style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.12)" }}
+      className="group relative flex flex-col overflow-hidden rounded-[14px] transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[var(--cyan-line)] hover:shadow-[0_18px_40px_-20px_rgba(47,143,232,0.55)]"
+      style={{ background: "var(--panel)", border: "1px solid var(--line-soft)" }}
     >
       {ownerEditHref && (
         <Link
           href={ownerEditHref}
           aria-label="แก้ไขประกาศ"
-          className="absolute bottom-[9px] right-[9px] z-10 flex items-center justify-center rounded-lg"
+          className="absolute bottom-[10px] right-[10px] z-10 flex items-center justify-center rounded-full transition-colors hover:text-[var(--cyan)]"
           style={{
-            width: 28,
-            height: 28,
+            width: 40,
+            height: 40,
             background: "rgba(10,12,16,0.72)",
             backdropFilter: "blur(6px)",
-            border: "1px solid rgba(140,147,163,0.25)",
+            border: "1px solid var(--line)",
             color: "var(--steel)",
           }}
         >
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M13.5 3.5 L16.5 6.5 L7 16 L3.5 16.5 L4 13 Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
           </svg>
         </Link>
       )}
       <Link href={`/listings/${listing.id}`} className="contents no-underline text-inherit">
         <div
-          className="relative flex items-center justify-center"
+          className="relative flex items-center justify-center overflow-hidden"
           style={{ aspectRatio: "5 / 6", background: "var(--panel-2)" }}
         >
-          {isBuyNow ? (
-            <span
-              className="mono absolute left-[9px] top-[9px] rounded-full px-2 py-[3px] text-[10.5px]"
-              style={{ color: "var(--steel)", background: "rgba(140, 147, 163, 0.1)", border: "1px solid rgba(140, 147, 163, 0.22)" }}
-            >
-              ซื้อทันที
-            </span>
-          ) : (
-            <span
-              className="mono absolute left-[9px] top-[9px] rounded-full px-2 py-[3px] text-[10.5px]"
-              style={{ color: "var(--cyan)", background: "rgba(95, 212, 255, 0.1)", border: "1px solid rgba(95, 212, 255, 0.28)" }}
-            >
-              ใกล้ปิด <Countdown endsAt={listing.ends_at} initialSeconds={secondsUntil(listing.ends_at)} />
-            </span>
-          )}
-          <span
-            className="mono absolute right-[9px] top-[9px] rounded-md px-[6px] py-[2px] text-[10px]"
-            style={{ color: "var(--blue-dim)", background: "rgba(47, 143, 232, 0.12)" }}
-          >
-            {listing.rarity}
-          </span>
           {listing.photo_front_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={listing.photo_front_url}
               alt={listing.name}
-              className="absolute inset-0 h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.04]"
             />
           ) : (
             <svg className="w-[34%] h-[34%]" viewBox="0 0 32 32" aria-hidden="true">
               <path d={crestFor(listing.id)} fill="var(--blue)" opacity={0.85} />
             </svg>
           )}
+          {/* Fade so the chips and the card body read against any photo. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-14"
+            style={{ background: "linear-gradient(180deg, rgba(10,12,16,0.55), transparent)" }}
+          />
+          {!isBuyNow && (
+            <span
+              className={`${chip} left-[10px] flex items-center gap-[5px]`}
+              style={{ color: "var(--cyan)", background: "rgba(10,12,16,0.72)", border: "1px solid var(--cyan-line)" }}
+            >
+              <span aria-hidden="true" className="h-[5px] w-[5px] rounded-full" style={{ background: "var(--cyan)", boxShadow: "0 0 6px var(--cyan)" }} />
+              <Countdown endsAt={listing.ends_at} initialSeconds={secondsUntil(listing.ends_at)} />
+            </span>
+          )}
+          <span
+            className={`${chip} right-[10px]`}
+            style={{ color: "var(--white)", background: "rgba(10,12,16,0.72)", border: "1px solid var(--line)" }}
+          >
+            {listing.rarity}
+          </span>
         </div>
 
-        <div className="flex flex-1 flex-col gap-2 px-[14px] pb-[14px] pt-3">
+        <div className="flex flex-1 flex-col gap-3 px-[14px] pb-[14px] pt-3">
           <p
-            className="text-[13.5px] font-medium leading-snug overflow-hidden"
+            className="text-[14px] font-medium leading-snug overflow-hidden"
             style={{
               color: "var(--white)",
               minHeight: "2.8em",
@@ -110,19 +114,31 @@ export function ProductCard({
           >
             {listing.name}
           </p>
-          <div className="flex items-baseline justify-between">
-            <span className="mono text-[15px]" style={{ color: "var(--white)" }}>
-              {formatTHB(price!)}
-            </span>
-            <span className="text-[10.5px]" style={{ color: "var(--steel-dim)" }}>
-              {isBuyNow ? "ซื้อทันที" : "ราคาปัจจุบัน"}
+          <div className="flex items-end justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[11px]" style={{ color: "var(--steel)" }}>
+                {isBuyNow ? "ราคา" : "ราคาประมูลตอนนี้"}
+              </p>
+              <p className="mono text-[17px] leading-tight" style={{ color: "var(--white)" }}>
+                {formatTHB(price!)}
+              </p>
+            </div>
+            <span
+              className="flex-shrink-0 rounded-full px-[9px] py-[3px] text-[11px] font-medium"
+              style={
+                isBuyNow
+                  ? { color: "var(--steel)", background: "var(--line-soft)", border: "1px solid var(--line)" }
+                  : { color: "var(--cyan)", background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)" }
+              }
+            >
+              {isBuyNow ? "ซื้อทันที" : "ประมูล"}
             </span>
           </div>
 
           {!ownerEditHref && seller && (
             <div
-              className="flex min-w-0 items-center gap-[6px] pt-2 text-[11.5px]"
-              style={{ borderTop: "1px solid rgba(140, 147, 163, 0.1)", color: "var(--steel)" }}
+              className="flex min-w-0 items-center gap-[6px] pt-[10px] text-[12px]"
+              style={{ borderTop: "1px solid var(--line-soft)", color: "var(--steel)" }}
             >
               <svg width="13" height="13" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ color: "var(--cyan)", flexShrink: 0 }}>
                 <circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" strokeWidth="1.4" />
@@ -130,7 +146,7 @@ export function ProductCard({
               </svg>
               <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{seller.display_name}</span>
               {salesCount != null && (
-                <span className="mono ml-auto flex-shrink-0 pl-[6px] whitespace-nowrap" style={{ color: "var(--steel-dim)" }}>
+                <span className="mono ml-auto flex-shrink-0 pl-[6px] whitespace-nowrap" style={{ color: "var(--steel)" }}>
                   {salesCount} ออเดอร์
                 </span>
               )}
