@@ -77,29 +77,32 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
                 <LiveBidding
                   listingId={listing.id}
+                  initialStatus={listing.status}
+                  startPrice={listing.start_price}
                   initialPrice={listing.current_price}
                   initialEndsAt={listing.ends_at}
                   initialSecondsLeft={listing.status === "active" ? secondsUntil(listing.ends_at) : 0}
                   initialBids={bids}
                   currentUserId={userId}
                   isOwner={listing.seller_id === userId}
+                  buyNowSlot={
+                    listing.buy_now_price != null && (listing.status !== "active" || isBuyNowAvailable(listing)) ? (
+                      <BuyNowBox
+                        listingId={listing.id}
+                        price={listing.buy_now_price}
+                        isOwner={listing.seller_id === userId}
+                        isSold={listing.status !== "active"}
+                        name={listing.name}
+                        setName={listing.set_name}
+                        rarity={listing.rarity}
+                        photoUrl={listing.photo_front_url}
+                        sellerId={listing.seller_id}
+                        sellerName={listing.seller.display_name}
+                        sellerVerified={listing.seller.verified}
+                      />
+                    ) : null
+                  }
                 />
-
-                {listing.buy_now_price != null && (listing.status !== "active" || isBuyNowAvailable(listing)) && (
-                  <BuyNowBox
-                    listingId={listing.id}
-                    price={listing.buy_now_price}
-                    isOwner={listing.seller_id === userId}
-                    isSold={listing.status !== "active"}
-                    name={listing.name}
-                    setName={listing.set_name}
-                    rarity={listing.rarity}
-                    photoUrl={listing.photo_front_url}
-                    sellerId={listing.seller_id}
-                    sellerName={listing.seller.display_name}
-                    sellerVerified={listing.seller.verified}
-                  />
-                )}
 
                 <SellerRow seller={listing.seller} stats={sellerStats} />
               </div>

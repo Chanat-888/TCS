@@ -27,6 +27,15 @@ export async function placeBid(listingId: string, amount: number) {
   const minBid = listing.current_price + BID_INCREMENT;
   if (amount < minBid) return { error: `กรอกจำนวนเงินอย่างน้อยราคาบิดขั้นต่ำ` as const };
 
+  const { data: topBid } = await supabase
+    .from("bids")
+    .select("bidder_id")
+    .eq("listing_id", listingId)
+    .order("amount", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (topBid?.bidder_id === userId) return { error: "คุณเป็นผู้บิดสูงสุดอยู่แล้ว" as const };
+
   const secondsLeft = (new Date(listing.ends_at).getTime() - Date.now()) / 1000;
   const extended = secondsLeft < ANTI_SNIPE_WINDOW_SECONDS;
   const newEndsAt = extended

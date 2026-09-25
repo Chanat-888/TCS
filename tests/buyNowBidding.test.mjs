@@ -23,7 +23,7 @@ function load(path, dependencies = {}) {
 
 const listingKind = load("src/lib/listingKind.ts");
 
-function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null } = {}) {
+function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null, topBidder = null } = {}) {
   const calls = { updates: [], orders: [], bids: [] };
   const actions = load("src/app/listings/[id]/actions.ts", {
     "next/cache": { revalidatePath() {} },
@@ -50,7 +50,8 @@ function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidEr
             return { insert: (row) => { calls.orders.push(row); return { select: () => ({ single: async () => ({ data: orderError ? null : { id: "o1" }, error: orderError }) }) }; } };
           }
           if (table === "bids") {
-            return { insert: (row) => { calls.bids.push(row); return { select: () => ({ single: async () => ({ data: bidError ? null : { id: "b1", ...row }, error: bidError }) }) }; } };
+            return {
+              select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: topBidder ? { bidder_id: topBidder } : null }) }) }) }) }), insert: (row) => { calls.bids.push(row); return { select: () => ({ single: async () => ({ data: bidError ? null : { id: "b1", ...row }, error: bidError }) }) }; } };
           }
           throw new Error("Unexpected table: " + table);
         },
@@ -111,4 +112,12 @@ test("placeBid is conditional on status and the price it read, and never lands a
   assert.equal(won.success, true);
   assert.equal(ok.calls.updates[0].filters.status, "active");
   assert.equal(ok.calls.updates[0].filters.current_price, 1000);
+});
+
+test("the current top bidder cannot outbid themselves", async () => {
+  const { actions, calls } = fixture(base, { topBidder: "buyer-1" });
+  const result = await actions.placeBid("l1", 1100);
+  assert.ok(result.error);
+  assert.equal(calls.updates.length, 0);
+  assert.equal(calls.bids.length, 0);
 });
