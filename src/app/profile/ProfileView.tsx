@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import type { ProfileData } from "@/lib/profile";
 import { formatThaiMonthYear } from "@/lib/format";
+import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import { Stars } from "@/components/Stars";
 import { ReviewItem } from "@/components/ReviewItem";
@@ -80,31 +81,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
 
   return (
     <div>
-      <header
-        className="sticky top-0 z-50"
-        style={{
-          background: "rgba(10, 12, 16, 0.78)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid var(--line-soft)",
-        }}
-      >
-        <div className="wrap flex items-center gap-[14px] py-[14px]">
-          <Link
-            href="/browse"
-            aria-label="ย้อนกลับ"
-            className="flex flex-shrink-0 items-center justify-center rounded-[10px] no-underline"
-            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-          <span style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16 }}>
-            {isOwner ? "โปรไฟล์ของฉัน" : profile.display_name}
-          </span>
-        </div>
-      </header>
+      <BackHeader href="/browse" title={isOwner ? "โปรไฟล์ของฉัน" : profile.display_name} />
 
       <main>
         <section className="pb-2 pt-9">
