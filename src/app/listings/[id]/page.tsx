@@ -74,7 +74,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </p>
                 </div>
 
-                {listing.buy_now_price != null ? (
+                <LiveBidding
+                  listingId={listing.id}
+                  initialPrice={listing.current_price}
+                  initialEndsAt={listing.ends_at}
+                  initialSecondsLeft={listing.status === "active" ? secondsUntil(listing.ends_at) : 0}
+                  initialBids={bids}
+                  currentUserId={userId}
+                  isOwner={listing.seller_id === userId}
+                />
+
+                {listing.buy_now_price != null && (
                   <BuyNowBox
                     listingId={listing.id}
                     price={listing.buy_now_price}
@@ -87,16 +97,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     sellerId={listing.seller_id}
                     sellerName={listing.seller.display_name}
                     sellerVerified={listing.seller.verified}
-                  />
-                ) : (
-                  <LiveBidding
-                    listingId={listing.id}
-                    initialPrice={listing.current_price}
-                    initialEndsAt={listing.ends_at}
-                    initialSecondsLeft={secondsUntil(listing.ends_at)}
-                    initialBids={bids}
-                    currentUserId={userId}
-                    isOwner={listing.seller_id === userId}
                   />
                 )}
 

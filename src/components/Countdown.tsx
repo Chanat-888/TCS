@@ -11,9 +11,11 @@ function format(totalSeconds: number) {
 }
 
 /**
- * Ticks down from a server-computed starting point so SSR and hydration
- * render the same text (no mismatch warning) — only the client-side
- * interval updates it after mount.
+ * Ticks down from a server-computed starting point. The server and the
+ * browser's hydration pass each call Date.now() at a different real moment,
+ * so the very first render can legitimately be a second off — the same
+ * class of mismatch as any server-rendered clock (see React's own docs on
+ * suppressHydrationWarning). The client-side interval takes over after mount.
  */
 export function Countdown({
   endsAt,
@@ -44,6 +46,6 @@ export function Countdown({
   }, [endsAt]);
 
   return (
-    <span className={`mono ${className ?? ""}`}>{format(seconds)}</span>
+    <span className={`mono ${className ?? ""}`} suppressHydrationWarning>{format(seconds)}</span>
   );
 }
