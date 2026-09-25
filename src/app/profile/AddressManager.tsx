@@ -21,6 +21,12 @@ const inputStyle: CSSProperties = {
 const EMPTY = { label: "", recipient: "", phone: "", address: "", province: "", postcode: "" };
 const LABEL_SUGGESTIONS = ["บ้าน", "ที่ทำงาน", "คอนโด"];
 
+const plusIcon = (
+  <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+);
+
 function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div className="mt-[14px] first:mt-0">
@@ -97,38 +103,51 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
 
   return (
     <section className="wrap py-6">
-      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-lg">ที่อยู่จัดส่ง</h2>
-            <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-              บันทึกไว้ครั้งเดียว ใช้ตอนชำระเงินได้ทันที ผู้ขายจะเห็นที่อยู่เฉพาะคำสั่งซื้อของคุณเท่านั้น
-            </p>
+      <div className="max-w-md overflow-hidden rounded-2xl" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+        <div className="px-5 pb-4 pt-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-[1.15rem]">ที่อยู่จัดส่ง</h2>
+            {addresses.length > 0 && (
+              <button
+                type="button"
+                onClick={() => open("new")}
+                disabled={atLimit}
+                className="inline-flex min-h-11 flex-shrink-0 cursor-pointer items-center gap-[6px] rounded-full px-4 text-[13.5px] font-medium transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)] disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: "var(--panel-2)", border: "1px solid var(--line-strong)", color: "var(--white)" }}
+              >
+                {plusIcon}
+                เพิ่มที่อยู่
+              </button>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={() => open("new")}
-            disabled={atLimit}
-            className="cursor-pointer rounded-[10px] px-4 py-[9px] text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ background: "var(--panel-2)", border: "1px solid var(--cyan-line)", color: "var(--white)" }}
-          >
-            + เพิ่มที่อยู่
-          </button>
+          <p className="mt-1 max-w-[46ch] text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
+            บันทึกไว้ครั้งเดียว ใช้ตอนชำระเงินได้ทันที ผู้ขายจะเห็นที่อยู่เฉพาะคำสั่งซื้อของคุณเท่านั้น
+          </p>
         </div>
 
+        <div className="p-5" style={{ borderTop: "1px solid var(--line-soft)" }}>
         {atLimit && (
-          <p className="mt-3 text-[12px]" style={{ color: "var(--steel)" }}>
+          <p className="mb-3 text-[12px]" style={{ color: "var(--steel)" }}>
             บันทึกครบ {MAX_ADDRESSES} ที่อยู่แล้ว ลบอันเก่าก่อนเพิ่มใหม่
           </p>
         )}
-        {listError && <p role="alert" className="mt-3 text-[12.5px]" style={{ color: "var(--danger)" }}>{listError}</p>}
+        {listError && <p role="alert" className="mb-3 text-[12.5px]" style={{ color: "var(--danger)" }}>{listError}</p>}
 
         {addresses.length === 0 ? (
-          <p className="mt-4 text-[13.5px]" style={{ color: "var(--steel)" }}>
-            ยังไม่มีที่อยู่ที่บันทึกไว้ เพิ่มที่อยู่เพื่อไม่ต้องกรอกใหม่ทุกครั้งที่ซื้อ
-          </p>
+          <button
+            type="button"
+            onClick={() => open("new")}
+            className="flex min-h-[150px] w-full cursor-pointer flex-col items-center justify-center gap-[10px] rounded-xl px-4 text-center transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)]"
+            style={{ border: "1.5px dashed var(--line)", color: "var(--steel)", background: "transparent" }}
+          >
+            <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>
+              {plusIcon}
+            </span>
+            <span className="text-[13.5px] font-medium">เพิ่มที่อยู่แรกของคุณ</span>
+            <span className="text-[12.5px]" style={{ color: "var(--steel)" }}>ไม่ต้องกรอกใหม่ทุกครั้งที่ซื้อ</span>
+          </button>
         ) : (
-          <ul className="mt-4 flex flex-col gap-3">
+          <ul className="flex flex-col gap-3">
             {addresses.map((a) => (
               <li key={a.id} className="rounded-xl p-4" style={{ background: "var(--panel-2)", border: `1px solid ${a.is_default ? "var(--cyan-line)" : "var(--line-soft)"}` }}>
                 <div className="flex flex-wrap items-center gap-2">
@@ -144,26 +163,26 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
                   <br />
                   {a.address} {a.province} <span className="mono">{a.postcode}</span>
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
+                <div className="mt-1 flex flex-wrap gap-x-4 text-[12.5px]">
                   {!a.is_default && (
-                    <button type="button" disabled={busy} className="cursor-pointer" style={{ color: "var(--cyan)" }} onClick={() => run(() => setDefaultAddress(a.id))}>
+                    <button type="button" disabled={busy} className="inline-flex min-h-11 cursor-pointer items-center" style={{ color: "var(--cyan)" }} onClick={() => run(() => setDefaultAddress(a.id))}>
                       ตั้งเป็นค่าเริ่มต้น
                     </button>
                   )}
-                  <button type="button" disabled={busy} className="cursor-pointer" style={{ color: "var(--steel)" }} onClick={() => open(a)}>
+                  <button type="button" disabled={busy} className="inline-flex min-h-11 cursor-pointer items-center" style={{ color: "var(--steel)" }} onClick={() => open(a)}>
                     แก้ไข
                   </button>
                   {confirmId === a.id ? (
                     <>
-                      <button type="button" disabled={busy} className="cursor-pointer font-medium" style={{ color: "var(--danger)" }} onClick={() => run(() => deleteAddress(a.id))}>
+                      <button type="button" disabled={busy} className="inline-flex min-h-11 cursor-pointer items-center font-medium" style={{ color: "var(--danger)" }} onClick={() => run(() => deleteAddress(a.id))}>
                         ยืนยันลบ
                       </button>
-                      <button type="button" disabled={busy} className="cursor-pointer" style={{ color: "var(--steel)" }} onClick={() => setConfirmId(null)}>
+                      <button type="button" disabled={busy} className="inline-flex min-h-11 cursor-pointer items-center" style={{ color: "var(--steel)" }} onClick={() => setConfirmId(null)}>
                         ยกเลิก
                       </button>
                     </>
                   ) : (
-                    <button type="button" disabled={busy} className="cursor-pointer" style={{ color: "var(--steel)" }} onClick={() => setConfirmId(a.id)}>
+                    <button type="button" disabled={busy} className="inline-flex min-h-11 cursor-pointer items-center" style={{ color: "var(--steel)" }} onClick={() => setConfirmId(a.id)}>
                       ลบ
                     </button>
                   )}
@@ -172,6 +191,7 @@ export function AddressManager({ addresses }: { addresses: SavedAddress[] }) {
             ))}
           </ul>
         )}
+        </div>
       </div>
 
       {editing && (
