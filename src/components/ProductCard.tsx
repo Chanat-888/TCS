@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
-import { formatTHB } from "@/lib/format";
+import { formatTHB, formatThaiDateTime } from "@/lib/format";
 import { isFixedPrice } from "@/lib/listingKind";
 import type { Listing, Profile } from "@/lib/supabase/types";
 
@@ -135,6 +135,12 @@ export function ProductCard({
               {isBuyNow ? "ซื้อทันที" : "ประมูล"}
             </span>
           </div>
+
+          {!isBuyNow && (
+            <p className="text-[12px]" style={{ color: "var(--steel)" }}>
+              ปิดประมูล <span className="mono" style={{ color: "var(--white)" }}>{formatThaiDateTime(listing.ends_at)}</span>
+            </p>
+          )}
 
           {!ownerEditHref && seller && (
             <div

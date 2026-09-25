@@ -5,7 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
-import { formatTHB } from "@/lib/format";
+import { formatTHB, formatThaiDateTime } from "@/lib/format";
 import type { ListingWithSeller } from "@/lib/queries";
 
 const SLIDE_SECONDS = 5;
@@ -134,6 +134,9 @@ export function FeaturedCarousel({ listings }: { listings: ListingWithSeller[] }
                   </dt>
                   <dd className="mono mt-1 text-[clamp(1.4rem,2.4vw,1.75rem)] leading-none" style={{ color: "var(--cyan)" }}>
                     <Countdown endsAt={featured.ends_at} initialSeconds={secondsUntil(featured.ends_at)} />
+                    <span className="mono mt-2 block text-[12px]" style={{ color: "var(--steel)" }}>
+                      {formatThaiDateTime(featured.ends_at)}
+                    </span>
                   </dd>
                 </div>
               )}

@@ -23,11 +23,11 @@ function load(path, dependencies = {}) {
 
 const listingKind = load("src/lib/listingKind.ts");
 
-function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null, topBidder = null } = {}) {
+function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null, topBidder = null, topAmount = 1000, userId = "buyer-1", claimSeq = null } = {}) {
   const calls = { updates: [], orders: [], bids: [], bidsDeleted: [] };
   const actions = load("src/app/listings/[id]/actions.ts", {
     "next/cache": { revalidatePath() {} },
-    "@/lib/session": { requireVerifiedUserId: async () => "buyer-1" },
+    "@/lib/session": { requireVerifiedUserId: async () => userId },
     "@/lib/listingKind": listingKind,
     "@/lib/supabase/server": {
       createServiceClient: () => ({
@@ -39,7 +39,7 @@ function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidEr
                 const filters = {};
                 const chain = {
                   eq(col, val) { filters[col] = val; return chain; },
-                  select() { calls.updates.push({ fields, filters }); return Promise.resolve({ data: claimRows, error: null }); },
+                  select() { calls.updates.push({ fields, filters }); return Promise.resolve({ data: claimSeq ? (claimSeq.shift() ?? []) : claimRows, error: null }); },
                   then(resolve) { calls.updates.push({ fields, filters }); resolve({ error: null }); },
                 };
                 return chain;
@@ -52,7 +52,7 @@ function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidEr
           if (table === "bids") {
             return {
               delete: () => ({ eq: (col, val) => { calls.bidsDeleted.push({ col, val }); return Promise.resolve({}); } }),
-              select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: topBidder ? { bidder_id: topBidder } : null }) }) }) }) }), insert: (row) => { calls.bids.push(row); return { select: () => ({ single: async () => ({ data: bidError ? null : { id: "b1", ...row }, error: bidError }) }) }; } };
+              select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: topBidder ? { bidder_id: topBidder, amount: topAmount } : null }) }) }) }) }), insert: (row) => { calls.bids.push(row); return { select: () => ({ single: async () => ({ data: bidError ? null : { id: "b1", ...row }, error: bidError }) }) }; } };
           }
           throw new Error("Unexpected table: " + table);
         },
@@ -187,4 +187,63 @@ test("a fixed-price listing (buy-now equals start) cannot be bid on", async () =
   assert.equal(listingKind.isFixedPrice({ buy_now_price: 1000, start_price: 1000 }), true);
   assert.equal(listingKind.isFixedPrice({ buy_now_price: 4000, start_price: 1000 }), false);
   assert.equal(listingKind.isFixedPrice({ buy_now_price: null, start_price: 1000 }), false);
+});
+
+test("only the seller can end an auction early", async () => {
+  const { actions, calls } = fixture({ ...base, buy_now_price: null }, { userId: "someone-else" });
+  const result = await actions.endAuctionNow("l1");
+  assert.ok(result.error);
+  assert.equal(calls.updates.length, 0);
+});
+
+test("ending an auction with no bids cancels it and creates no order", async () => {
+  const { actions, calls } = fixture({ ...base, buy_now_price: null }, { userId: "seller-1" });
+  const result = await actions.endAuctionNow("l1");
+  assert.equal(result.outcome, "cancelled");
+  assert.equal(calls.updates[0].fields.status, "cancelled");
+  assert.equal(calls.orders.length, 0);
+});
+
+test("ending an auction with bids sells to the top bidder at their bid", async () => {
+  const listing = { ...base, buy_now_price: null, current_price: 1500 };
+  const { actions, calls } = fixture(listing, { userId: "seller-1", topBidder: "bidder-9", topAmount: 1500 });
+  const result = await actions.endAuctionNow("l1");
+  assert.equal(result.outcome, "sold");
+  assert.equal(calls.updates[0].fields.status, "sold");
+  assert.equal(calls.updates[0].filters.current_price, 1500);
+  assert.equal(calls.orders[0].buyer_id, "bidder-9");
+  assert.equal(calls.orders[0].seller_id, "seller-1");
+  assert.equal(calls.orders[0].amount, 1500);
+});
+
+test("ending early loses cleanly to a bid that lands first, and reopens if the order fails", async () => {
+  const raced = fixture({ ...base, buy_now_price: null }, { userId: "seller-1", claimRows: [] });
+  assert.ok((await raced.actions.endAuctionNow("l1")).error);
+  assert.equal(raced.calls.orders.length, 0);
+
+  const failed = fixture({ ...base, buy_now_price: null }, { userId: "seller-1", topBidder: "bidder-9", orderError: { message: "x" } });
+  assert.ok((await failed.actions.endAuctionNow("l1")).error);
+  assert.equal(failed.calls.updates.at(-1).fields.status, "active");
+});
+
+test("Thai date/time formatting is fixed to UTC+7 regardless of the viewer's timezone", () => {
+  const format = load("src/lib/format.ts");
+  assert.equal(format.formatThaiDateTime("2026-10-03T04:00:00.000Z"), "3 ต.ค. 11.00 น.");
+  assert.equal(format.formatThaiDateTime("2026-10-03T18:30:00.000Z", { year: true }), "4 ต.ค. 2569 01.30 น.");
+});
+
+test("a higher bid that loses the race for the price is retried against the new price, not refused", async () => {
+  const { actions, calls } = fixture({ ...base, buy_now_price: null }, { claimSeq: [[], [{ id: "l1" }]] });
+  const result = await actions.placeBid("l1", 1200);
+  assert.equal(result.success, true);
+  assert.equal(calls.updates.length, 2);
+  assert.equal(calls.bids.length, 1);
+});
+
+test("a bid that keeps losing the race gives up after a few tries and records nothing", async () => {
+  const { actions, calls } = fixture({ ...base, buy_now_price: null }, { claimSeq: [[], [], [], []] });
+  const result = await actions.placeBid("l1", 1200);
+  assert.ok(result.error);
+  assert.equal(calls.updates.length, 3);
+  assert.equal(calls.bids.length, 0);
 });
