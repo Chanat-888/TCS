@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
 import { getActiveListings, getSellerSalesCountMap } from "@/lib/queries";
+import { isAuction } from "@/lib/listingKind";
 import { getActiveWantedPosts } from "@/lib/wantedPosts";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
@@ -27,7 +28,7 @@ export default async function BrowsePage({
   // eslint-disable-next-line react-hooks/purity -- server component, runs once per request
   const now = Date.now();
   const openAuctions = listings
-    .filter((l) => l.buy_now_price == null && new Date(l.ends_at).getTime() > now)
+    .filter((l) => isAuction(l) && new Date(l.ends_at).getTime() > now)
     .sort((a, b) => b.current_price - a.current_price);
   const featuredList = type ? [] : (openAuctions.length > 0 ? openAuctions : listings).slice(0, MAX_FEATURED_SLIDES);
 

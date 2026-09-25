@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Countdown } from "@/components/Countdown";
 import { formatTHB, formatRelativeTime, maskUserLabel } from "@/lib/format";
@@ -12,21 +12,29 @@ const BID_INCREMENT = 100;
 
 export function LiveBidding({
   listingId,
+  initialStatus,
+  startPrice,
   initialPrice,
   initialEndsAt,
   initialSecondsLeft,
   initialBids,
   currentUserId,
   isOwner,
+  buyNowSlot,
 }: {
   listingId: string;
+  initialStatus: string;
+  startPrice: number;
   initialPrice: number;
   initialEndsAt: string;
   initialSecondsLeft: number;
   initialBids: Bid[];
   currentUserId: string;
   isOwner: boolean;
+  /** Buy-now box; shown only while the listing is unbid and still active, live. */
+  buyNowSlot?: ReactNode;
 }) {
+  const [status, setStatus] = useState(initialStatus);
   const [price, setPrice] = useState(initialPrice);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
   const [bids, setBids] = useState(initialBids);
@@ -38,6 +46,13 @@ export function LiveBidding({
   const extendTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const minBid = price + BID_INCREMENT;
+  const closed = status !== "active";
+  const topBid = bids.reduce<Bid | null>((top, b) => (!top || b.amount > top.amount ? b : top), null);
+  const youAreTop = topBid?.bidder_id === currentUserId;
+  const youHaveBid = bids.some((b) => b.bidder_id === currentUserId);
+  // A server-rendered sold listing keeps its "sold" buy-now box; a live one hides
+  // it the moment the first bid lands or the listing closes.
+  const showBuyNow = initialStatus !== "active" || (!closed && price <= startPrice);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -55,8 +70,9 @@ export function LiveBidding({
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "listings", filter: `id=eq.${listingId}` },
         (payload) => {
-          const row = payload.new as { current_price: number; ends_at: string };
+          const row = payload.new as { current_price: number; ends_at: string; status: string };
           setPrice(row.current_price);
+          setStatus(row.status);
           setEndsAt((prevEndsAt) => {
             if (row.ends_at !== prevEndsAt) {
               setShowExtend(true);
@@ -65,7 +81,9 @@ export function LiveBidding({
             }
             return row.ends_at;
           });
-          setExpired(false);
+          // Only a still-active listing with time left can reopen; a sold or
+          // cancelled update must never bring the bid form back.
+          setExpired(row.status !== "active" || new Date(row.ends_at).getTime() <= Date.now());
         }
       )
       .subscribe();
@@ -151,12 +169,26 @@ export function LiveBidding({
           <p className="mt-[18px] text-[13px]" style={{ color: "var(--steel)" }}>
             นี่คือประกาศของคุณเอง — ไม่สามารถบิดประกาศของตัวเองได้
           </p>
-        ) : expired ? (
+        ) : closed || expired ? (
           <p className="mt-[18px] text-[13px]" style={{ color: "var(--steel)" }}>
-            ปิดประมูลแล้ว
+            {closed ? "ประกาศนี้ปิดการประมูลแล้ว" : "ปิดประมูลแล้ว"}
           </p>
         ) : (
           <>
+            {youHaveBid && (
+              <p
+                className="mt-[18px] rounded-[9px] px-3 py-2 text-[12.5px]"
+                style={
+                  youAreTop
+                    ? { color: "var(--cyan)", background: "rgba(95,212,255,0.08)", border: "1px solid rgba(95,212,255,0.22)" }
+                    : { color: "var(--danger)", background: "rgba(255,90,90,0.08)", border: "1px solid rgba(255,90,90,0.25)" }
+                }
+              >
+                {youAreTop ? "คุณเป็นผู้บิดสูงสุดอยู่ตอนนี้" : "มีคนบิดสูงกว่าคุณแล้ว — บิดใหม่เพื่อชิงกลับ"}
+              </p>
+            )}
+            {youAreTop ? null : (
+              <>
             <div className="mt-[18px] flex items-stretch gap-[10px]">
               <button
                 type="button"
@@ -214,12 +246,16 @@ export function LiveBidding({
                 ยืนยันการบิด
               </PrimaryButton>
             </div>
+              </>
+            )}
             <p className="mt-3 text-[12px] leading-relaxed" style={{ color: "var(--steel-dim)" }}>
               หากมีการบิดภายใน 2 นาทีสุดท้ายก่อนปิดประมูล เวลาจะขยายอีก 2 นาทีโดยอัตโนมัติ เพื่อป้องกันการบิดชิงจังหวะสุดท้าย
             </p>
           </>
         )}
       </div>
+
+      {showBuyNow && buyNowSlot}
 
       <div className="section">
         <h2 className="text-[1.1rem]">ประวัติการบิด</h2>

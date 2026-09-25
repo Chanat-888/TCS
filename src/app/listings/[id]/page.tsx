@@ -11,6 +11,7 @@ import { SellerRow } from "@/components/SellerRow";
 import { formatTHB } from "@/lib/format";
 import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
+import { isBuyNowAvailable } from "@/lib/listingKind";
 import { BuyNowBox } from "./BuyNowBox";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,31 +75,34 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   </p>
                 </div>
 
-                {listing.buy_now_price != null ? (
-                  <BuyNowBox
-                    listingId={listing.id}
-                    price={listing.buy_now_price}
-                    isOwner={listing.seller_id === userId}
-                    isSold={listing.status !== "active"}
-                    name={listing.name}
-                    setName={listing.set_name}
-                    rarity={listing.rarity}
-                    photoUrl={listing.photo_front_url}
-                    sellerId={listing.seller_id}
-                    sellerName={listing.seller.display_name}
-                    sellerVerified={listing.seller.verified}
-                  />
-                ) : (
-                  <LiveBidding
-                    listingId={listing.id}
-                    initialPrice={listing.current_price}
-                    initialEndsAt={listing.ends_at}
-                    initialSecondsLeft={secondsUntil(listing.ends_at)}
-                    initialBids={bids}
-                    currentUserId={userId}
-                    isOwner={listing.seller_id === userId}
-                  />
-                )}
+                <LiveBidding
+                  listingId={listing.id}
+                  initialStatus={listing.status}
+                  startPrice={listing.start_price}
+                  initialPrice={listing.current_price}
+                  initialEndsAt={listing.ends_at}
+                  initialSecondsLeft={listing.status === "active" ? secondsUntil(listing.ends_at) : 0}
+                  initialBids={bids}
+                  currentUserId={userId}
+                  isOwner={listing.seller_id === userId}
+                  buyNowSlot={
+                    listing.buy_now_price != null && (listing.status !== "active" || isBuyNowAvailable(listing)) ? (
+                      <BuyNowBox
+                        listingId={listing.id}
+                        price={listing.buy_now_price}
+                        isOwner={listing.seller_id === userId}
+                        isSold={listing.status !== "active"}
+                        name={listing.name}
+                        setName={listing.set_name}
+                        rarity={listing.rarity}
+                        photoUrl={listing.photo_front_url}
+                        sellerId={listing.seller_id}
+                        sellerName={listing.seller.display_name}
+                        sellerVerified={listing.seller.verified}
+                      />
+                    ) : null
+                  }
+                />
 
                 <SellerRow seller={listing.seller} stats={sellerStats} />
               </div>

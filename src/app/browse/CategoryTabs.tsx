@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 import { WantedPostCard } from "@/components/WantedPostCard";
+import { isAuction } from "@/lib/listingKind";
 import type { ListingWithSeller } from "@/lib/queries";
 import type { WantedPostWithPoster } from "@/lib/wantedPosts";
 
@@ -98,13 +99,13 @@ export function CategoryTabs({
   const [active, setActive] = useState<TabKey>(validCategory ? (initialCategory as TabKey) : "all");
 
   const byType = listings.filter((l) => {
-    if (initialType === "auction") return l.buy_now_price == null;
-    if (initialType === "product") return l.buy_now_price != null;
+    if (initialType === "auction") return isAuction(l);
+    if (initialType === "product") return !isAuction(l);
     return true;
   });
 
   const inTab = (key: TabKey) => (l: ListingWithSeller) =>
-    key === "all" ? true : key === "closing" ? l.buy_now_price == null : l.category === key;
+    key === "all" ? true : key === "closing" ? isAuction(l) : l.category === key;
   const wantedInTab = (key: TabKey) => (p: WantedPostWithPoster) => key === "all" || key === "closing" || p.category === key;
 
   const visible = byType.filter(inTab(active));

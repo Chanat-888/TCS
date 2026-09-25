@@ -1,5 +1,6 @@
 "use client";
 
+import { isAuction as isAuctionListing } from "@/lib/listingKind";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
@@ -51,7 +52,7 @@ export function FeaturedCarousel({ listings }: { listings: ListingWithSeller[] }
 
   const goPrev = () => setIndex((i) => (i - 1 + listings.length) % listings.length);
   const goNext = () => setIndex((i) => (i + 1) % listings.length);
-  const isAuction = featured.buy_now_price == null;
+  const isAuction = isAuctionListing(featured);
   const price = isAuction ? featured.current_price : featured.buy_now_price!;
   const multiple = listings.length > 1;
   const slideAnimation = reducedMotion ? undefined : "featured-slide-in 0.5s var(--ease)";
