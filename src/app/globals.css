@@ -24,6 +24,9 @@
   --gold-line: rgba(232, 184, 79, 0.3);
   --danger-tint: rgba(232, 102, 79, 0.1);
   --danger-line: rgba(232, 102, 79, 0.35);
+  --blue-hover: #4aa0ef;
+  --ink-on-blue: #071523;
+  --ink-on-danger: #2a0d08;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 

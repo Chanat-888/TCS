@@ -9,8 +9,8 @@ interface PrimaryButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_STYLES: Record<string, { bg: string; hoverBg: string; ink: string; ringInk: string }> = {
-  primary: { bg: "var(--blue)", hoverBg: "#4aa0ef", ink: "#071523", ringInk: "rgba(7,21,35,0.35)" },
-  danger: { bg: "var(--danger)", hoverBg: "var(--danger)", ink: "#2a0d08", ringInk: "rgba(42,13,8,0.35)" },
+  primary: { bg: "var(--blue)", hoverBg: "var(--blue-hover)", ink: "var(--ink-on-blue)", ringInk: "rgba(7,21,35,0.35)" },
+  danger: { bg: "var(--danger)", hoverBg: "var(--danger)", ink: "var(--ink-on-danger)", ringInk: "rgba(42,13,8,0.35)" },
 };
 
 /** Loading state: label fades out, a small spinner fades in — per DESIGN.md's primary-button loading pattern. */

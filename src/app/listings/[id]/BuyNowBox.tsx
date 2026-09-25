@@ -50,7 +50,7 @@ export function BuyNowBox({
   }
 
   return (
-    <div className="mt-[22px] rounded-2xl p-[22px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
+    <div className="mt-[22px] rounded-2xl p-[22px]" style={{ background: "var(--panel)", border: "1px solid var(--line-soft)" }}>
       <p className="text-[12px]" style={{ color: "var(--steel)" }}>
         ราคาซื้อทันที
       </p>
@@ -84,7 +84,7 @@ export function BuyNowBox({
                 addToCart({ listingId, name, setName, rarity, photoUrl, price, sellerId, sellerName, sellerVerified })
               }
               className="h-11 w-full rounded-[11px] text-[13.5px] font-medium disabled:opacity-50"
-              style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.22)", color: "var(--white)" }}
+              style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--white)" }}
             >
               {inCart ? "อยู่ในตะกร้าแล้ว" : "เพิ่มลงตะกร้า"}
             </button>
