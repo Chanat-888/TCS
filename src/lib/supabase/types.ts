@@ -43,6 +43,8 @@ export interface Listing {
   start_price: number;
   buy_now_price: number | null;
   current_price: number;
+  /** Absent on rows read before migration 0015 is applied; treat as 100. */
+  bid_increment?: number;
   ends_at: string;
   status: ListingStatus;
   created_at: string;

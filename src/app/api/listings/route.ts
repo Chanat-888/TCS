@@ -3,7 +3,12 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 
-const DURATIONS_DAYS = [1, 3, 5, 7];
+// Hours: from a quick "hot time" auction up to a week.
+const DURATIONS_HOURS = [1, 3, 6, 12, 24, 72, 120, 168];
+const MIN_AUCTION_MS = 60 * 60 * 1000;
+const MAX_AUCTION_MS = 30 * 24 * 60 * 60 * 1000;
+const MIN_BID_INCREMENT = 5;
+const MAX_BID_INCREMENT = 1000;
 
 export async function POST(request: Request) {
   const userId = await getVerifiedUserId();
@@ -20,13 +25,32 @@ export async function POST(request: Request) {
   const startPrice = parseInt(String(formData.get("startPrice") ?? ""), 10);
   const buyNowPriceRaw = String(formData.get("buyNowPrice") ?? "").trim();
   const buyNowPrice = buyNowPriceRaw ? parseInt(buyNowPriceRaw, 10) : null;
-  const durationDays = DURATIONS_DAYS.includes(Number(formData.get("duration"))) ? Number(formData.get("duration")) : 3;
+  const durationHours = DURATIONS_HOURS.includes(Number(formData.get("durationHours"))) ? Number(formData.get("durationHours")) : 72;
+  // Seller may pick an exact end date/time instead of a preset length.
+  const endsAtRaw = String(formData.get("endsAt") ?? "").trim();
+  const customEndsAt = endsAtRaw ? new Date(endsAtRaw).getTime() : null;
+  if (customEndsAt != null) {
+    const untilEnd = customEndsAt - Date.now();
+    // A minute of slack so "exactly 1 hour from now" picked a moment ago still passes.
+    if (!Number.isFinite(untilEnd) || untilEnd < MIN_AUCTION_MS - 60_000 || untilEnd > MAX_AUCTION_MS) {
+      return NextResponse.json({ error: "เวลาปิดประมูลต้องอยู่ระหว่าง 1 ชั่วโมง ถึง 30 วันจากตอนนี้" }, { status: 400 });
+    }
+  }
+  const bidIncrementRaw = String(formData.get("bidIncrement") ?? "").trim();
+  const bidIncrement = bidIncrementRaw ? parseInt(bidIncrementRaw, 10) : 100;
 
   if (!(front instanceof File) || !(back instanceof File)) {
     return NextResponse.json({ error: "อัปโหลดรูปทั้งด้านหน้าและด้านหลังก่อนเผยแพร่ประกาศ" }, { status: 400 });
   }
   if (!name || !setName || !category || !condition || !startPrice) {
     return NextResponse.json({ error: "กรอกข้อมูลให้ครบก่อนเผยแพร่ประกาศ" }, { status: 400 });
+  }
+
+  if (!Number.isInteger(bidIncrement) || bidIncrement < MIN_BID_INCREMENT || bidIncrement > MAX_BID_INCREMENT) {
+    return NextResponse.json({ error: `บิดขั้นต่ำต้องอยู่ระหว่าง ฿${MIN_BID_INCREMENT} – ฿${MAX_BID_INCREMENT.toLocaleString("en-US")}` }, { status: 400 });
+  }
+  if (buyNowPrice != null && (!Number.isFinite(buyNowPrice) || buyNowPrice < startPrice)) {
+    return NextResponse.json({ error: "ราคาชนะทันทีต้องไม่ต่ำกว่าราคาเริ่มต้น" }, { status: 400 });
   }
 
   // Rarity isn't a separate form field yet (create-listing brief doesn't ask
@@ -48,7 +72,9 @@ export async function POST(request: Request) {
       start_price: startPrice,
       buy_now_price: buyNowPrice,
       current_price: startPrice,
-      ends_at: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
+      // Only sent when non-default so listing still works before migration 0015 is applied.
+      ...(bidIncrement !== 100 ? { bid_increment: bidIncrement } : {}),
+      ends_at: new Date(customEndsAt ?? Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
     })
     .select()
     .single();
