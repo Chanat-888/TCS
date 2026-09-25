@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 import { WantedPostCard } from "@/components/WantedPostCard";
+import { isAuction } from "@/lib/listingKind";
 import type { ListingWithSeller } from "@/lib/queries";
 import type { WantedPostWithPoster } from "@/lib/wantedPosts";
 
@@ -95,14 +96,14 @@ export function CategoryTabs({
   );
 
   const byType = listings.filter((l) => {
-    if (initialType === "auction") return l.buy_now_price == null;
-    if (initialType === "product") return l.buy_now_price != null;
+    if (initialType === "auction") return isAuction(l);
+    if (initialType === "product") return !isAuction(l);
     return true;
   });
 
   const visible = byType.filter((l) => {
     if (active === "all") return true;
-    if (active === "closing") return l.buy_now_price == null;
+    if (active === "closing") return isAuction(l);
     return l.category === active;
   });
 

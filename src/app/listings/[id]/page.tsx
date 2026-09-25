@@ -11,6 +11,7 @@ import { SellerRow } from "@/components/SellerRow";
 import { formatTHB } from "@/lib/format";
 import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
+import { isBuyNowAvailable } from "@/lib/listingKind";
 import { BuyNowBox } from "./BuyNowBox";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -84,7 +85,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   isOwner={listing.seller_id === userId}
                 />
 
-                {listing.buy_now_price != null && (
+                {listing.buy_now_price != null && (listing.status !== "active" || isBuyNowAvailable(listing)) && (
                   <BuyNowBox
                     listingId={listing.id}
                     price={listing.buy_now_price}
