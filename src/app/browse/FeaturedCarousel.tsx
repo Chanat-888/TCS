@@ -31,6 +31,44 @@ function ControlButton({ label, onClick, children }: { label: string; onClick: (
   );
 }
 
+/** The banner frame shared by the featured carousel and the empty-market welcome. */
+function BannerShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="relative grid grid-cols-[1.15fr_0.85fr] items-center gap-10 overflow-hidden rounded-[20px] px-12 py-10 max-[800px]:grid-cols-1 max-[800px]:gap-8 max-[800px]:px-[22px] max-[800px]:py-7"
+      style={{
+        background:
+          "radial-gradient(60% 90% at 78% 50%, color-mix(in srgb, var(--blue) 16%, transparent) 0%, transparent 70%), var(--panel)",
+        border: "1px solid var(--line)",
+      }}
+    >
+      {/* Circuit traces, after the card-back engraving. */}
+      <svg
+        className="pointer-events-none absolute inset-y-0 right-0 h-full w-[55%] max-[800px]:hidden"
+        viewBox="0 0 500 360"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <g stroke="var(--cyan)" strokeWidth={1} fill="none" opacity={0.18} strokeLinecap="round">
+          <path d="M0 70 H120 L150 100 H250" />
+          <path d="M0 290 H90 L130 250 H250" />
+          <path d="M500 60 H400 L370 90 H330" />
+          <path d="M500 300 H420 L385 265 H330" />
+          <path d="M250 0 V40" />
+          <path d="M250 360 V320" />
+        </g>
+        <g fill="var(--cyan)" opacity={0.35}>
+          <circle cx="250" cy="100" r="2.5" />
+          <circle cx="250" cy="250" r="2.5" />
+          <circle cx="330" cy="90" r="2.5" />
+          <circle cx="330" cy="265" r="2.5" />
+        </g>
+      </svg>
+      {children}
+    </div>
+  );
+}
+
 export function FeaturedCarousel({ listings }: { listings: ListingWithSeller[] }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -69,36 +107,7 @@ export function FeaturedCarousel({ listings }: { listings: ListingWithSeller[] }
       onBlur={() => setHovering(false)}
     >
       <div className="wrap">
-        <div
-          className="relative grid grid-cols-[1.15fr_0.85fr] items-center gap-10 overflow-hidden rounded-[20px] px-12 py-10 max-[800px]:grid-cols-1 max-[800px]:gap-8 max-[800px]:px-[22px] max-[800px]:py-7"
-          style={{
-            background:
-              "radial-gradient(60% 90% at 78% 50%, color-mix(in srgb, var(--blue) 16%, transparent) 0%, transparent 70%), var(--panel)",
-            border: "1px solid var(--line)",
-          }}
-        >
-          {/* Circuit traces, after the card-back engraving. */}
-          <svg
-            className="pointer-events-none absolute inset-y-0 right-0 h-full w-[55%] max-[800px]:hidden"
-            viewBox="0 0 500 360"
-            preserveAspectRatio="xMidYMid slice"
-            aria-hidden="true"
-          >
-            <g stroke="var(--cyan)" strokeWidth={1} fill="none" opacity={0.18} strokeLinecap="round">
-              <path d="M0 70 H120 L150 100 H250" />
-              <path d="M0 290 H90 L130 250 H250" />
-              <path d="M500 60 H400 L370 90 H330" />
-              <path d="M500 300 H420 L385 265 H330" />
-              <path d="M250 0 V40" />
-              <path d="M250 360 V320" />
-            </g>
-            <g fill="var(--cyan)" opacity={0.35}>
-              <circle cx="250" cy="100" r="2.5" />
-              <circle cx="250" cy="250" r="2.5" />
-              <circle cx="330" cy="90" r="2.5" />
-              <circle cx="330" cy="265" r="2.5" />
-            </g>
-          </svg>
+        <BannerShell>
 
           <div
             key={featured.id}
@@ -246,7 +255,105 @@ export function FeaturedCarousel({ listings }: { listings: ListingWithSeller[] }
               </div>
             </div>
           )}
-        </div>
+        </BannerShell>
+      </div>
+    </section>
+  );
+}
+
+const ESCROW_STEPS = [
+  { title: "ผู้ซื้อจ่ายเข้าระบบพักเงิน", note: "เงินยังไม่ถึงมือผู้ขาย" },
+  { title: "ผู้ขายส่งการ์ดพร้อมเลขพัสดุ", note: "ติดตามได้ในคำสั่งซื้อ" },
+  { title: "ผู้ซื้อกดรับการ์ด", note: "เงินจึงโอนให้ผู้ขาย ไม่พอใจเปิดข้อพิพาทได้" },
+];
+
+/** Shown in the banner slot when the market has nothing to feature yet. */
+export function WelcomeBanner({ name }: { name: string }) {
+  return (
+    <section className="pb-2 pt-5" aria-label="ยินดีต้อนรับ">
+      <div className="wrap">
+        <BannerShell>
+          <div className="relative z-[1] flex min-w-0 flex-col">
+            <h2 className="max-w-[18ch] text-[clamp(1.6rem,3.2vw,2.4rem)] leading-[1.15]" style={{ textWrap: "balance" }}>
+              ยินดีต้อนรับ, <span style={{ color: "var(--cyan)" }}>{name}</span>
+            </h2>
+            <p className="mt-3 max-w-[46ch] text-[14px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              ตอนนี้ยังไม่มีการ์ดเปิดขาย ลงประกาศใบแรกของตลาด หรือบอกทุกคนว่าคุณกำลังตามหาการ์ดใบไหน
+            </p>
+
+            <ol className="mt-6 flex max-w-[46ch] flex-col gap-3">
+              {ESCROW_STEPS.map((step, i) => (
+                <li key={step.title} className="flex items-start gap-3">
+                  <span
+                    className="mono flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[11px]"
+                    style={{ color: "var(--cyan)", background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)" }}
+                  >
+                    {i + 1}
+                  </span>
+                  <p className="text-[13.5px] leading-snug" style={{ color: "var(--white)" }}>
+                    {step.title}
+                    <span className="block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                      {step.note}
+                    </span>
+                  </p>
+                </li>
+              ))}
+            </ol>
+
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                href="/listings/new"
+                className="inline-flex min-h-11 items-center gap-2 rounded-[10px] px-[22px] text-[14.5px] font-semibold no-underline transition-[filter] hover:brightness-110"
+                style={{ background: "var(--blue)", color: "#071523" }}
+              >
+                ลงประกาศขาย
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M4 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <Link
+                href="/wanted/new"
+                className="inline-flex min-h-11 items-center rounded-[10px] px-[20px] text-[14px] font-medium no-underline transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)]"
+                style={{ background: "var(--panel-2)", border: "1px solid var(--line-strong)", color: "var(--white)" }}
+              >
+                ลงประกาศหา
+              </Link>
+            </div>
+          </div>
+
+          <div className="relative z-[1] flex items-center justify-center py-2 max-[800px]:hidden">
+            {/* The same fanned pair as a featured slide, but face-down: the TCS card back. */}
+            <div className="relative" style={{ width: 196, height: 274 }} aria-hidden="true">
+              <div
+                className="absolute inset-0 rounded-2xl"
+                style={{ background: "var(--panel-2)", border: "1px solid var(--blue-dim)", transform: "rotate(8deg) translate(18px, 6px)" }}
+              />
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl"
+                style={{
+                  background: "radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--blue) 22%, var(--panel-2)) 0%, var(--panel-2) 62%)",
+                  border: "1.5px solid var(--cyan-line)",
+                  boxShadow: "0 30px 60px -22px rgba(47, 143, 232, 0.55)",
+                  transform: "rotate(-3deg)",
+                }}
+              >
+                <svg className="absolute inset-0 h-full w-full" viewBox="0 0 196 274" fill="none">
+                  <g stroke="var(--cyan)" strokeWidth={1} opacity={0.3} strokeLinecap="round">
+                    <rect x="12" y="12" width="172" height="250" rx="10" />
+                    <path d="M12 70 H48 L66 88 M184 70 H148 L130 88 M12 204 H48 L66 186 M184 204 H148 L130 186" />
+                  </g>
+                </svg>
+                <svg width="54" height="54" viewBox="0 0 64 64">
+                  <path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="var(--cyan)" />
+                  <path d="M32 6 L40.8 25.2 L32 44.4 L23.2 25.2 Z" fill="none" stroke="var(--cyan)" strokeWidth={1} opacity={0.5} transform="translate(32 25) scale(1.45) translate(-32 -25)" />
+                </svg>
+                <span className="relative" style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 18, letterSpacing: "0.2em", color: "var(--white)" }}>
+                  TCS
+                </span>
+              </div>
+            </div>
+          </div>
+        </BannerShell>
       </div>
     </section>
   );
