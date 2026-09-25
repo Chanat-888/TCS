@@ -336,7 +336,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
               {isOwner && (
                 <Link
                   href="/listings/new"
-                  className="flex min-h-full flex-col items-center justify-center gap-[10px] rounded-2xl no-underline"
+                  className="flex min-h-[200px] flex-col items-center justify-center gap-[10px] rounded-2xl no-underline transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)]"
                   style={{ border: "1.5px dashed var(--line)", color: "var(--steel)" }}
                 >
                   <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>
@@ -366,7 +366,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
               {isOwner && (
                 <Link
                   href="/wanted/new"
-                  className="flex min-h-full flex-col items-center justify-center gap-[10px] rounded-2xl no-underline"
+                  className="flex min-h-[200px] flex-col items-center justify-center gap-[10px] rounded-2xl no-underline transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)]"
                   style={{ border: "1.5px dashed var(--line)", color: "var(--steel)" }}
                 >
                   <span className="flex items-center justify-center rounded-full" style={{ width: 40, height: 40, border: "1.5px solid currentColor" }}>

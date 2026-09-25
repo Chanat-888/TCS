@@ -20,7 +20,7 @@ const PROVIDERS = {
   },
 } as const;
 
-export function OAuthButton({ provider, link = false, disabled = false, quiet = false }: { provider: keyof typeof PROVIDERS; link?: boolean; disabled?: boolean; quiet?: boolean }) {
+export function OAuthButton({ provider, link = false, disabled = false, quiet = false, compact = false }: { provider: keyof typeof PROVIDERS; link?: boolean; disabled?: boolean; quiet?: boolean; compact?: boolean }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const busy = useRef(false);
@@ -47,13 +47,15 @@ export function OAuthButton({ provider, link = false, disabled = false, quiet = 
   }
 
   return (
-    <div>
+    <div className={compact ? "flex flex-col items-end" : undefined}>
       <button type="button" onClick={begin} disabled={disabled || pending}
         className={quiet
           ? "border-0 bg-transparent p-0 text-[13px] cursor-pointer underline disabled:opacity-50"
-          : "w-full rounded-[11px] border px-4 py-3 text-[14px] font-medium cursor-pointer disabled:opacity-50"}
+          : compact
+            ? "min-h-11 rounded-full border px-5 text-[13.5px] font-medium cursor-pointer transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)] disabled:opacity-50"
+            : "w-full rounded-[11px] border px-4 py-3 text-[14px] font-medium cursor-pointer disabled:opacity-50"}
         style={quiet ? { color: "var(--steel)" } : config.style}>
-        {pending ? "กำลังเชื่อมต่อ…" : quiet ? config.quietLabel : link ? config.linkLabel : config.label}
+        {pending ? "กำลังเชื่อมต่อ…" : compact ? "เชื่อม" : quiet ? config.quietLabel : link ? config.linkLabel : config.label}
       </button>
       {error && <p role="alert" className="mt-2 text-[13px]" style={{ color: "var(--danger)" }}>{error}</p>}
     </div>
