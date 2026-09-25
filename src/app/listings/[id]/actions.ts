@@ -4,31 +4,45 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
 import { bidIncrementOf, isBuyNowAvailable, isFixedPrice } from "@/lib/listingKind";
+import type { Bid } from "@/lib/supabase/types";
 
 const ANTI_SNIPE_WINDOW_SECONDS = 120;
 const ANTI_SNIPE_EXTENSION_SECONDS = 120;
 
-export async function placeBid(listingId: string, amount: number) {
-  const userId = await requireVerifiedUserId();
-  if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อนบิด" as const };
+type PlaceBidResult =
+  | { error: string }
+  | { success: true; won: true; orderId: string; extended: false; newEndsAt: string; newPrice: number; bid: Bid }
+  | { success: true; won: false; extended: boolean; newEndsAt: string; newPrice: number; bid: Bid };
 
+// A bid that loses the race for the price is re-checked against the new price a
+// couple of times: first to commit wins, but a genuinely higher bid must not be
+// refused just because a lower one landed a moment earlier.
+const BID_RACE_RETRIES = 2;
+
+export async function placeBid(listingId: string, amount: number): Promise<PlaceBidResult> {
+  const userId = await requireVerifiedUserId();
+  if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อนบิด" };
+  return attemptBid(listingId, amount, userId, BID_RACE_RETRIES);
+}
+
+async function attemptBid(listingId: string, amount: number, userId: string, retries: number): Promise<PlaceBidResult> {
   const supabase = createServiceClient();
   const { data: listing, error: fetchError } = await supabase
     .from("listings")
     .select("*")
     .eq("id", listingId)
     .maybeSingle();
-  if (fetchError || !listing) return { error: "ไม่พบประกาศนี้" as const };
-  if (listing.seller_id === userId) return { error: "คุณไม่สามารถบิดประกาศของตัวเองได้" as const };
-  if (listing.status !== "active") return { error: "ประกาศนี้ปิดการประมูลแล้ว" as const };
-  if (new Date(listing.ends_at).getTime() <= Date.now()) return { error: "หมดเวลาประมูลแล้ว" as const };
-  if (isFixedPrice(listing)) return { error: "ประกาศนี้ขายราคาตายตัว ไม่มีการประมูล" as const };
+  if (fetchError || !listing) return { error: "ไม่พบประกาศนี้" };
+  if (listing.seller_id === userId) return { error: "คุณไม่สามารถบิดประกาศของตัวเองได้" };
+  if (listing.status !== "active") return { error: "ประกาศนี้ปิดการประมูลแล้ว" };
+  if (new Date(listing.ends_at).getTime() <= Date.now()) return { error: "หมดเวลาประมูลแล้ว" };
+  if (isFixedPrice(listing)) return { error: "ประกาศนี้ขายราคาตายตัว ไม่มีการประมูล" };
 
   // Bidding up to the seller's buy-now price wins instantly, so that price is
   // always reachable even when the next increment would step past it.
   const buyNowPrice: number | null = listing.buy_now_price;
   const minBid = Math.min(listing.current_price + bidIncrementOf(listing), buyNowPrice ?? Infinity);
-  if (amount < minBid) return { error: `กรอกจำนวนเงินอย่างน้อยราคาบิดขั้นต่ำ` as const };
+  if (amount < minBid) return { error: `กรอกจำนวนเงินอย่างน้อยราคาบิดขั้นต่ำ` };
 
   const { data: topBid } = await supabase
     .from("bids")
@@ -37,7 +51,7 @@ export async function placeBid(listingId: string, amount: number) {
     .order("amount", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (topBid?.bidder_id === userId) return { error: "คุณเป็นผู้บิดสูงสุดอยู่แล้ว" as const };
+  if (topBid?.bidder_id === userId) return { error: "คุณเป็นผู้บิดสูงสุดอยู่แล้ว" };
 
   const instantWin = buyNowPrice != null && amount >= buyNowPrice;
   if (instantWin) amount = buyNowPrice;
@@ -57,8 +71,11 @@ export async function placeBid(listingId: string, amount: number) {
     .eq("status", "active")
     .eq("current_price", listing.current_price)
     .select("id");
-  if (updateError) return { error: "บิดไม่สำเร็จ ลองอีกครั้ง" as const };
-  if (!claimed || claimed.length === 0) return { error: "ราคาเปลี่ยนไปแล้วหรือประกาศถูกขายไปแล้ว กรุณารีเฟรชแล้วลองอีกครั้ง" as const };
+  if (updateError) return { error: "บิดไม่สำเร็จ ลองอีกครั้ง" };
+  if (!claimed || claimed.length === 0) {
+    if (retries > 0) return attemptBid(listingId, amount, userId, retries - 1);
+    return { error: "ราคาเปลี่ยนไปแล้วหรือประกาศถูกขายไปแล้ว กรุณารีเฟรชแล้วลองอีกครั้ง" };
+  }
 
   const { data: bid, error: bidError } = await supabase
     .from("bids")
@@ -73,7 +90,7 @@ export async function placeBid(listingId: string, amount: number) {
       .eq("current_price", amount);
   if (bidError || !bid) {
     await reopen();
-    return { error: "บิดไม่สำเร็จ ลองอีกครั้ง" as const };
+    return { error: "บิดไม่สำเร็จ ลองอีกครั้ง" };
   }
 
   if (instantWin) {
@@ -81,15 +98,15 @@ export async function placeBid(listingId: string, amount: number) {
     if (orderError || !order) {
       await supabase.from("bids").delete().eq("id", bid.id);
       await reopen();
-      return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" as const };
+      return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" };
     }
     revalidatePath(`/listings/${listingId}`);
     revalidatePath("/browse");
-    return { success: true as const, won: true as const, orderId: order.id as string, extended: false, newEndsAt, newPrice: amount, bid };
+    return { success: true, won: true, orderId: order.id as string, extended: false, newEndsAt, newPrice: amount, bid };
   }
 
   revalidatePath(`/listings/${listingId}`);
-  return { success: true as const, won: false as const, extended, newEndsAt, newPrice: amount, bid };
+  return { success: true, won: false, extended, newEndsAt, newPrice: amount, bid };
 }
 
 function generateOrderCode() {
@@ -160,4 +177,66 @@ export async function buyNow(listingId: string) {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/browse");
   return { success: true as const, orderId: order.id as string };
+}
+
+/**
+ * Seller closes their own listing early. With bids, the top bidder wins at their
+ * bid and gets a pending-payment order; with none, the listing is cancelled.
+ * Guarded on the price we read, so a bid landing at the same moment can't be lost.
+ */
+export async function endAuctionNow(listingId: string) {
+  const userId = await requireVerifiedUserId();
+  if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
+
+  const supabase = createServiceClient();
+  const { data: listing, error: fetchError } = await supabase
+    .from("listings")
+    .select("*")
+    .eq("id", listingId)
+    .maybeSingle();
+  if (fetchError || !listing) return { error: "ไม่พบประกาศนี้" as const };
+  if (listing.seller_id !== userId) return { error: "เฉพาะเจ้าของประกาศเท่านั้นที่ปิดประมูลได้" as const };
+  if (listing.status !== "active") return { error: "ประกาศนี้ปิดไปแล้ว" as const };
+
+  const { data: topBid } = await supabase
+    .from("bids")
+    .select("bidder_id, amount")
+    .eq("listing_id", listingId)
+    .order("amount", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // A bid raises the listing price first and is saved a moment later. If we read
+  // in that gap the price and the bid list disagree; closing now could sell to the
+  // previous top bidder at the old price, or cancel a listing whose first bid is
+  // landing. Only proceed when the two agree.
+  const consistent = topBid ? topBid.amount === listing.current_price : listing.current_price === listing.start_price;
+  if (!consistent) return { error: "มีการบิดเข้ามาใหม่ กรุณาลองอีกครั้ง" as const };
+
+  const nextStatus = topBid ? "sold" : "cancelled";
+  const { data: claimed, error: claimError } = await supabase
+    .from("listings")
+    .update({ status: nextStatus })
+    .eq("id", listingId)
+    .eq("status", "active")
+    .eq("current_price", listing.current_price)
+    .select("id");
+  if (claimError) return { error: "เกิดข้อผิดพลาด ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "มีการบิดเข้ามาใหม่ กรุณารีเฟรชแล้วลองอีกครั้ง" as const };
+
+  if (!topBid) {
+    revalidatePath(`/listings/${listingId}`);
+    revalidatePath("/browse");
+    return { success: true as const, outcome: "cancelled" as const };
+  }
+
+  const { data: order, error: orderError } = await createPendingOrder(supabase, listing, topBid.bidder_id, topBid.amount);
+  if (orderError || !order) {
+    await supabase.from("listings").update({ status: "active" }).eq("id", listingId);
+    return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" as const };
+  }
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath("/browse");
+  return { success: true as const, outcome: "sold" as const, orderId: order.id as string };
 }

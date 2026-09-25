@@ -27,6 +27,14 @@ export function formatThaiMonthYear(iso: string): string {
   return `${THAI_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** "27 ก.ย. 18.00 น." in Thai time (UTC+7), whatever the viewer's timezone. */
+export function formatThaiDateTime(iso: string, { year = false }: { year?: boolean } = {}): string {
+  const d = new Date(new Date(iso).getTime() + 7 * 60 * 60 * 1000);
+  const time = `${String(d.getUTCHours()).padStart(2, "0")}.${String(d.getUTCMinutes()).padStart(2, "0")} น.`;
+  const date = `${d.getUTCDate()} ${THAI_MONTHS[d.getUTCMonth()]}${year ? ` ${d.getUTCFullYear() + 543}` : ""}`;
+  return `${date} ${time}`;
+}
+
 export function maskUserLabel(id: string): string {
   return `ผู้ใช้ ···${id.replace(/-/g, "").slice(-3)}`;
 }

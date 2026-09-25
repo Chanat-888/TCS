@@ -4,10 +4,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Countdown } from "@/components/Countdown";
-import { formatTHB, formatRelativeTime, maskUserLabel } from "@/lib/format";
+import { formatTHB, formatRelativeTime, formatThaiDateTime, maskUserLabel } from "@/lib/format";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import type { Bid } from "@/lib/supabase/types";
-import { placeBid } from "./actions";
+import { endAuctionNow, placeBid } from "./actions";
 
 export function LiveBidding({
   listingId,
@@ -40,6 +40,14 @@ export function LiveBidding({
   const router = useRouter();
   const nextMin = (p: number) => Math.min(p + bidIncrement, buyNowPrice ?? Infinity);
   const [status, setStatus] = useState(initialStatus);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
+  const cancelEndRef = useRef<HTMLButtonElement | null>(null);
+  // Move focus into the confirm step (on the safe "cancel" choice) when it opens.
+  useEffect(() => {
+    if (confirmEnd) cancelEndRef.current?.focus();
+  }, [confirmEnd]);
   const [price, setPrice] = useState(initialPrice);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
   const [bids, setBids] = useState(initialBids);
@@ -107,6 +115,20 @@ export function LiveBidding({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [price]);
 
+  async function handleEndNow() {
+    setEnding(true);
+    setEndError("");
+    const result = await endAuctionNow(listingId);
+    setEnding(false);
+    if ("error" in result) {
+      setEndError(result.error ?? "เกิดข้อผิดพลาด ลองอีกครั้ง");
+      return;
+    }
+    setConfirmEnd(false);
+    setStatus(result.outcome === "sold" ? "sold" : "cancelled");
+    router.refresh();
+  }
+
   async function handlePlaceBid() {
     const value = parseInt(amount, 10);
     if (!value || value < minBid) {
@@ -159,6 +181,9 @@ export function LiveBidding({
               />
               <Countdown endsAt={endsAt} initialSeconds={initialSecondsLeft} onExpire={() => setExpired(true)} />
             </p>
+            <p className="mono mt-1 text-[12px]" style={{ color: "var(--steel)" }}>
+              {formatThaiDateTime(endsAt, { year: true })}
+            </p>
           </div>
         </div>
 
@@ -176,9 +201,59 @@ export function LiveBidding({
         )}
 
         {isOwner ? (
-          <p className="mt-[18px] text-[13px]" style={{ color: "var(--steel)" }}>
-            นี่คือประกาศของคุณเอง — ไม่สามารถบิดประกาศของตัวเองได้
-          </p>
+          <>
+            <p className="mt-[18px] text-[13px]" style={{ color: "var(--steel)" }}>
+              นี่คือประกาศของคุณเอง — ไม่สามารถบิดประกาศของตัวเองได้
+            </p>
+            {closed ? (
+              <p className="mt-2 text-[13px]" style={{ color: "var(--steel)" }}>
+                ประกาศนี้ปิดการประมูลแล้ว
+              </p>
+            ) : confirmEnd ? (
+              <div className="mt-3 rounded-[11px] p-[14px]" style={{ background: "var(--danger-tint)", border: "1px solid var(--danger-line)" }}>
+                <p className="text-[13px] leading-relaxed" style={{ color: "var(--white)" }}>
+                  {bids.length > 0
+                    ? `ปิดประมูลตอนนี้และขายให้ผู้บิดสูงสุดที่ ${formatTHB(price)} ทันที ระบบจะสร้างคำสั่งซื้อให้ผู้ชนะ ย้อนกลับไม่ได้`
+                    : "ยังไม่มีผู้บิด ประกาศนี้จะถูกยกเลิกทันที ย้อนกลับไม่ได้"}
+                </p>
+                {endError && (
+                  <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>
+                    {endError}
+                  </p>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={ending}
+                    onClick={handleEndNow}
+                    className="min-h-11 rounded-[9px] px-4 text-[13px] font-semibold disabled:opacity-60"
+                    style={{ background: "var(--danger)", color: "#fff" }}
+                  >
+                    {ending ? "กำลังปิด…" : "ยืนยันปิดประมูล"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={ending}
+                    onClick={() => { setConfirmEnd(false); setEndError(""); }}
+                    ref={cancelEndRef}
+                    className="min-h-11 rounded-[9px] px-4 text-[13px]"
+                    style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmEnd(true)}
+                className="mt-3 min-h-11 rounded-[9px] px-4 text-[13px]"
+                style={{ background: "transparent", border: "1px solid var(--danger-line)", color: "var(--danger)" }}
+              >
+                ปิดประมูลตอนนี้
+              </button>
+            )}
+          </>
         ) : closed || expired ? (
           <p className="mt-[18px] text-[13px]" style={{ color: "var(--steel)" }}>
             {closed ? "ประกาศนี้ปิดการประมูลแล้ว" : "ปิดประมูลแล้ว"}
