@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
 import { formatTHB } from "@/lib/format";
-import { isBuyNowAvailable } from "@/lib/listingKind";
+import { isFixedPrice } from "@/lib/listingKind";
 import type { Listing, Profile } from "@/lib/supabase/types";
 
 const CREST_PATHS = {
@@ -31,7 +31,7 @@ export function ProductCard({
   /** Owner's-own-profile variant: floating edit button instead of the seller row. */
   ownerEditHref?: string;
 }) {
-  const isBuyNow = isBuyNowAvailable(listing);
+  const isBuyNow = isFixedPrice(listing);
   const price = isBuyNow ? listing.buy_now_price! : listing.current_price;
 
   const chip = "mono absolute top-[10px] z-[1] rounded-full px-2 py-[3px] text-[10.5px] backdrop-blur-[6px]";

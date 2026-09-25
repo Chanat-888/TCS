@@ -90,7 +90,29 @@ export function CreateListingForm() {
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
   const [startPrice, setStartPrice] = useState("");
-  const [duration, setDuration] = useState("3");
+  const [duration, setDuration] = useState("72");
+  // Custom end time is always Thai time (UTC+7), independent of the browser's locale/timezone.
+  const [endDate, setEndDate] = useState("");
+  const [endHour, setEndHour] = useState("18");
+  const [endMinute, setEndMinute] = useState("00");
+  const [endDates] = useState(() => {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
+    const [y, m, d] = today.split("-").map(Number);
+    return Array.from({ length: 31 }, (_, i) => {
+      const day = new Date(Date.UTC(y, m - 1, d + i));
+      const value = day.toISOString().slice(0, 10);
+      const label =
+        i === 0
+          ? "วันนี้"
+          : i === 1
+            ? "พรุ่งนี้"
+            : day.toLocaleDateString("th-TH", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short", year: "numeric" });
+      return { value, label };
+    });
+  });
+  const customEndIso = endDate ? `${endDate}T${endHour}:${endMinute}:00+07:00` : "";
+  const [bidIncrement, setBidIncrement] = useState("100");
+  const [instantWinPrice, setInstantWinPrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
 
   const [photoError, setPhotoError] = useState(false);
@@ -117,6 +139,25 @@ export function CreateListingForm() {
       setPriceError(true);
       return;
     }
+    if (mode === "auction" && duration === "custom") {
+      const end = new Date(customEndIso).getTime();
+      const untilEnd = end - Date.now();
+      if (!customEndIso || Number.isNaN(end) || untilEnd < 60 * 60 * 1000 - 60_000 || untilEnd > 30 * 24 * 60 * 60 * 1000) {
+        setSubmitError("เวลาปิดประมูลต้องอยู่ระหว่าง 1 ชั่วโมง ถึง 30 วันจากตอนนี้");
+        return;
+      }
+    }
+    if (mode === "auction" && instantWinPrice.trim() && Number(instantWinPrice) <= Number(startPrice)) {
+      setSubmitError("ราคาชนะทันทีต้องสูงกว่าราคาเริ่มต้น");
+      return;
+    }
+    if (mode === "auction") {
+      const step = Number(bidIncrement);
+      if (!Number.isInteger(step) || step < 5 || step > 1000) {
+        setSubmitError("บิดขั้นต่ำต้องอยู่ระหว่าง ฿5 – ฿1,000");
+        return;
+      }
+    }
     setPriceError(false);
 
     setSubmitting(true);
@@ -134,7 +175,10 @@ export function CreateListingForm() {
       formData.append("buyNowPrice", sellPrice);
     } else {
       formData.append("startPrice", startPrice);
-      formData.append("duration", duration);
+      if (duration === "custom") formData.append("endsAt", new Date(customEndIso).toISOString());
+      else formData.append("durationHours", duration);
+      formData.append("bidIncrement", bidIncrement);
+      if (instantWinPrice.trim()) formData.append("buyNowPrice", instantWinPrice);
     }
 
     const res = await fetch("/api/listings", { method: "POST", body: formData });
@@ -312,6 +356,7 @@ export function CreateListingForm() {
         </div>
 
         {mode === "auction" ? (
+          <>
           <div className="grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
             <div>
               <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
@@ -336,13 +381,110 @@ export function CreateListingForm() {
                 ระยะเวลาประมูล
               </label>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
-                <option value="1">1 วัน</option>
-                <option value="3">3 วัน</option>
-                <option value="5">5 วัน</option>
-                <option value="7">7 วัน</option>
+                <optgroup label="ประมูลเร็ว (ราคาร้อน)">
+                  <option value="1">1 ชั่วโมง</option>
+                  <option value="3">3 ชั่วโมง</option>
+                  <option value="6">6 ชั่วโมง</option>
+                  <option value="12">12 ชั่วโมง</option>
+                </optgroup>
+                <optgroup label="ประมูลปกติ">
+                  <option value="24">1 วัน</option>
+                  <option value="72">3 วัน</option>
+                  <option value="120">5 วัน</option>
+                  <option value="168">7 วัน</option>
+                </optgroup>
+                <option value="custom">กำหนดวันและเวลาเอง</option>
               </select>
             </div>
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                บิดขั้นต่ำต่อครั้ง
+              </label>
+              <div className="relative">
+                <span className="mono pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[14.5px]" style={{ color: "var(--steel)" }}>
+                  ฿
+                </span>
+                <input
+                  className="mono"
+                  style={{ ...inputStyle, paddingLeft: 30 }}
+                  inputMode="numeric"
+                  value={bidIncrement}
+                  onChange={(e) => { setBidIncrement(e.target.value.replace(/\D/g, "")); setPriceError(false); }}
+                  placeholder="100"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ราคาชนะทันที (ไม่บังคับ)
+              </label>
+              <div className="relative">
+                <span className="mono pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2 text-[14.5px]" style={{ color: "var(--steel)" }}>
+                  ฿
+                </span>
+                <input
+                  className="mono"
+                  style={{ ...inputStyle, paddingLeft: 30 }}
+                  inputMode="numeric"
+                  value={instantWinPrice}
+                  onChange={(e) => setInstantWinPrice(e.target.value.replace(/\D/g, ""))}
+                  placeholder="เว้นว่าง = ไม่มี"
+                />
+              </div>
+            </div>
           </div>
+          {duration === "custom" && (
+            <div className="mt-3">
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ปิดประมูลเมื่อ
+              </label>
+              <div className="grid grid-cols-[1.6fr_1fr_1fr] gap-2">
+                <select
+                  aria-label="วันที่ปิดประมูล"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setSubmitError(""); }}
+                  style={{ ...inputStyle, color: endDate ? "var(--white)" : "var(--steel)" }}
+                >
+                  <option value="">เลือกวันที่</option>
+                  {endDates.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+                <select
+                  aria-label="ชั่วโมง"
+                  value={endHour}
+                  onChange={(e) => { setEndHour(e.target.value); setSubmitError(""); }}
+                  style={{ ...inputStyle, color: "var(--white)" }}
+                >
+                  {Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")).map((h) => (
+                    <option key={h} value={h}>{h} น.</option>
+                  ))}
+                </select>
+                <select
+                  aria-label="นาที"
+                  value={endMinute}
+                  onChange={(e) => { setEndMinute(e.target.value); setSubmitError(""); }}
+                  style={{ ...inputStyle, color: "var(--white)" }}
+                >
+                  {["00", "15", "30", "45"].map((m) => (
+                    <option key={m} value={m}>{m} นาที</option>
+                  ))}
+                </select>
+              </div>
+              {endDate && (
+                <p className="mono mt-2 text-[13px]" style={{ color: "var(--cyan)" }}>
+                  ปิดประมูล {endDates.find((d) => d.value === endDate)?.label} เวลา {endHour}.{endMinute} น.
+                </p>
+              )}
+              <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
+                เวลาประเทศไทย เลือกได้ตั้งแต่ 1 ชั่วโมง ถึง 30 วันจากตอนนี้ · ถ้ามีคนบิดในช่วง 2 นาทีสุดท้าย เวลาจะขยายให้อัตโนมัติ
+              </p>
+            </div>
+          )}
+          <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
+            บิดขั้นต่ำตั้งได้ ฿5 – ฿1,000 ต่อครั้ง · ถ้าตั้งราคาชนะทันที ผู้ซื้อที่บิดถึงราคานี้จะชนะและปิดประมูลทันที
+          </p>
+          </>
         ) : (
           <div>
             <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>

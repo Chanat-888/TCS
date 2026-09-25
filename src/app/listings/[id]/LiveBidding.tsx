@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Countdown } from "@/components/Countdown";
 import { formatTHB, formatRelativeTime, maskUserLabel } from "@/lib/format";
@@ -8,12 +9,12 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import type { Bid } from "@/lib/supabase/types";
 import { placeBid } from "./actions";
 
-const BID_INCREMENT = 100;
-
 export function LiveBidding({
   listingId,
   initialStatus,
   startPrice,
+  buyNowPrice,
+  bidIncrement,
   initialPrice,
   initialEndsAt,
   initialSecondsLeft,
@@ -25,6 +26,8 @@ export function LiveBidding({
   listingId: string;
   initialStatus: string;
   startPrice: number;
+  buyNowPrice: number | null;
+  bidIncrement: number;
   initialPrice: number;
   initialEndsAt: string;
   initialSecondsLeft: number;
@@ -34,18 +37,20 @@ export function LiveBidding({
   /** Buy-now box; shown only while the listing is unbid and still active, live. */
   buyNowSlot?: ReactNode;
 }) {
+  const router = useRouter();
+  const nextMin = (p: number) => Math.min(p + bidIncrement, buyNowPrice ?? Infinity);
   const [status, setStatus] = useState(initialStatus);
   const [price, setPrice] = useState(initialPrice);
   const [endsAt, setEndsAt] = useState(initialEndsAt);
   const [bids, setBids] = useState(initialBids);
-  const [amount, setAmount] = useState(String(initialPrice + BID_INCREMENT));
+  const [amount, setAmount] = useState(String(nextMin(initialPrice)));
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showExtend, setShowExtend] = useState(false);
   const [expired, setExpired] = useState(initialSecondsLeft <= 0);
   const extendTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const minBid = price + BID_INCREMENT;
+  const minBid = nextMin(price);
   const closed = status !== "active";
   const topBid = bids.reduce<Bid | null>((top, b) => (!top || b.amount > top.amount ? b : top), null);
   const youAreTop = topBid?.bidder_id === currentUserId;
@@ -98,7 +103,8 @@ export function LiveBidding({
     // Resets the suggested bid whenever the price changes (own bid or
     // realtime update from someone else) — an intentional prop-driven reset.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAmount(String(price + BID_INCREMENT));
+    setAmount(String(nextMin(price)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [price]);
 
   async function handlePlaceBid() {
@@ -113,6 +119,10 @@ export function LiveBidding({
     setSubmitting(false);
     if ("error" in result) {
       setError(result.error ?? "เกิดข้อผิดพลาด ลองอีกครั้ง");
+      return;
+    }
+    if (result.won) {
+      router.push(`/checkout/${result.orderId}`);
       return;
     }
     setPrice(result.newPrice);
@@ -194,7 +204,7 @@ export function LiveBidding({
                 type="button"
                 aria-label="ลดจำนวนเงินบิด"
                 onClick={() => {
-                  setAmount(String(Math.max(minBid, (parseInt(amount, 10) || minBid) - BID_INCREMENT)));
+                  setAmount(String(Math.max(minBid, (parseInt(amount, 10) || minBid) - bidIncrement)));
                   setError("");
                 }}
                 className="flex-shrink-0 rounded-[11px] text-[18px]"
@@ -224,7 +234,7 @@ export function LiveBidding({
                 type="button"
                 aria-label="เพิ่มจำนวนเงินบิด"
                 onClick={() => {
-                  setAmount(String((parseInt(amount, 10) || minBid) + BID_INCREMENT));
+                  setAmount(String((parseInt(amount, 10) || minBid) + bidIncrement));
                   setError("");
                 }}
                 className="flex-shrink-0 rounded-[11px] text-[18px]"
@@ -234,8 +244,13 @@ export function LiveBidding({
               </button>
             </div>
             <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
-              บิดขั้นต่ำถัดไป <span className="mono">{formatTHB(minBid)}</span> (เพิ่มขึ้นทีละ ฿100)
+              บิดขั้นต่ำถัดไป <span className="mono">{formatTHB(minBid)}</span> (เพิ่มขึ้นทีละ {formatTHB(bidIncrement)})
             </p>
+            {buyNowPrice != null && (
+              <p className="mt-1 text-[12px]" style={{ color: "var(--cyan)" }}>
+                บิดถึง <span className="mono">{formatTHB(buyNowPrice)}</span> = ชนะทันที (ปิดประมูลและไปชำระเงินเลย)
+              </p>
+            )}
             {error && (
               <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>
                 {error}

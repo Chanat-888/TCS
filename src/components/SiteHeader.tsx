@@ -209,6 +209,17 @@ export function SiteHeader({ userId }: { userId: string }) {
               <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </Link>
+          <Link
+            href="/listings/new"
+            aria-label="ลงขายการ์ด"
+            className="flex h-11 flex-shrink-0 items-center justify-center gap-[6px] rounded-full no-underline min-[860px]:px-[18px] max-[859px]:w-11"
+            style={{ background: "var(--blue)", color: "#071523" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-[14px] font-semibold max-[859px]:hidden">ลงขาย</span>
+          </Link>
           <CartLink />
           <AccountMenu userId={userId} />
           <MobileMenu />
