@@ -187,6 +187,23 @@ export function LiveBidding({
           </div>
         </div>
 
+        {buyNowPrice != null && !closed && (
+          <div
+            className="mt-[14px] flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-[9px] px-3 py-2 text-[12.5px]"
+            style={{ color: "var(--cyan)", background: "rgba(95,212,255,0.08)", border: "1px solid rgba(95,212,255,0.22)" }}
+          >
+            <span>ราคาชนะทันที</span>
+            <span className="mono text-[14px]" style={{ color: "var(--white)" }}>
+              {formatTHB(buyNowPrice)}
+            </span>
+            <span className="w-full text-[12px]" style={{ color: "var(--steel)" }}>
+              {isOwner
+                ? "ผู้ซื้อที่บิดถึงราคานี้จะชนะและปิดประมูลทันที"
+                : "บิดถึงราคานี้เพื่อชนะและปิดประมูลทันที แล้วไปชำระเงินได้เลย"}
+            </span>
+          </div>
+        )}
+
         {showExtend && (
           <div
             className="mt-[10px] flex items-center gap-[7px] rounded-[9px] px-3 py-2 text-[12.5px]"
@@ -321,11 +338,6 @@ export function LiveBidding({
             <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
               บิดขั้นต่ำถัดไป <span className="mono">{formatTHB(minBid)}</span> (เพิ่มขึ้นทีละ {formatTHB(bidIncrement)})
             </p>
-            {buyNowPrice != null && (
-              <p className="mt-1 text-[12px]" style={{ color: "var(--cyan)" }}>
-                บิดถึง <span className="mono">{formatTHB(buyNowPrice)}</span> = ชนะทันที (ปิดประมูลและไปชำระเงินเลย)
-              </p>
-            )}
             {error && (
               <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>
                 {error}
