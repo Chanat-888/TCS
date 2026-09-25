@@ -365,7 +365,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                 </Link>
               </div>
             )}
-            <div className="wrap flex justify-center" style={{ paddingTop: 32, paddingBottom: 56 }}>
+            <div className="wrap flex flex-col items-center gap-3" style={{ paddingTop: 32, paddingBottom: 56 }}>
               <form action="/logout" method="post">
                 <button
                   type="submit"
@@ -376,12 +376,8 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
                   ออกจากระบบ
                 </button>
               </form>
+              <DeleteAccountButton />
             </div>
-          </div>
-        )}
-        {isOwner && (
-          <div className="mt-4">
-            <DeleteAccountButton />
           </div>
         )}
       </main>

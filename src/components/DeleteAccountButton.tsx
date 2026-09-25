@@ -68,13 +68,13 @@ export function DeleteAccountButton() {
 
   if (step === "idle" || step === "checking") {
     return (
-      <div className="mt-2">
+      <div className="flex flex-col items-center">
         <button
           type="button"
           onClick={start}
           disabled={step === "checking"}
-          className="border-0 bg-transparent p-0 text-[13px] cursor-pointer underline disabled:opacity-50"
-          style={{ color: "var(--danger)" }}
+          className="inline-flex items-center gap-[8px] rounded-full px-6 text-[13.5px] font-medium cursor-pointer transition-colors hover:bg-[rgba(232,102,79,0.1)] disabled:opacity-50"
+          style={{ height: 44, background: "var(--panel)", border: "1px solid rgba(232,102,79,0.4)", color: "var(--danger)" }}
         >
           {step === "checking" ? "กำลังตรวจสอบ…" : "ลบบัญชี"}
         </button>
