@@ -7,7 +7,7 @@ import { updateProfile } from "./actions";
 
 const fieldStyle = {
   background: "var(--panel-2)",
-  border: "1px solid rgba(140, 147, 163, 0.2)",
+  border: "1px solid var(--line)",
   color: "var(--white)",
 } as const;
 
@@ -67,10 +67,10 @@ export function EditProfileButton({
       <button
         type="button"
         onClick={show}
-        className="inline-flex flex-shrink-0 cursor-pointer items-center gap-[7px] rounded-[10px] px-[18px] py-[10px] text-[13.5px] font-medium max-[640px]:mt-1"
+        className="inline-flex flex-shrink-0 cursor-pointer items-center gap-[7px] min-h-11 rounded-[10px] px-[18px] text-[13.5px] font-medium max-[640px]:mt-1"
         style={{
           background: highlight ? "var(--blue)" : "var(--panel)",
-          border: "1px solid rgba(95,212,255,0.3)",
+          border: "1px solid var(--cyan-line)",
           color: highlight ? "#071523" : "var(--white)",
         }}
       >
@@ -91,7 +91,7 @@ export function EditProfileButton({
             aria-modal="true"
             aria-labelledby="edit-profile-title"
             className="w-full rounded-[18px] text-left"
-            style={{ maxWidth: 420, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.18)", padding: "28px 24px" }}
+            style={{ maxWidth: 420, background: "var(--panel)", border: "1px solid var(--line)", padding: "28px 24px" }}
             onSubmit={(e) => {
               e.preventDefault();
               save();
@@ -136,7 +136,7 @@ export function EditProfileButton({
               className="mt-2 w-full resize-none rounded-[11px] px-[14px] py-3 text-[14px] leading-relaxed outline-none"
               style={fieldStyle}
             />
-            <p className="mono mt-1 text-right text-[11px]" style={{ color: "var(--steel-dim)" }}>{Array.from(about).length} / {BIO_MAX}</p>
+            <p className="mono mt-1 text-right text-[11px]" style={{ color: "var(--steel)" }}>{Array.from(about).length} / {BIO_MAX}</p>
 
             <div className="mt-5 flex gap-3">
               <button
@@ -144,7 +144,7 @@ export function EditProfileButton({
                 onClick={() => setOpen(false)}
                 disabled={saving}
                 className="h-[46px] flex-1 cursor-pointer rounded-[11px] text-[14px] disabled:opacity-40"
-                style={{ background: "transparent", border: "1px solid rgba(140,147,163,0.3)", color: "var(--steel)" }}
+                style={{ background: "transparent", border: "1px solid var(--line-strong)", color: "var(--steel)" }}
               >
                 ยกเลิก
               </button>

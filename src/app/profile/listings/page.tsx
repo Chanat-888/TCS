@@ -34,7 +34,7 @@ export default async function ManageListingsPage() {
           {listings.length === 0 ? (
             <div
               className="mt-4 flex flex-col items-center rounded-2xl px-5 py-16 text-center"
-              style={{ background: "var(--panel)", border: "1px dashed rgba(140,147,163,0.22)" }}
+              style={{ background: "var(--panel)", border: "1px dashed var(--line)" }}
             >
               <h2 className="text-[1.15rem]">ยังไม่มีประกาศขาย</h2>
               <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
