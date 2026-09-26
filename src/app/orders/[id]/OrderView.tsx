@@ -119,6 +119,11 @@ export function OrderView({
       meta: order.shipped_at ? (
         <>
           {order.delivery_method === "meetup" ? "ส่งมอบแล้ว (นัดรับ)" : <>{order.courier} · เลขพัสดุ <span className="mono">{order.tracking_number}</span></>} · <span className="mono">{formatRelativeTime(order.shipped_at)}</span>
+          {order.packing_video_url && (
+            <>
+              {" "}· <a href={order.packing_video_url} target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>ดูวิดีโอแพ็คของจากผู้ขาย</a>
+            </>
+          )}
         </>
       ) : (
         order.delivery_method === "meetup" ? "นัดสถานที่และเวลากับผู้ขายในแชท แล้วรอผู้ขายกดยืนยันส่งมอบ" : "รอผู้ขายจัดส่งสินค้า"
@@ -245,7 +250,7 @@ export function OrderView({
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(95,212,255,0.2)" }}>
             <h3 className="text-[15px] font-medium">ถ่ายวิดีโอแกะกล่อง</h3>
             <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
-              อัปโหลดวิดีโอตอนแกะกล่องก่อนกดรับการ์ด — เป็นหลักฐานเดียวที่ใช้เปิดข้อพิพาทได้ ไม่มีวิดีโอ ไม่มีสิทธิ์เปิดข้อพิพาท
+              อัปโหลดวิดีโอตอนแกะกล่องก่อนกดรับการ์ด — TCS ต้องมีวิดีโอจากทั้งผู้ขาย (ตอนแพ็ค) และผู้ซื้อ (ตอนแกะ) ทุกออเดอร์ และเป็นหลักฐานเดียวที่ใช้เปิดข้อพิพาทได้ ไม่มีวิดีโอ ไม่มีสิทธิ์เปิดข้อพิพาท
             </p>
             <input
               ref={fileInput}

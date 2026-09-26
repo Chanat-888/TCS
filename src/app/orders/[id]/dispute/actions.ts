@@ -15,13 +15,25 @@ export async function fileDispute(orderId: string, reason: DisputeReason, descri
   if (!order.unboxing_video_url) return { error: "ต้องมีวิดีโอแกะกล่องก่อนเปิดข้อพิพาท" as const };
   if (order.status !== "DELIVERED") return { error: "คำสั่งซื้อนี้ไม่ได้อยู่ในสถานะที่เปิดข้อพิพาทได้" as const };
 
+  // Claim the order first, conditional on it still being DELIVERED, so a double
+  // click or a simultaneous approve can never produce two disputes or a dispute
+  // on an order that has already been completed.
+  const { data: claimed, error: orderError } = await supabase
+    .from("orders")
+    .update({ status: "DISPUTED" })
+    .eq("id", orderId)
+    .eq("status", "DELIVERED")
+    .select("id");
+  if (orderError) return { error: "ส่งข้อพิพาทไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "สถานะคำสั่งซื้อเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า" as const };
+
   const { error: disputeError } = await supabase
     .from("disputes")
     .insert({ order_id: orderId, opened_by: userId, reason, description });
-  if (disputeError) return { error: "ส่งข้อพิพาทไม่สำเร็จ ลองอีกครั้ง" as const };
-
-  const { error: orderError } = await supabase.from("orders").update({ status: "DISPUTED" }).eq("id", orderId);
-  if (orderError) return { error: "ส่งข้อพิพาทไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (disputeError) {
+    await supabase.from("orders").update({ status: "DELIVERED" }).eq("id", orderId).eq("status", "DISPUTED");
+    return { error: "ส่งข้อพิพาทไม่สำเร็จ ลองอีกครั้ง" as const };
+  }
 
   revalidatePath(`/orders/${orderId}`);
   return { success: true as const };
@@ -48,17 +60,22 @@ export async function reportMeetupNoShow(orderId: string, description: string) {
     return { error: "คำสั่งขายนี้ไม่ได้อยู่ในสถานะที่แจ้งปัญหานี้ได้" as const };
   }
 
-  const { error: disputeError } = await supabase
-    .from("disputes")
-    .insert({ order_id: orderId, opened_by: userId, reason: "not_received", description: cleaned });
-  if (disputeError) return { error: "ส่งเรื่องไม่สำเร็จ ลองอีกครั้ง" as const };
-
-  const { error: orderError } = await supabase
+  const { data: claimed, error: orderError } = await supabase
     .from("orders")
     .update({ status: "DISPUTED" })
     .eq("id", orderId)
-    .in("status", ["PAID_HELD", "SHIPPED"]);
+    .in("status", ["PAID_HELD", "SHIPPED"])
+    .select("id");
   if (orderError) return { error: "ส่งเรื่องไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "สถานะคำสั่งซื้อเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า" as const };
+
+  const { error: disputeError } = await supabase
+    .from("disputes")
+    .insert({ order_id: orderId, opened_by: userId, reason: "not_received", description: cleaned });
+  if (disputeError) {
+    await supabase.from("orders").update({ status: order.status }).eq("id", orderId).eq("status", "DISPUTED");
+    return { error: "ส่งเรื่องไม่สำเร็จ ลองอีกครั้ง" as const };
+  }
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath(`/orders/${orderId}/seller`);

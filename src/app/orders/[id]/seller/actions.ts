@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
 
+// TCS always needs video from both sides: the seller's packing video before
+// anything leaves their hands, and the buyer's unboxing video on receipt.
+const PACKING_VIDEO_REQUIRED = "อัปโหลดวิดีโอแพ็คของก่อนยืนยัน — TCS ต้องมีวิดีโอจากทั้งผู้ขายและผู้ซื้อทุกออเดอร์";
+
 export async function confirmShipment(orderId: string, courier: string, trackingNumber: string) {
   const userId = await requireVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
@@ -14,13 +18,17 @@ export async function confirmShipment(orderId: string, courier: string, tracking
   if (!order || order.seller_id !== userId) return { error: "ไม่พบคำสั่งขายนี้" as const };
   if (order.status !== "PAID_HELD") return { error: "คำสั่งขายนี้ไม่ได้อยู่ในสถานะที่ยืนยันจัดส่งได้" as const };
   if (order.delivery_method === "meetup") return { error: "คำสั่งซื้อนี้เป็นการนัดรับ กรุณากดยืนยันการส่งมอบแทน" as const };
+  if (!order.packing_video_url) return { error: PACKING_VIDEO_REQUIRED };
 
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { data: claimed, error } = await supabase
     .from("orders")
     .update({ status: "SHIPPED", courier, tracking_number: trackingNumber.trim(), shipped_at: now })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("status", "PAID_HELD")
+    .select("id");
   if (error) return { error: "ยืนยันการจัดส่งไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "สถานะคำสั่งขายเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า" as const };
 
   revalidatePath(`/orders/${orderId}/seller`);
   return { success: true as const };
@@ -38,13 +46,16 @@ export async function confirmHandover(orderId: string) {
   if (!order || order.seller_id !== userId) return { error: "ไม่พบคำสั่งขายนี้" as const };
   if (order.delivery_method !== "meetup") return { error: "คำสั่งซื้อนี้เป็นการจัดส่ง กรุณากรอกขนส่งและเลขพัสดุ" as const };
   if (order.status !== "PAID_HELD") return { error: "คำสั่งขายนี้ไม่ได้อยู่ในสถานะที่ยืนยันการส่งมอบได้" as const };
+  if (!order.packing_video_url) return { error: PACKING_VIDEO_REQUIRED };
 
-  const { error } = await supabase
+  const { data: claimed, error } = await supabase
     .from("orders")
     .update({ status: "SHIPPED", shipped_at: new Date().toISOString() })
     .eq("id", orderId)
-    .eq("status", "PAID_HELD");
+    .eq("status", "PAID_HELD")
+    .select("id");
   if (error) return { error: "ยืนยันการส่งมอบไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "สถานะคำสั่งขายเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า" as const };
 
   revalidatePath(`/orders/${orderId}/seller`);
   revalidatePath(`/orders/${orderId}`);

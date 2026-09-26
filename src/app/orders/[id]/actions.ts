@@ -15,11 +15,16 @@ export async function approveOrder(orderId: string) {
   if (order.status !== "DELIVERED") return { error: "คำสั่งซื้อนี้ไม่ได้อยู่ในสถานะที่กดรับได้" as const };
 
   const now = new Date().toISOString();
-  const { error } = await supabase
+  // Conditional on still being DELIVERED: a dispute opened at the same moment must
+  // win, otherwise approving would release money held for an open dispute.
+  const { data: claimed, error } = await supabase
     .from("orders")
     .update({ status: "COMPLETED", approved_at: now, completed_at: now })
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .eq("status", "DELIVERED")
+    .select("id");
   if (error) return { error: "ดำเนินการไม่สำเร็จ ลองอีกครั้ง" as const };
+  if (!claimed || claimed.length === 0) return { error: "สถานะคำสั่งซื้อเปลี่ยนไปแล้ว กรุณารีเฟรชหน้า" as const };
 
   revalidatePath(`/orders/${orderId}`);
   return { success: true as const };
