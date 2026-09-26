@@ -85,6 +85,8 @@ export interface Order {
   shipped_at: string | null;
   delivered_at: string | null;
   /** Seller's packing video (absent before migration 0018). Required before shipping. */
+  /** Currently agreed ship / hand-over date (absent before migration 0019). */
+  ship_by_at?: string | null;
   packing_video_url?: string | null;
   packing_video_uploaded_at?: string | null;
   unboxing_video_url: string | null;
@@ -150,4 +152,20 @@ export interface WantedPostMessage {
   sender_id: string;
   body: string;
   created_at: string;
+}
+
+export type ShipProposalKind = "ship_date" | "cancel";
+export type ShipProposalStatus = "pending" | "accepted" | "declined" | "withdrawn";
+
+export interface ShipProposal {
+  id: string;
+  order_id: string;
+  proposed_by: string;
+  kind: ShipProposalKind;
+  proposed_date: string | null;
+  reason: string;
+  status: ShipProposalStatus;
+  response_note: string | null;
+  created_at: string;
+  responded_at: string | null;
 }

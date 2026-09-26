@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
 import { bidIncrementOf, isBuyNowAvailable, isFixedPrice } from "@/lib/listingKind";
+import { createPendingOrder } from "@/lib/orderCreate";
 import type { Bid } from "@/lib/supabase/types";
 
 const ANTI_SNIPE_WINDOW_SECONDS = 120;
@@ -107,36 +108,6 @@ async function attemptBid(listingId: string, amount: number, userId: string, ret
 
   revalidatePath(`/listings/${listingId}`);
   return { success: true, won: false, extended, newEndsAt, newPrice: amount, bid };
-}
-
-function generateOrderCode() {
-  const now = new Date();
-  const yy = String(now.getFullYear() % 100).padStart(2, "0");
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
-  return `TCS-${yy}${mm}${dd}-${suffix}`;
-}
-
-function createPendingOrder(
-  supabase: ReturnType<typeof createServiceClient>,
-  listing: { id: string; seller_id: string },
-  buyerId: string,
-  amount: number
-) {
-  return supabase
-    .from("orders")
-    .insert({
-      order_code: generateOrderCode(),
-      listing_id: listing.id,
-      buyer_id: buyerId,
-      seller_id: listing.seller_id,
-      amount,
-      status: "PENDING_PAYMENT",
-      payment_deadline_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    })
-    .select()
-    .single();
 }
 
 export async function buyNow(listingId: string) {

@@ -4,8 +4,9 @@ import { useRef, useState } from "react";
 import { OrderTimeline, type TimelineStep } from "@/components/OrderTimeline";
 import { StatusPill } from "@/components/StatusPill";
 import { ChatPanel } from "@/components/ChatPanel";
+import { ShipDatePanel } from "@/components/ShipDatePanel";
 import { formatTHB, maskUserLabel, formatRelativeTime } from "@/lib/format";
-import type { Message, Order } from "@/lib/supabase/types";
+import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 
@@ -15,11 +16,13 @@ export function OrderSellerView({
   order,
   listingName,
   messages,
+  proposals,
   currentUserId,
 }: {
   order: Order;
   listingName: string;
   messages: Message[];
+  proposals: ShipProposal[];
   currentUserId: string;
 }) {
   const [courier, setCourier] = useState("");
@@ -136,6 +139,33 @@ export function OrderSellerView({
         </h2>
         <OrderTimeline steps={steps} />
       </div>
+
+      {order.status === "CANCELLED" ? (
+        <div className="section">
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--danger-line)" }}>
+            <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>คำสั่งขายนี้ถูกยกเลิกแล้ว</h3>
+            <p className="mt-[6px] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              {order.paid_at
+                ? "เงินที่พักไว้จะคืนให้ผู้ซื้อ ไม่ต้องจัดส่งสินค้า — เหตุผลการยกเลิก (ตกลงยกเลิกร่วมกัน หรือไม่ได้จัดส่งตามกำหนด) ดูได้ในแชท"
+                : "ผู้ซื้อไม่ได้ชำระเงินภายใน 24 ชั่วโมง คำสั่งซื้อจึงถูกยกเลิก ไม่ต้องจัดส่งสินค้า"}
+            </p>
+          </div>
+        </div>
+      ) : (
+        (order.status === "PAID_HELD" || order.ship_by_at || proposals.length > 0) && (
+          <div className="section">
+            <ShipDatePanel
+              orderId={order.id}
+              role="seller"
+              currentUserId={currentUserId}
+              shipByAt={order.ship_by_at ?? null}
+              proposals={proposals}
+              isMeetup={isMeetup}
+              canChange={order.status === "PAID_HELD" && !shipped}
+            />
+          </div>
+        )
+      )}
 
       <div className="section">
         <h2 className="mb-[14px] text-[14px] font-medium" style={{ color: "var(--steel)" }}>

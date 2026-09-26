@@ -52,12 +52,13 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
   const supabase = createServiceClient();
   const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
   if (!order || order.buyer_id !== userId) return { error: "ไม่พบคำสั่งซื้อนี้" as const };
+  if (order.status === "CANCELLED") return { error: "คำสั่งซื้อนี้ถูกยกเลิกแล้ว (เกินกำหนดชำระเงิน 24 ชั่วโมง)" as const };
   if (order.status !== "PENDING_PAYMENT") return { error: "คำสั่งซื้อนี้ชำระเงินไปแล้ว" as const };
 
   const resolved = await resolveDelivery(userId, input.delivery);
   if ("error" in resolved) return { error: resolved.error };
 
-  const { error } = await supabase
+  const { data: claimed, error } = await supabase
     .from("orders")
     .update({
       status: "PAID_HELD",
@@ -73,8 +74,12 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
       paid_at: new Date().toISOString(),
     })
     .eq("id", orderId)
-    .eq("status", "PENDING_PAYMENT");
+    .eq("status", "PENDING_PAYMENT")
+    .select("id");
   if (error) return { error: "ชำระเงินไม่สำเร็จ ลองอีกครั้ง" as const };
+  // The order timer may have cancelled it (deadline passed) between our read and this
+  // update: never report a payment for an order that is no longer waiting for one.
+  if (!claimed || claimed.length === 0) return { error: "คำสั่งซื้อนี้ไม่ได้รอชำระเงินแล้ว (อาจถูกยกเลิกเพราะเกินกำหนด) กรุณารีเฟรชหน้า" as const };
 
   // Saving the address is a convenience: it must never undo or fail a payment.
   if (resolved.saveAs) {
