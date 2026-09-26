@@ -132,6 +132,20 @@ export default async function AdminDisputePage({ params }: { params: Promise<{ i
                 <div>
                   {evidenceCaption("วิดีโอแกะกล่อง", "จากผู้ซื้อ · 48 วินาที")}
                   <VideoEvidenceBox videoUrl={detail.order.unboxing_video_url ?? ""} />
+                  {detail.order.unboxing_video_url && (
+                    <a href={detail.order.unboxing_video_url} target="_blank" rel="noreferrer" className="mt-2 block text-[12.5px]" style={{ color: "var(--cyan)" }}>
+                      เปิดวิดีโอแกะกล่อง
+                    </a>
+                  )}
+                  {detail.order.packing_video_url ? (
+                    <a href={detail.order.packing_video_url} target="_blank" rel="noreferrer" className="mt-2 block text-[12.5px]" style={{ color: "var(--cyan)" }}>
+                      เปิดวิดีโอแพ็คของจากผู้ขาย
+                    </a>
+                  ) : (
+                    <p className="mt-2 text-[12.5px]" style={{ color: "var(--steel)" }}>
+                      ผู้ขายไม่มีวิดีโอแพ็คของ (ออเดอร์ก่อนเริ่มบังคับ)
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

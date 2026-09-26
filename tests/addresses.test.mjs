@@ -74,7 +74,7 @@ function makeDb({ order = null, single = {}, writeFails = [] } = {}) {
           then(resolve, reject) {
             log.push(plain(state));
             const failed = writeFails.includes(table);
-            return Promise.resolve(failed ? { error: { code: "XX000" } } : { error: null }).then(resolve, reject);
+            return Promise.resolve(failed ? { error: { code: "XX000" } } : { data: [{ id: "row" }], error: null }).then(resolve, reject);
           },
         };
         return q;
@@ -270,7 +270,7 @@ function seller({ userId = "seller", order }) {
   });
   return { actions, db };
 }
-const PAID = { id: "o", seller_id: "seller", buyer_id: "buyer", status: "PAID_HELD", delivery_method: "ship" };
+const PAID = { id: "o", seller_id: "seller", buyer_id: "buyer", status: "PAID_HELD", delivery_method: "ship", packing_video_url: "https://example.test/pack.mp4" };
 
 test("shipped orders still need a courier and tracking number", async () => {
   const { actions, db } = seller({ order: PAID });

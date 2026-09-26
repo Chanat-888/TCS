@@ -30,14 +30,17 @@ function fixture(order, { insertError = null, updateError = null, userId = "buye
           if (table === "orders") {
             return {
               select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: order }) }) }),
-              update: (fields) => ({
-                eq: (col, val) => ({
-                  in: (col2, statuses) => {
-                    calls.updated.push({ fields, col, val, col2, statuses });
-                    return Promise.resolve({ error: updateError });
-                  },
-                }),
-              }),
+              update: (fields) => {
+                const entry = { fields, filters: {}, statuses: undefined };
+                calls.updated.push(entry);
+                const chain = {
+                  eq(col, val) { entry.filters[col] = val; return chain; },
+                  in(col, statuses) { entry.statuses = statuses; return chain; },
+                  select() { return Promise.resolve({ data: updateError ? null : [{ id: "o1" }], error: updateError }); },
+                  then(resolve) { resolve({ error: null }); },
+                };
+                return chain;
+              },
             };
           }
           if (table === "disputes") {
@@ -113,19 +116,22 @@ test("orders already completed, disputed, or delivered cannot be reported this w
   }
 });
 
-test("a failed dispute insert is reported and the order status is left untouched", async () => {
+test("a failed dispute insert is reported and the order is put back where it was", async () => {
   const order = { id: "o1", buyer_id: "buyer-1", delivery_method: "meetup", unboxing_video_url: null, status: "SHIPPED" };
   const { actions, calls } = fixture(order, { insertError: { message: "boom" } });
   const result = await actions.reportMeetupNoShow("o1", VALID_DESCRIPTION);
   assert.ok(result.error);
-  assert.equal(calls.updated.length, 0);
+  assert.equal(calls.updated.length, 2);
+  assert.equal(calls.updated[0].fields.status, "DISPUTED");
+  assert.equal(calls.updated[1].fields.status, "SHIPPED");
 });
 
-test("a failed order-status update is reported, not claimed as success", async () => {
+test("a failed order-status update is reported, not claimed as success, and records no dispute", async () => {
   const order = { id: "o1", buyer_id: "buyer-1", delivery_method: "meetup", unboxing_video_url: null, status: "SHIPPED" };
   const { actions, calls } = fixture(order, { updateError: { message: "boom" } });
   const result = await actions.reportMeetupNoShow("o1", VALID_DESCRIPTION);
   assert.ok(result.error);
   assert.equal(result.success, undefined);
+  assert.equal(calls.inserted.length, 0);
   assert.equal(calls.revalidated.length, 0);
 });

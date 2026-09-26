@@ -3,6 +3,7 @@
 import { useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { formatTHB } from "@/lib/format";
+import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -89,6 +90,9 @@ export function CreateListingForm() {
   const [category, setCategory] = useState("");
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
+  const [rarity, setRarity] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [hasExtras, setHasExtras] = useState("");
   const [startPrice, setStartPrice] = useState("");
   const [duration, setDuration] = useState("72");
   // Custom end time is always Thai time (UTC+7), independent of the browser's locale/timezone.
@@ -133,6 +137,10 @@ export function CreateListingForm() {
       setDetailsError(true);
       return;
     }
+    if ((category === "rare" && !rarity) || (category === "deck" && !hasExtras)) {
+      setDetailsError(true);
+      return;
+    }
     setDetailsError(false);
     const price = mode === "sell" ? sellPrice : startPrice;
     if (!price.trim()) {
@@ -168,6 +176,9 @@ export function CreateListingForm() {
     formData.append("name", name.trim());
     formData.append("set", set.trim());
     formData.append("category", category);
+    formData.append("rarity", rarity);
+    formData.append("quantity", quantity);
+    formData.append("hasExtras", hasExtras);
     formData.append("condition", condition);
     formData.append("description", description.trim());
     if (mode === "sell") {
@@ -264,9 +275,9 @@ export function CreateListingForm() {
       <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
         <div>
           <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-            ชื่อการ์ด
+            ชื่อการ์ด / สินค้า
           </label>
-          <input style={inputStyle} value={name} onChange={(e) => { setName(e.target.value); setDetailsError(false); }} placeholder="เช่น Dragonic Overlord SP" />
+          <input style={inputStyle} value={name} onChange={(e) => { setName(e.target.value); setDetailsError(false); }} placeholder="เช่น Dragonic Overlord SP หรือ Starter Deck / กล่อง BT" />
         </div>
         <div className="mt-[14px] grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
           <div>
@@ -277,20 +288,83 @@ export function CreateListingForm() {
           </div>
           <div>
             <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-              หมวดหมู่
+              ประเภทสินค้า
             </label>
             <select
               value={category}
-              onChange={(e) => { setCategory(e.target.value); setDetailsError(false); }}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setQuantity("1");
+                setDetailsError(false);
+              }}
               style={{ ...inputStyle, color: category ? "var(--white)" : "var(--steel-dim)" }}
             >
-              <option value="">เลือกหมวดหมู่</option>
-              <option value="new">บูสเตอร์ใหม่</option>
-              <option value="deck">เด็คพร้อมเล่น</option>
-              <option value="rare">การ์ดหายาก</option>
+              <option value="">เลือกประเภทสินค้า</option>
+              <option value="rare">{PRODUCT_TYPE_LABELS.rare}</option>
+              <option value="deck">{PRODUCT_TYPE_LABELS.deck}</option>
+              <option value="new">{PRODUCT_TYPE_LABELS.new}</option>
             </select>
           </div>
         </div>
+        {category === "rare" && (
+          <div className="mt-[14px] grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ความหายาก
+              </label>
+              <select
+                value={rarity}
+                onChange={(e) => { setRarity(e.target.value); setDetailsError(false); }}
+                style={{ ...inputStyle, color: rarity ? "var(--white)" : "var(--steel-dim)" }}
+              >
+                <option value="">เลือกความหายาก</option>
+                {VANGUARD_RARITIES.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+                <option value={OTHER_RARITY}>{OTHER_RARITY}</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                จำนวนการ์ด
+              </label>
+              <select value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                <option value="1">1 ใบ (แยกใบ)</option>
+                <option value="2">เป็นชุด 2 ใบ</option>
+                <option value="3">เป็นชุด 3 ใบ</option>
+                <option value="4">เป็นชุด 4 ใบ</option>
+              </select>
+            </div>
+          </div>
+        )}
+        {category === "deck" && (
+          <div className="mt-[14px]">
+            <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+              อะไหล่ / ส่วนประกอบเสริม
+            </label>
+            <select
+              value={hasExtras}
+              onChange={(e) => { setHasExtras(e.target.value); setDetailsError(false); }}
+              style={{ ...inputStyle, color: hasExtras ? "var(--white)" : "var(--steel-dim)" }}
+            >
+              <option value="">เลือก</option>
+              <option value="true">มีอะไหล่ (การ์ดหรืออุปกรณ์เสริม)</option>
+              <option value="false">ไม่มีอะไหล่ (เด็คเท่านั้น)</option>
+            </select>
+          </div>
+        )}
+        {category === "new" && (
+          <div className="mt-[14px]">
+            <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+              จำนวนกล่อง
+            </label>
+            <select value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+              {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 24].map((n) => (
+                <option key={n} value={String(n)}>{n} กล่อง</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="mt-[14px]">
           <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
             สภาพการ์ด
@@ -301,6 +375,7 @@ export function CreateListingForm() {
             style={{ ...inputStyle, color: condition ? "var(--white)" : "var(--steel-dim)" }}
           >
             <option value="">เลือกสภาพการ์ด</option>
+            <option>ซีลใหม่ (Sealed)</option>
             <option>สภาพสมบูรณ์ (Near Mint)</option>
             <option>สภาพดีมาก (Excellent)</option>
             <option>สภาพดี (Good)</option>
@@ -323,7 +398,7 @@ export function CreateListingForm() {
         </div>
         {detailsError && (
           <p className="mt-2 text-[12px]" style={{ color: "var(--danger)" }}>
-            กรอกชื่อการ์ด ชุด หมวดหมู่ และสภาพการ์ดให้ครบ
+            กรอกชื่อ ชุด ประเภทสินค้า และสภาพให้ครบ (การ์ดแยกใบเลือกความหายาก · เด็คเลือกอะไหล่)
           </p>
         )}
       </div>

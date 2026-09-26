@@ -38,6 +38,8 @@ Launch scope is Vanguard-first: TCS launches focused on Cardfight!! Vanguard to 
 
 ## Capabilities and Constraints
 
+**Video policy (always, every order):** TCS requires video evidence from BOTH sides on every order. The seller records a packing video (putting the sold card into its sleeve/box) before shipping or before a meet-up hand-over, and cannot confirm shipment without it. The buyer records an unboxing video on receipt, and cannot approve or open a dispute without it. Both are stored, byte-validated MP4/MOV files visible to the other party and the admin. This is a standing product rule, not a per-order option.
+
 In scope for MVP: phone-OTP signup (one phone = one account) with bank-name-matched verified badge; card listings (photos, name, set, condition, start/buy-now price, auction end time); live bidding with anti-sniping and increment rules; escrow held by a licensed payment provider (app never touches money directly); delivery tracking; required in-app/uploaded unboxing video as dispute evidence; 48h dispute window with admin review; per-order buyer/seller chat visible to admin during disputes; post-order reviews (no fake reviews — only from completed orders); profile trust signals (completed sales, dispute count, join date, verified badge).
 
 **Trust-tier tag** (added after the browse/profile design pass): a label on the user's profile unlocked by accumulating good reviews — a tier system derived from data TCS already tracks (reviews), not a new points/currency mechanic. Exact tier names and the review-count thresholds for each are not decided yet; the user (Pan) intends to define the final tag labels.
