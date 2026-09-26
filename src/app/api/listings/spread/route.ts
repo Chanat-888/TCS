@@ -10,7 +10,7 @@ import {
   parseSpreadItems,
 } from "@/lib/spreadPost";
 
-/** Creates a spread post: one listing row, its photos, and one item row per card. */
+/** Creates a spread post: one listing row, its photos, and one item row per pinned card. */
 export async function POST(request: Request) {
   const userId = await getVerifiedUserId();
   if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน", code: "LOGIN_REQUIRED" }, { status: 403 });
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "ข้อมูลการ์ดไม่ถูกต้อง" }, { status: 400 });
   }
-  const parsed = parseSpreadItems(rawItems);
+  const parsed = parseSpreadItems(rawItems, files.length);
   if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   // Check every photo's size and real type before anything is created.
@@ -86,9 +86,12 @@ export async function POST(request: Request) {
   };
 
   const { error: itemsError } = await supabase.from("listing_items").insert(
-    parsed.items.map((item) => ({
+    parsed.items.map((item, index) => ({
       listing_id: listing.id,
-      position: item.position,
+      position: index + 1, // the number on the pin
+      photo_index: item.photoIndex,
+      x: item.x,
+      y: item.y,
       name: item.name,
       rarity: item.rarity,
       condition: item.condition,

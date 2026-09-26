@@ -82,27 +82,51 @@ export function SpreadPicker({
   return (
     <div>
       <div className="flex flex-col gap-3">
-        {photos.map((url, index) => (
-          <a
-            key={url}
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="block overflow-hidden rounded-2xl"
-            style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}
-            aria-label={`เปิดรูปที่ ${index + 1} ขนาดเต็ม`}
-          >
+        {photos.map((url, photoIndex) => (
+          <div key={url} className="relative overflow-hidden rounded-2xl" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`รูปการ์ดทั้งหมดในโพสต์ รูปที่ ${index + 1}`} className="block h-auto w-full" />
-          </a>
+            <img src={url} alt={`รูปการ์ดทั้งหมดในโพสต์ รูปที่ ${photoIndex + 1}`} className="block h-auto w-full" draggable={false} />
+            {items
+              .filter((item) => item.photo_index === photoIndex)
+              .map((item) => {
+                const isPicked = selected.includes(item.id);
+                const available = item.status === "available";
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => toggle(item)}
+                    disabled={!canPick || !available}
+                    aria-pressed={isPicked}
+                    aria-label={`การ์ดใบที่ ${item.position} ${item.name} ${formatTHB(item.price)} ${STATUS_LABEL[item.status]}`}
+                    className="mono absolute flex items-center justify-center rounded-full text-[13px] font-semibold"
+                    style={{
+                      left: `${item.x}%`,
+                      top: `${item.y}%`,
+                      width: 34,
+                      height: 34,
+                      transform: "translate(-50%, -50%)",
+                      border: "2px solid #fff",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.55)",
+                      background: isPicked ? "var(--good)" : available ? "var(--cyan)" : "rgba(110,118,133,0.95)",
+                      color: "#071523",
+                      opacity: available ? 1 : 0.75,
+                      cursor: canPick && available ? "pointer" : "default",
+                    }}
+                  >
+                    {isPicked ? "✓" : item.position}
+                  </button>
+                );
+              })}
+          </div>
         ))}
       </div>
       <p className="mt-2 text-[12.5px]" style={{ color: "var(--steel)" }}>
-        แตะรูปเพื่อดูขนาดเต็ม · หมายเลขในรายการตรงกับหมายเลขที่ผู้ขายวางไว้ข้างการ์ดในรูป
+        {canPick ? "แตะหมายเลขบนรูป หรือติ๊กในรายการด้านล่าง เพื่อเลือกการ์ดที่ต้องการ" : "หมายเลขบนรูปคือการ์ดแต่ละใบในรายการด้านล่าง"}
       </p>
 
       <h2 className="mb-2 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>
-        รายการการ์ด — {canPick ? "ติ๊กใบที่ต้องการ" : "การ์ดทั้งหมดในโพสต์"} · ว่าง {counts.available} · จองแล้ว {counts.reserved} · ขายแล้ว {counts.sold}
+        รายการการ์ด · ว่าง {counts.available} · จองแล้ว {counts.reserved} · ขายแล้ว {counts.sold}
       </h2>
       <ul className="flex flex-col gap-2">
         {items.map((item) => {

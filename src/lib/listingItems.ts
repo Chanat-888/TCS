@@ -2,7 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import type { ListingItem } from "@/lib/supabase/types";
 
 // `reserved_by` (who is holding a card) is private, so it is never selected.
-const ITEM_COLUMNS = "id, listing_id, position, name, rarity, condition, price, status, order_id";
+const ITEM_COLUMNS = "id, listing_id, position, photo_index, x, y, name, rarity, condition, price, status, order_id";
 
 /** Cards of a spread post, in the order the seller numbered them. */
 export async function getListingItems(listingId: string): Promise<ListingItem[]> {

@@ -25,38 +25,36 @@ const spread = load("src/lib/spreadPost.ts", { "@/lib/vanguard": vanguard });
 const imageUpload = load("src/lib/imageUpload.ts");
 const orderCreate = load("src/lib/orderCreate.ts");
 
-let counter = 0;
-const good = (over = {}) => ({ position: ++counter, name: "Blaster Blade", rarity: "RRR", condition: "สภาพสมบูรณ์ (Near Mint)", price: 500, ...over });
-const fresh = (n, over = {}) => Array.from({ length: n }, (_, i) => good({ position: i + 1, ...over }));
+const good = (over = {}) => ({ photoIndex: 0, x: 30, y: 40, name: "Blaster Blade", rarity: "RRR", condition: "สภาพสมบูรณ์ (Near Mint)", price: 500, ...over });
+const fresh = (n, over = {}) => Array.from({ length: n }, () => good(over));
 
 // ---------- validation ----------
-test("a spread post needs 1-30 valid, priced cards", () => {
-  assert.equal(spread.parseSpreadItems([good({ position: 1 })]).ok, true);
-  assert.equal(spread.parseSpreadItems([]).ok, false);
-  assert.equal(spread.parseSpreadItems("nope").ok, false);
-  assert.equal(spread.parseSpreadItems(fresh(31)).ok, false);
-  assert.equal(spread.parseSpreadItems(fresh(30)).ok, true);
+test("a spread post needs 1-30 valid, priced, pinned cards", () => {
+  assert.equal(spread.parseSpreadItems([good()], 1).ok, true);
+  assert.equal(spread.parseSpreadItems([], 1).ok, false);
+  assert.equal(spread.parseSpreadItems("nope", 1).ok, false);
+  assert.equal(spread.parseSpreadItems(fresh(31), 1).ok, false);
+  assert.equal(spread.parseSpreadItems(fresh(30), 1).ok, true);
 });
 
-test("each card's fields are checked and the error names the row", () => {
+test("each card's fields are checked and the error names the card", () => {
   for (const bad of [
     { name: "" }, { name: "x".repeat(81) }, { rarity: "MYTHIC" }, { rarity: "" }, { condition: "" },
     { price: 0 }, { price: -5 }, { price: 1.5 }, { price: 2_000_000 }, { price: "abc" },
-    { position: 0 }, { position: 61 }, { position: 1.5 }, { position: "x" },
+    { photoIndex: 1 }, { photoIndex: -1 }, { photoIndex: 0.5 }, { x: -1 }, { x: 101 }, { y: -0.1 }, { y: 100.5 }, { x: "left" },
   ]) {
-    const result = spread.parseSpreadItems([good({ position: 1 }), good({ position: 2, ...bad })]);
+    const result = spread.parseSpreadItems([good(), good(bad)], 1);
     assert.equal(result.ok, false, JSON.stringify(bad));
-    assert.match(result.error, /แถวที่ 2/);
+    assert.match(result.error, /ใบที่ 2/);
   }
-  assert.equal(spread.parseSpreadItems([good({ position: "7", price: "1200" })]).ok, true);
-  assert.equal(spread.parseSpreadItems([null]).ok, false);
+  assert.equal(spread.parseSpreadItems([good({ price: "1200", x: "10", y: "20" })], 1).ok, true);
+  assert.equal(spread.parseSpreadItems([good({ x: 0, y: 100 })], 1).ok, true);
+  assert.equal(spread.parseSpreadItems([null], 1).ok, false);
 });
 
-test("card numbers must be unique so a buyer's #3 is unambiguous", () => {
-  const result = spread.parseSpreadItems([good({ position: 3 }), good({ position: 5 }), good({ position: 3 })]);
-  assert.equal(result.ok, false);
-  assert.match(result.error, /ซ้ำ/);
-  assert.equal(spread.parseSpreadItems([good({ position: 60 }), good({ position: 1 })]).ok, true);
+test("a pin may sit on any of the uploaded photos", () => {
+  assert.equal(spread.parseSpreadItems([good({ photoIndex: 2 })], 3).ok, true);
+  assert.equal(spread.parseSpreadItems([good({ photoIndex: 3 })], 3).ok, false);
 });
 
 test("totals and the headline price come from the cards", () => {
@@ -222,7 +220,7 @@ function routeDb({ itemsError = null, uploadFails = false } = {}) {
   return { route, calls };
 }
 
-function post({ photos = 1, items = [good({ position: 1 })], title = "การ์ดชุดใหม่ทั้งกอง", extra = {} } = {}) {
+function post({ photos = 1, items = [good()], title = "การ์ดชุดใหม่ทั้งกอง", extra = {} } = {}) {
   const fd = new FormData();
   for (let i = 0; i < photos; i++) fd.append(`photo${i}`, new File([JPEG], `p${i}.jpg`, { type: "image/jpeg" }));
   fd.append("title", title);
@@ -233,14 +231,16 @@ function post({ photos = 1, items = [good({ position: 1 })], title = "การ�
 
 test("a valid spread post creates the listing, one row per card, and stores the photos", async () => {
   const { route, calls } = routeDb();
-  const res = await route.POST(post({ photos: 2, items: [good({ position: 4, price: 900 }), good({ position: 9, price: 300, name: "Gancelot" })] }));
+  const res = await route.POST(post({ photos: 2, items: [good({ price: 900 }), good({ price: 300, name: "Gancelot", x: 60, y: 10 })] }));
   assert.equal(res.status, 200);
   const listing = calls.listings[0];
   assert.equal(listing.post_kind, "spread");
   assert.equal(listing.start_price, 300); // headline price = cheapest card
   assert.equal(listing.buy_now_price, 300);
   assert.equal(calls.items[0].length, 2);
-  assert.deepEqual(plain(calls.items[0].map((i) => i.position)), [4, 9]); // the seller's own numbers
+  assert.deepEqual(plain(calls.items[0].map((i) => i.position)), [1, 2]); // numbered in pin order
+  assert.equal(calls.items[0][1].x, 60);
+  assert.equal(calls.items[0][1].photo_index, 0);
   assert.equal(calls.uploads.length, 2);
   assert.match(calls.uploads[0].path, /^L1\/post-0-[0-9a-f-]+\.jpg$/);
   assert.equal(calls.uploads[0].opts.contentType, "image/jpeg");
@@ -253,7 +253,7 @@ test("bad input creates nothing: no photos, bad cards, bad title, or a fake imag
     post({ items: [] }),
     post({ items: [good({ price: 0 })] }),
     post({ title: "x" }),
-    post({ items: [good({ position: 3 }), good({ position: 3 })] }),
+    post({ items: [good({ photoIndex: 3 })] }),
   ]) {
     const { route, calls } = routeDb();
     const res = await route.POST(req);
@@ -263,7 +263,7 @@ test("bad input creates nothing: no photos, bad cards, bad title, or a fake imag
   const fake = new FormData();
   fake.append("photo0", new File(["<svg onload=alert(1)>............"], "a.jpg", { type: "image/jpeg" }));
   fake.append("title", "ชื่อโพสต์");
-  fake.append("items", JSON.stringify([good({ position: 1 })]));
+  fake.append("items", JSON.stringify([good()]));
   const { route, calls } = routeDb();
   assert.equal((await route.POST(new Request("https://tcs.test/x", { method: "POST", body: fake }))).status, 400);
   assert.equal(calls.listings.length, 0);

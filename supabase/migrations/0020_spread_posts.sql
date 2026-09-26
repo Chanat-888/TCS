@@ -1,6 +1,6 @@
 -- "Spread" posts: one photo (or a few) of many cards laid out, where each card is a
--- separate item the buyer can pick individually, by the number the seller wrote next
--- to it. The post itself is a normal `listings` row (post_kind = 'spread'), so orders,
+-- separate item the buyer can pick individually, by tapping its numbered pin on the photo
+-- or its row in the list. The post itself is a normal `listings` row (post_kind = 'spread'), so orders,
 -- checkout, disputes and browse keep working; the cards live in `listing_items`, and an
 -- order's cards are the items whose order_id points at it.
 
@@ -13,7 +13,7 @@ alter table public.listings
 create table if not exists public.listing_items (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.listings(id) on delete cascade,
-  position smallint not null check (position between 1 and 60), -- the number next to the card in the photo
+  position smallint not null check (position between 1 and 60), -- the number shown on the pin
   name text not null,
   rarity text not null,
   condition text not null,
@@ -25,13 +25,15 @@ create table if not exists public.listing_items (
   unique (listing_id, position)
 );
 
--- An earlier draft of this table also stored a circle (x, y, r) and photo index per
--- card. Drop them if that draft was ever applied.
+-- Where the seller tapped to pin the card: which photo, and the point as a % of that
+-- photo's width (x) and height (y). Added separately so the migration also works if an
+-- earlier draft of this table was already applied; the circle-size columns of that
+-- draft are dropped.
 alter table public.listing_items
-  drop column if exists photo_index,
+  add column if not exists photo_index smallint not null default 0 check (photo_index between 0 and 3),
+  add column if not exists x real not null default 50 check (x between 0 and 100),
+  add column if not exists y real not null default 50 check (y between 0 and 100),
   drop column if exists aspect,
-  drop column if exists x,
-  drop column if exists y,
   drop column if exists r;
 
 create index if not exists listing_items_listing_idx on public.listing_items (listing_id);

@@ -6,7 +6,7 @@ import { prepareCardPhoto } from "@/lib/clientImage";
 import { postForm } from "@/lib/postForm";
 import { formatTHB } from "@/lib/format";
 import { CONDITION_OPTIONS, OTHER_RARITY, VANGUARD_RARITIES } from "@/lib/vanguard";
-import { MAX_ITEM_NUMBER, MAX_SPREAD_ITEMS, MAX_SPREAD_PHOTOS, MAX_SPREAD_UPLOAD_BYTES, cheapestPrice } from "@/lib/spreadPost";
+import { MAX_SPREAD_ITEMS, MAX_SPREAD_PHOTOS, MAX_SPREAD_UPLOAD_BYTES, cheapestPrice } from "@/lib/spreadPost";
 
 interface EditorPhoto {
   file: File;
@@ -15,7 +15,9 @@ interface EditorPhoto {
 
 interface EditorItem {
   key: string;
-  number: string;
+  photoIndex: number;
+  x: number;
+  y: number;
   name: string;
   rarity: string;
   condition: string;
@@ -28,15 +30,19 @@ const fieldStyle = {
   color: "var(--white)",
 } as const;
 const input = "min-h-11 w-full rounded-[10px] px-3 text-[14px] outline-none";
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
- * Seller's editor for a spread post: upload the photo(s) of the cards laid out, write
- * a number next to each card in real life, then list each card by that number with
- * its name, rarity, condition and price.
+ * Seller's editor for a spread post: upload the photo(s) of the cards laid out, tap
+ * once on each card to drop a numbered pin (drag to nudge it), then give each card its
+ * name, rarity, condition and price. The numbers follow the order of the pins.
  */
 export function SpreadEditor() {
   const [photos, setPhotos] = useState<EditorPhoto[]>([]);
+  const [activePhoto, setActivePhoto] = useState(0);
   const [items, setItems] = useState<EditorItem[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [preparing, setPreparing] = useState(false);
@@ -45,6 +51,8 @@ export function SpreadEditor() {
   const [publishing, setPublishing] = useState(false);
   const [done, setDone] = useState<{ id: string; itemCount: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const drag = useRef<string | null>(null);
   const urlsRef = useRef<string[]>([]);
 
   // Object URLs are created when a photo is added and revoked when it is removed or
@@ -71,32 +79,41 @@ export function SpreadEditor() {
       return;
     }
     setPhotos((prev) => [...prev, { file: result.file, url: URL.createObjectURL(result.file) }]);
+    setActivePhoto(photos.length);
   }
 
   function removePhoto(index: number) {
     const photo = photos[index];
     if (photo) URL.revokeObjectURL(photo.url);
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+    // Cards pinned on the removed photo go with it; later photos shift down by one.
+    setItems((prev) => prev.filter((i) => i.photoIndex !== index).map((i) => (i.photoIndex > index ? { ...i, photoIndex: i.photoIndex - 1 } : i)));
+    setActivePhoto(0);
+    setSelectedKey(null);
   }
 
-  function nextNumber(list: EditorItem[]) {
-    const used = new Set(list.map((i) => Number(i.number)));
-    for (let n = 1; n <= MAX_ITEM_NUMBER; n++) if (!used.has(n)) return String(n);
-    return "";
+  function pointOf(clientX: number, clientY: number) {
+    const rect = stage.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0 || rect.height === 0) return null;
+    return { x: round1(clamp(((clientX - rect.left) / rect.width) * 100, 0, 100)), y: round1(clamp(((clientY - rect.top) / rect.height) * 100, 0, 100)) };
   }
 
-  function addItem() {
+  function addPin(clientX: number, clientY: number) {
     if (items.length >= MAX_SPREAD_ITEMS) {
       setError(`ใส่การ์ดได้สูงสุด ${MAX_SPREAD_ITEMS} ใบต่อโพสต์`);
       return;
     }
+    const point = pointOf(clientX, clientY);
+    if (!point) return;
     setError("");
     const previous = items[items.length - 1];
+    const key = crypto.randomUUID();
     setItems((prev) => [
       ...prev,
       {
-        key: crypto.randomUUID(),
-        number: nextNumber(prev),
+        key,
+        photoIndex: activePhoto,
+        ...point,
         name: "",
         // The next card is usually the same rarity/condition as the last: save the seller a tap.
         rarity: previous?.rarity ?? "",
@@ -104,24 +121,26 @@ export function SpreadEditor() {
         price: "",
       },
     ]);
+    setSelectedKey(key);
   }
 
   function patch(key: string, changes: Partial<EditorItem>) {
     setItems((prev) => prev.map((i) => (i.key === key ? { ...i, ...changes } : i)));
   }
 
+  function remove(key: string) {
+    // The numbers close up: pins after the removed one move down by one.
+    setItems((prev) => prev.filter((i) => i.key !== key));
+    if (selectedKey === key) setSelectedKey(null);
+  }
+
   async function publish() {
     setError("");
     if (photos.length === 0) return setError("อัปโหลดรูปการ์ดอย่างน้อย 1 รูป");
     if (title.trim().length < 3) return setError("ตั้งชื่อโพสต์ (อย่างน้อย 3 ตัวอักษร)");
-    if (items.length === 0) return setError("เพิ่มการ์ดอย่างน้อย 1 ใบ");
-    const seen = new Set<number>();
+    if (items.length === 0) return setError("แตะบนรูปเพื่อปักหมุดการ์ดอย่างน้อย 1 ใบ");
     for (const [index, item] of items.entries()) {
-      const label = `การ์ดแถวที่ ${index + 1}`;
-      const number = Number(item.number);
-      if (!Number.isInteger(number) || number < 1 || number > MAX_ITEM_NUMBER) return setError(`${label}: หมายเลขต้องเป็น 1 – ${MAX_ITEM_NUMBER}`);
-      if (seen.has(number)) return setError(`${label}: หมายเลข ${number} ซ้ำกัน`);
-      seen.add(number);
+      const label = `การ์ดใบที่ ${index + 1}`;
       if (!item.name.trim()) return setError(`${label}: กรอกชื่อการ์ด`);
       if (!item.rarity) return setError(`${label}: เลือกความหายาก`);
       const price = Number(item.price);
@@ -136,9 +155,7 @@ export function SpreadEditor() {
     formData.append(
       "items",
       JSON.stringify(
-        [...items]
-          .sort((a, b) => Number(a.number) - Number(b.number))
-          .map((i) => ({ position: Number(i.number), name: i.name.trim(), rarity: i.rarity, condition: i.condition, price: Number(i.price) }))
+        items.map((i) => ({ photoIndex: i.photoIndex, x: i.x, y: i.y, name: i.name.trim(), rarity: i.rarity, condition: i.condition, price: Number(i.price) }))
       )
     );
     const sent = await postForm<{ id: string; itemCount: number }>("/api/listings/spread", formData);
@@ -169,6 +186,7 @@ export function SpreadEditor() {
     );
   }
 
+  const pins = items.map((item, index) => ({ item, number: index + 1 })).filter(({ item }) => item.photoIndex === activePhoto);
   const prices = items.map((i) => ({ price: Number(i.price) || Infinity }));
   const lowest = items.length > 0 ? cheapestPrice(prices) : Infinity;
 
@@ -176,10 +194,6 @@ export function SpreadEditor() {
     <div>
       <h2 className="mb-3 text-[14px] font-medium" style={{ color: "var(--steel)" }}>1. รูปการ์ด (วางการ์ดหลายใบในรูปเดียว)</h2>
       <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-        <p className="mb-3 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-          <strong style={{ color: "var(--white)", fontWeight: 500 }}>เคล็ดลับ:</strong> วางกระดาษเขียนเลข 1, 2, 3 … ไว้ข้างการ์ดแต่ละใบก่อนถ่ายรูป
-          แล้วลงรายการด้านล่างตามเลขเดียวกัน ผู้ซื้อจะเลือกจากเลขในรายการได้ง่าย
-        </p>
         <input
           ref={fileInput}
           type="file"
@@ -192,137 +206,217 @@ export function SpreadEditor() {
           }}
         />
 
-        {photos.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {photos.map((photo, index) => (
-              <div key={photo.url} className="relative overflow-hidden rounded-xl" style={{ border: "1px solid var(--line)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photo.url} alt={`รูปที่ ${index + 1}`} className="block h-auto w-full" />
+        {photos.length > 1 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {photos.map((_, index) => (
+              <span key={index} className="inline-flex overflow-hidden rounded-full" style={{ border: "1px solid var(--line)" }}>
+                <button
+                  type="button"
+                  onClick={() => setActivePhoto(index)}
+                  className="min-h-11 px-4 text-[13px]"
+                  style={index === activePhoto ? { background: "var(--blue)", color: "#071523", fontWeight: 600 } : { background: "var(--panel-2)", color: "var(--steel)" }}
+                >
+                  รูปที่ {index + 1}
+                </button>
                 <button
                   type="button"
                   onClick={() => removePhoto(index)}
                   aria-label={`ลบรูปที่ ${index + 1}`}
-                  className="absolute right-2 top-2 flex min-h-11 min-w-11 items-center justify-center rounded-lg"
-                  style={{ background: "rgba(10,12,16,0.75)", border: "1px solid rgba(140,147,163,0.25)", color: "var(--danger)" }}
+                  className="min-h-11 px-3 text-[13px]"
+                  style={{ background: "var(--panel-2)", color: "var(--danger)" }}
                 >
                   ✕
                 </button>
-              </div>
+              </span>
             ))}
           </div>
         )}
 
-        {photos.length < MAX_SPREAD_PHOTOS && (
+        {photos[activePhoto] ? (
+          <>
+            <div
+              ref={stage}
+              className="relative touch-none overflow-hidden rounded-xl"
+              style={{ border: "1px solid var(--line)", cursor: "crosshair" }}
+              onClick={(e) => addPin(e.clientX, e.clientY)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photos[activePhoto].url} alt="รูปการ์ดทั้งหมด" className="block h-auto w-full select-none" draggable={false} />
+              {pins.map(({ item, number }) => {
+                const isSelected = item.key === selectedKey;
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-label={`หมุดการ์ดใบที่ ${number}`}
+                    onClick={(e) => { e.stopPropagation(); setSelectedKey(item.key); }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      drag.current = item.key;
+                      setSelectedKey(item.key);
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    }}
+                    onPointerMove={(e) => {
+                      if (drag.current !== item.key) return;
+                      const point = pointOf(e.clientX, e.clientY);
+                      if (point) patch(item.key, point);
+                    }}
+                    onPointerUp={() => { drag.current = null; }}
+                    onPointerCancel={() => { drag.current = null; }}
+                    className="mono absolute flex touch-none items-center justify-center rounded-full text-[13px] font-semibold"
+                    style={{
+                      left: `${item.x}%`,
+                      top: `${item.y}%`,
+                      width: 34,
+                      height: 34,
+                      transform: "translate(-50%, -50%)",
+                      border: "2px solid #fff",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.55)",
+                      background: isSelected ? "var(--gold)" : "var(--cyan)",
+                      color: "#071523",
+                      cursor: "grab",
+                    }}
+                  >
+                    {number}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              <strong style={{ color: "var(--white)", fontWeight: 500 }}>แตะที่การ์ดแต่ละใบบนรูป</strong> เพื่อปักหมุด (หมายเลขขึ้นให้อัตโนมัติ) ·
+              <strong style={{ color: "var(--white)", fontWeight: 500 }}> ลากหมุด</strong> เพื่อขยับ
+            </p>
+          </>
+        ) : (
           <button
             type="button"
             onClick={() => fileInput.current?.click()}
             disabled={preparing}
-            className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl px-4 text-center text-[13.5px] ${photos.length === 0 ? "min-h-[140px]" : "mt-3 min-h-11"}`}
+            className="flex min-h-[140px] w-full items-center justify-center rounded-xl px-4 text-center text-[13.5px]"
             style={{ border: "1.5px dashed rgba(140,147,163,0.28)", color: "var(--steel)" }}
           >
-            {preparing ? "กำลังเตรียมรูป…" : photos.length === 0 ? "แตะเพื่ออัปโหลดรูป" : "+ เพิ่มรูป"}
+            {preparing ? "กำลังเตรียมรูป…" : "แตะเพื่ออัปโหลดรูป (วางการ์ดที่จะขายกระจายในรูปเดียว)"}
           </button>
         )}
+
         {photos.length > 0 && (
-          <p className="mt-2 text-[12px]" style={{ color: "var(--steel)" }}>
-            {photos.length}/{MAX_SPREAD_PHOTOS} รูป · ใช้ {(usedBytes / 1024 / 1024).toFixed(1)} จาก {MAX_SPREAD_UPLOAD_BYTES / 1024 / 1024} MB
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {photos.length < MAX_SPREAD_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={preparing}
+                className="min-h-11 rounded-[10px] px-4 text-[13.5px]"
+                style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--white)" }}
+              >
+                {preparing ? "กำลังเตรียมรูป…" : "+ เพิ่มรูป"}
+              </button>
+            )}
+            {photos.length === 1 && (
+              <button
+                type="button"
+                onClick={() => removePhoto(0)}
+                className="min-h-11 rounded-[10px] px-4 text-[13.5px]"
+                style={{ background: "transparent", border: "1px solid var(--danger-line)", color: "var(--danger)" }}
+              >
+                ลบรูป
+              </button>
+            )}
+            <span className="text-[12px]" style={{ color: "var(--steel)" }}>
+              {photos.length}/{MAX_SPREAD_PHOTOS} รูป · ใช้ {(usedBytes / 1024 / 1024).toFixed(1)} จาก {MAX_SPREAD_UPLOAD_BYTES / 1024 / 1024} MB
+            </span>
+          </div>
         )}
         {photoError && (
           <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>{photoError}</p>
         )}
       </div>
 
-      <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>2. รายการการ์ดแต่ละใบ ({items.length}/{MAX_SPREAD_ITEMS})</h2>
+      <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>2. รายละเอียดการ์ดแต่ละใบ ({items.length}/{MAX_SPREAD_ITEMS})</h2>
       {items.length === 0 ? (
         <p className="rounded-2xl p-4 text-[13px]" style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}>
-          ยังไม่มีการ์ด — กด “เพิ่มการ์ด” เพื่อลงรายการใบแรก
+          ยังไม่มีการ์ด — อัปโหลดรูปแล้วแตะที่การ์ดใบแรกบนรูป
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {items.map((item, index) => (
-            <li key={item.key} className="rounded-2xl p-3" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-              <div className="flex items-center gap-2">
-                <div className="relative w-[84px] flex-shrink-0">
-                  <span className="mono pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px]" style={{ color: "var(--cyan)" }}>#</span>
+          {items.map((item, index) => {
+            const isSelected = item.key === selectedKey;
+            return (
+              <li
+                key={item.key}
+                className="rounded-2xl p-3"
+                style={{ background: "var(--panel)", border: `1px solid ${isSelected ? "var(--gold)" : "rgba(140,147,163,0.14)"}` }}
+                onClick={() => { setSelectedKey(item.key); setActivePhoto(item.photoIndex); }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="mono flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[13px] font-semibold"
+                    style={{ background: isSelected ? "var(--gold)" : "var(--cyan)", color: "#071523" }}
+                  >
+                    {index + 1}
+                  </span>
                   <input
-                    aria-label={`หมายเลขการ์ดแถวที่ ${index + 1}`}
-                    className={`${input} mono`}
-                    style={{ ...fieldStyle, paddingLeft: 26 }}
-                    inputMode="numeric"
-                    value={item.number}
-                    onChange={(e) => patch(item.key, { number: e.target.value.replace(/\D/g, "").slice(0, 2) })}
+                    aria-label={`ชื่อการ์ดใบที่ ${index + 1}`}
+                    className={input}
+                    style={fieldStyle}
+                    value={item.name}
+                    maxLength={80}
+                    onChange={(e) => patch(item.key, { name: e.target.value })}
+                    placeholder="ชื่อการ์ด เช่น Blaster Blade"
                   />
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); remove(item.key); }}
+                    aria-label={`ลบการ์ดใบที่ ${index + 1}`}
+                    className="min-h-11 min-w-11 flex-shrink-0 rounded-[10px]"
+                    style={{ background: "transparent", border: "1px solid var(--danger-line)", color: "var(--danger)" }}
+                  >
+                    ✕
+                  </button>
                 </div>
-                <input
-                  aria-label={`ชื่อการ์ดแถวที่ ${index + 1}`}
-                  className={input}
-                  style={fieldStyle}
-                  value={item.name}
-                  maxLength={80}
-                  onChange={(e) => patch(item.key, { name: e.target.value })}
-                  placeholder="ชื่อการ์ด เช่น Blaster Blade"
-                />
-                <button
-                  type="button"
-                  onClick={() => setItems((prev) => prev.filter((i) => i.key !== item.key))}
-                  aria-label={`ลบการ์ดแถวที่ ${index + 1}`}
-                  className="min-h-11 min-w-11 flex-shrink-0 rounded-[10px]"
-                  style={{ background: "transparent", border: "1px solid var(--danger-line)", color: "var(--danger)" }}
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 max-[520px]:grid-cols-1">
-                <select
-                  aria-label={`ความหายากแถวที่ ${index + 1}`}
-                  className={input}
-                  style={{ ...fieldStyle, color: item.rarity ? "var(--white)" : "var(--steel-dim)" }}
-                  value={item.rarity}
-                  onChange={(e) => patch(item.key, { rarity: e.target.value })}
-                >
-                  <option value="">ความหายาก</option>
-                  {VANGUARD_RARITIES.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                  <option value={OTHER_RARITY}>{OTHER_RARITY}</option>
-                </select>
-                <select
-                  aria-label={`สภาพแถวที่ ${index + 1}`}
-                  className={input}
-                  style={fieldStyle}
-                  value={item.condition}
-                  onChange={(e) => patch(item.key, { condition: e.target.value })}
-                >
-                  {CONDITION_OPTIONS.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <div className="relative">
-                  <span className="mono pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px]" style={{ color: "var(--steel)" }}>฿</span>
-                  <input
-                    aria-label={`ราคาแถวที่ ${index + 1}`}
-                    className={`${input} mono`}
-                    style={{ ...fieldStyle, paddingLeft: 28 }}
-                    inputMode="numeric"
-                    value={item.price}
-                    onChange={(e) => patch(item.key, { price: e.target.value.replace(/\D/g, "") })}
-                    placeholder="ราคา"
-                  />
+                <div className="mt-2 grid grid-cols-3 gap-2 max-[520px]:grid-cols-1">
+                  <select
+                    aria-label={`ความหายากใบที่ ${index + 1}`}
+                    className={input}
+                    style={{ ...fieldStyle, color: item.rarity ? "var(--white)" : "var(--steel-dim)" }}
+                    value={item.rarity}
+                    onChange={(e) => patch(item.key, { rarity: e.target.value })}
+                  >
+                    <option value="">ความหายาก</option>
+                    {VANGUARD_RARITIES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                    <option value={OTHER_RARITY}>{OTHER_RARITY}</option>
+                  </select>
+                  <select
+                    aria-label={`สภาพใบที่ ${index + 1}`}
+                    className={input}
+                    style={fieldStyle}
+                    value={item.condition}
+                    onChange={(e) => patch(item.key, { condition: e.target.value })}
+                  >
+                    {CONDITION_OPTIONS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <div className="relative">
+                    <span className="mono pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px]" style={{ color: "var(--steel)" }}>฿</span>
+                    <input
+                      aria-label={`ราคาใบที่ ${index + 1}`}
+                      className={`${input} mono`}
+                      style={{ ...fieldStyle, paddingLeft: 28 }}
+                      inputMode="numeric"
+                      value={item.price}
+                      onChange={(e) => patch(item.key, { price: e.target.value.replace(/\D/g, "") })}
+                      placeholder="ราคา"
+                    />
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
-      <button
-        type="button"
-        onClick={addItem}
-        className="mt-3 min-h-12 w-full rounded-[11px] text-[14px] font-medium"
-        style={{ background: "var(--panel)", border: "1px solid var(--cyan-line)", color: "var(--cyan)" }}
-      >
-        + เพิ่มการ์ด
-      </button>
 
       <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>3. ชื่อโพสต์</h2>
       <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
