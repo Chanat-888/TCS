@@ -45,6 +45,9 @@ export interface Listing {
   current_price: number;
   /** Absent on rows read before migration 0015 is applied; treat as 100. */
   bid_increment?: number;
+  /** 'spread' = one big photo of many separately purchasable cards (absent before migration 0020). */
+  post_kind?: "single" | "spread";
+  photo_urls?: string[];
   /** Absent before migration 0017; treat as 1. */
   quantity?: number;
   /** Ready-to-play decks only: comes with spare cards/components. */
@@ -169,4 +172,24 @@ export interface ShipProposal {
   response_note: string | null;
   created_at: string;
   responded_at: string | null;
+}
+
+export type ListingItemStatus = "available" | "reserved" | "sold";
+
+/** One card inside a spread post. `reserved_by` is private and never selected for the public. */
+export interface ListingItem {
+  id: string;
+  listing_id: string;
+  position: number;
+  photo_index: number;
+  aspect: number;
+  x: number;
+  y: number;
+  r: number;
+  name: string;
+  rarity: string;
+  condition: string;
+  price: number;
+  status: ListingItemStatus;
+  order_id: string | null;
 }

@@ -5,6 +5,8 @@ import { getOrderDetail, getMessagesForOrder } from "@/lib/orders";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import { getShipProposals } from "@/lib/shipProposals";
+import { getOrderItems } from "@/lib/listingItems";
+import { OrderItemsList } from "@/components/OrderItemsList";
 import { OrderSellerView } from "./OrderSellerView";
 
 export default async function OrderSellerPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,13 +18,14 @@ export default async function OrderSellerPage({ params }: { params: Promise<{ id
   if (!detail) notFound();
   if (!detail.isSeller) redirect(`/orders/${id}`);
 
-  const [messages, proposals] = await Promise.all([getMessagesForOrder(id), getShipProposals(id)]);
+  const [messages, proposals, orderItems] = await Promise.all([getMessagesForOrder(id), getShipProposals(id), getOrderItems(id)]);
 
   return (
     <div style={{ "--wrap-max": "720px" } as CSSProperties}>
       <BackHeader href={`/profile/${userId}`} title="คำสั่งขาย" subtitle={`#${detail.order.order_code}`} />
       <main className="py-7 pb-[70px]">
         <div className="wrap">
+          <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
           <OrderSellerView order={detail.order} listingName={detail.listing.name} messages={messages} proposals={proposals} currentUserId={userId} />
         </div>
       </main>

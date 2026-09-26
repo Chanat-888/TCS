@@ -1,4 +1,6 @@
 import { PhoneVerificationNotice } from "@/components/PhoneVerificationNotice";
+import { getListingItems } from "@/lib/listingItems";
+import { SpreadPicker } from "./SpreadPicker";
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
@@ -11,7 +13,7 @@ import { SellerRow } from "@/components/SellerRow";
 import { formatTHB } from "@/lib/format";
 import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
-import { bidIncrementOf, isBuyNowAvailable, isFixedPrice } from "@/lib/listingKind";
+import { bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
 import { BuyNowBox } from "./BuyNowBox";
 import { PRODUCT_TYPE_LABELS, describeQuantity } from "@/lib/vanguard";
 import type { Listing } from "@/lib/supabase/types";
@@ -38,6 +40,47 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const listing = await getListingById(id);
   if (!listing) notFound();
+
+  if (isSpread(listing)) {
+    const [items, spreadSellerStats] = await Promise.all([getListingItems(id), getSellerStats(listing.seller_id)]);
+    const photos = listing.photo_urls?.length ? listing.photo_urls : listing.photo_front_url ? [listing.photo_front_url] : [];
+    return (
+      <div style={{ "--wrap-max": "860px" } as CSSProperties}>
+        <BackHeader href="/browse" title={listing.name} />
+        <PhoneVerificationNotice />
+        <main className="py-7 pb-[70px]">
+          <div className="wrap">
+            <h1 className="text-[clamp(1.35rem,2.6vw,1.7rem)] leading-tight">{listing.name}</h1>
+            {listing.description && (
+              <p className="mt-3 max-w-[68ch] text-[14.5px] leading-loose" style={{ color: "var(--steel)" }}>
+                {listing.description}
+              </p>
+            )}
+            <div
+              className="my-5 flex items-start gap-[10px] rounded-xl px-[15px] py-[13px]"
+              style={{ background: "rgba(95,212,255,0.06)", border: "1px solid rgba(95,212,255,0.2)" }}
+            >
+              <p className="text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+                <strong style={{ color: "var(--white)", fontWeight: 500 }}>เงินอยู่กับ TCS</strong> จนกว่าคุณจะกดรับการ์ด — เลือกหลายใบจากผู้ขายคนเดียวกันได้
+                ระบบรวมเป็นคำสั่งซื้อเดียวและส่งในพัสดุเดียว
+              </p>
+            </div>
+            <SpreadPicker
+              listingId={listing.id}
+              photos={photos}
+              items={items}
+              isOwner={listing.seller_id === userId}
+              isOpen={listing.status === "active"}
+            />
+            <div className="mt-6">
+              <SellerRow seller={listing.seller} stats={spreadSellerStats} />
+            </div>
+          </div>
+        </main>
+        <Footer note="เอกสารแนวคิดฉบับพรีวิว — การเลือกการ์ดและการจองเชื่อมกับฐานข้อมูลจริง" />
+      </div>
+    );
+  }
 
   const [bids, sellerStats, otherListings] = await Promise.all([
     getBidsForListing(id),

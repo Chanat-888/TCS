@@ -7,6 +7,8 @@ import { listAddresses } from "@/lib/addressBook";
 import type { SavedAddress } from "@/lib/addresses";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
+import { getOrderItems } from "@/lib/listingItems";
+import { OrderItemsList } from "@/components/OrderItemsList";
 import { CheckoutForm } from "./CheckoutForm";
 
 export default async function CheckoutPage({ params }: { params: Promise<{ orderId: string }> }) {
@@ -36,11 +38,14 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
     console.error("[checkout] address book unavailable", (e as { code?: string }).code);
   }
 
+  const orderItems = await getOrderItems(orderId);
+
   return (
     <div style={{ "--wrap-max": "640px" } as CSSProperties}>
       <BackHeader href={`/listings/${detail.listing.id}`} title="ชำระเงิน" />
       <main className="py-7 pb-20">
         <div className="wrap">
+          <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
           <CheckoutForm
             orderId={detail.order.id}
             listingName={detail.listing.name}

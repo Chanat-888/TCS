@@ -65,3 +65,13 @@ export function describeQuantity(category: ListingCategory, quantity: number): s
   if (category === "new") return `${quantity} กล่อง`;
   return quantity > 1 ? `${quantity} เด็ค` : "";
 }
+
+/** Condition choices offered wherever a seller describes a card. */
+export const CONDITION_OPTIONS = [
+  "ซีลใหม่ (Sealed)",
+  "สภาพสมบูรณ์ (Near Mint)",
+  "สภาพดีมาก (Excellent)",
+  "สภาพดี (Good)",
+  "มีตำหนิเล็กน้อย (Light Play)",
+  "มีตำหนิชัดเจน (Damaged)",
+] as const;
