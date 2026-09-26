@@ -1,3 +1,5 @@
+import { loadImage } from "@/lib/loadImage";
+
 /** Browser-side card photo preparation. Runs in the seller's browser before upload. */
 const MAX_ORIGINAL_BYTES = 40 * 1024 * 1024;
 const MAX_SIDE = 1600;
@@ -18,7 +20,7 @@ export async function prepareCardPhoto(
   if (file.size > MAX_ORIGINAL_BYTES) return { ok: false, error: "ไฟล์ใหญ่เกินไป (เกิน 40 MB) ลองเลือกรูปอื่น" };
 
   try {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await loadImage(file);
     const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -31,7 +33,7 @@ export async function prepareCardPhoto(
     // JPEG has no transparency: paint white first so a transparent PNG doesn't turn black.
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, width, height);
-    context.drawImage(bitmap, 0, 0, width, height);
+    context.drawImage(bitmap.source, 0, 0, width, height);
     bitmap.close();
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));

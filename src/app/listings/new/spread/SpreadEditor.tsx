@@ -35,6 +35,11 @@ const input = "min-h-11 w-full rounded-[10px] px-3 text-[14px] outline-none";
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+// Row keys only need to be unique within this editor. (crypto.randomUUID is not available
+// on plain-http pages, e.g. when the site is opened from a phone by its network address.)
+let keyCounter = 0;
+const newKey = () => `pin-${Date.now().toString(36)}-${keyCounter++}`;
+
 /**
  * Seller's editor for a spread post: upload the photo(s) of the cards laid out, tap
  * once on each card to drop a numbered pin (drag to nudge it), then give each card its
@@ -145,7 +150,7 @@ export function SpreadEditor() {
     if (!point) return;
     setError("");
     const previous = items[items.length - 1];
-    const key = crypto.randomUUID();
+    const key = newKey();
     setItems((prev) => [
       ...prev,
       {

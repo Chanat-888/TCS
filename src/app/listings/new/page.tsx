@@ -25,7 +25,7 @@ export default async function NewListingPage() {
                 มีการ์ดหลายใบ? โพสต์รวมในรูปเดียว
               </span>
               <span className="mt-1 block text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-                ถ่ายรูปการ์ดที่วางกระจาย แล้วแตะปักหมุดที่การ์ดแต่ละใบ ผู้ซื้อเลือกเป็นใบ ๆ ได้เหมือนใน Shopee / Lazada
+                ถ่ายรูปการ์ดที่วางกระจาย แล้วแตะปักหมุดที่การ์ดแต่ละใบ ผู้ซื้อเลือกเป็นใบๆ ตามเลข
               </span>
             </span>
             <span aria-hidden="true" style={{ color: "var(--cyan)", fontSize: 20 }}>›</span>

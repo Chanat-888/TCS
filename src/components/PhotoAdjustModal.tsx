@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { loadImage, type LoadedImage } from "@/lib/loadImage";
 import { FULL_RECT, MIN_CROP, clampRect, rotateRectCcw, rotateRectCw, type Rect } from "@/lib/photoEdit";
 
 const PREVIEW_MAX = 340; // longest side of the on-screen preview on a wide screen, in CSS px
@@ -32,7 +33,7 @@ export function PhotoAdjustModal({
   onCancel: () => void;
   onDone: (result: AdjustResult) => void;
 }) {
-  const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
+  const [bitmap, setBitmap] = useState<LoadedImage | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [turns, setTurns] = useState(0);
   const [crop, setCrop] = useState<Rect>(FULL_RECT);
@@ -46,12 +47,12 @@ export function PhotoAdjustModal({
 
   useEffect(() => {
     let cancelled = false;
-    let loaded: ImageBitmap | null = null;
-    createImageBitmap(file).then(
-      (b) => {
-        if (cancelled) return b.close();
-        loaded = b;
-        setBitmap(b);
+    let loaded: LoadedImage | null = null;
+    loadImage(file).then(
+      (image) => {
+        if (cancelled) return image.close();
+        loaded = image;
+        setBitmap(image);
       },
       () => !cancelled && setLoadError(true)
     );
@@ -83,7 +84,7 @@ export function PhotoAdjustModal({
     ctx.rotate((turns * Math.PI) / 2);
     const drawW = (sideways ? el.height : el.width);
     const drawH = (sideways ? el.width : el.height);
-    ctx.drawImage(bitmap, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.drawImage(bitmap.source, -drawW / 2, -drawH / 2, drawW, drawH);
   }, [bitmap, turns, shownW, shownH, sideways]);
 
   function rotate(direction: 1 | -1) {
@@ -134,7 +135,7 @@ export function PhotoAdjustModal({
       if (!fctx) throw new Error("no canvas");
       fctx.translate(full.width / 2, full.height / 2);
       fctx.rotate((turns * Math.PI) / 2);
-      fctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+      fctx.drawImage(bitmap.source, -bitmap.width / 2, -bitmap.height / 2);
 
       const sx = Math.round(crop.x * turnedW);
       const sy = Math.round(crop.y * turnedH);

@@ -82,3 +82,54 @@ test("rotating and then cropping applies the turn first, in the turned frame", (
   assert.equal(pin.x, 60); // (0.8 - 0.5) / 0.5
   assert.equal(pin.y, 10);
 });
+
+// ---------- image decoding fallback ----------
+function loadImageModule(globals) {
+  const code = ts.transpileModule(readFileSync(new URL("../src/lib/loadImage.ts", import.meta.url), "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  vm.runInNewContext(code, { exports, Promise, ...globals }, { filename: "loadImage.ts" });
+  return exports;
+}
+
+test("images decode through createImageBitmap when it works", async () => {
+  let closed = 0;
+  const { loadImage } = loadImageModule({ createImageBitmap: async () => ({ width: 640, height: 480, close: () => closed++ }) });
+  const image = await loadImage({});
+  assert.equal(image.width, 640);
+  assert.equal(image.height, 480);
+  image.close();
+  assert.equal(closed, 1);
+});
+
+test("if createImageBitmap is missing or fails, an <img> element is used instead so the photo is still usable", async () => {
+  const revoked = [];
+  class FakeImage {
+    async decode() { this.naturalWidth = 800; this.naturalHeight = 600; }
+  }
+  const globals = { Image: FakeImage, URL: { createObjectURL: () => "blob:x", revokeObjectURL: (u) => revoked.push(u) } };
+
+  for (const bitmap of [{ createImageBitmap: async () => { throw new Error("unsupported"); } }, {}]) {
+    const { loadImage } = loadImageModule({ ...globals, ...bitmap });
+    const image = await loadImage({});
+    assert.equal(image.width, 800);
+    assert.equal(image.height, 600);
+    image.close();
+  }
+  assert.deepEqual(revoked, ["blob:x", "blob:x"]); // the temporary URL is always released
+});
+
+test("a file that cannot be decoded at all is reported, and its temporary URL is released", async () => {
+  const revoked = [];
+  class BrokenImage {
+    async decode() { throw new Error("bad image"); }
+  }
+  const { loadImage } = loadImageModule({
+    createImageBitmap: async () => { throw new Error("no"); },
+    Image: BrokenImage,
+    URL: { createObjectURL: () => "blob:y", revokeObjectURL: (u) => revoked.push(u) },
+  });
+  await assert.rejects(loadImage({}));
+  assert.deepEqual(revoked, ["blob:y"]);
+});
