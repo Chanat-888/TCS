@@ -55,7 +55,7 @@ test("an SVG or script renamed .jpg is refused; an oversized or empty photo is r
 
 // ---------- client helper never leaves the UI stuck ----------
 test("postForm turns network failures and non-JSON error pages into readable errors", async () => {
-  const run = (fetchImpl) => load("src/lib/clientImage.ts", {}, { fetch: fetchImpl }).postForm("/x", new FormData());
+  const run = (fetchImpl) => load("src/lib/postForm.ts", {}, { fetch: fetchImpl }).postForm("/x", new FormData());
 
   const offline = await run(async () => { throw new TypeError("Failed to fetch"); });
   assert.equal(offline.ok, false);
@@ -78,7 +78,7 @@ test("postForm turns network failures and non-JSON error pages into readable err
 });
 
 // ---------- create route ----------
-function route(formDataFails = false) {
+function route() {
   const calls = { inserted: 0, deleted: 0, uploads: [] };
   const supabase = {
     from: () => ({
@@ -93,14 +93,14 @@ function route(formDataFails = false) {
       }),
     },
   };
-  const module = load("src/app/api/listings/route.ts", {
+  const listingRoute = load("src/app/api/listings/route.ts", {
     "next/server": { NextResponse: Response },
     "@/lib/session": { getVerifiedUserId: async () => "seller" },
     "@/lib/supabase/server": { createServiceClient: () => supabase },
     "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },
     "@/lib/imageUpload": img,
   });
-  return { module, calls };
+  return { listingRoute, calls };
 }
 
 function listingRequest({ front, back }) {
@@ -112,17 +112,17 @@ function listingRequest({ front, back }) {
 }
 
 test("a photo that isn't a real image is refused before any listing is created", async () => {
-  const { module, calls } = route();
+  const { listingRoute, calls } = route();
   const evil = new File(["<svg onload=alert(1)>............"], "card.jpg", { type: "image/jpeg" });
-  const res = await module.POST(listingRequest({ front: evil, back: new File([JPEG], "b.jpg", { type: "image/jpeg" }) }));
+  const res = await listingRoute.POST(listingRequest({ front: evil, back: new File([JPEG], "b.jpg", { type: "image/jpeg" }) }));
   assert.equal(res.status, 400);
   assert.equal(calls.inserted, 0);
   assert.equal(calls.uploads.length, 0);
 });
 
 test("valid photos are stored under a fresh path with the sniffed type, not the client's", async () => {
-  const { module, calls } = route();
-  const res = await module.POST(listingRequest({
+  const { listingRoute, calls } = route();
+  const res = await listingRoute.POST(listingRequest({
     front: new File([GIF], "anim.GIF.exe", { type: "text/html" }),
     back: new File([PNG], "b.svg", { type: "image/svg+xml" }),
   }));
@@ -135,9 +135,9 @@ test("valid photos are stored under a fresh path with the sniffed type, not the 
 });
 
 test("an unreadable (over-limit) request body gives a clear 413 instead of a bare server error", async () => {
-  const { module } = route();
+  const { listingRoute } = route();
   const req = new Request("https://tcs.test/api/listings", { method: "POST", headers: { "content-type": "multipart/form-data; boundary=x" }, body: "not a valid multipart body" });
-  const res = await module.POST(req);
+  const res = await listingRoute.POST(req);
   assert.equal(res.status, 413);
   assert.ok((await res.json()).error);
 });

@@ -4,7 +4,8 @@ import { useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { formatTHB } from "@/lib/format";
 import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
-import { postForm, prepareCardPhoto } from "@/lib/clientImage";
+import { prepareCardPhoto } from "@/lib/clientImage";
+import { postForm } from "@/lib/postForm";
 
 const inputStyle: CSSProperties = {
   width: "100%",
