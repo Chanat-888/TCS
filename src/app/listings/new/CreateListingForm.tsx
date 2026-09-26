@@ -4,6 +4,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { formatTHB } from "@/lib/format";
 import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
+import { postForm, prepareCardPhoto } from "@/lib/clientImage";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -29,7 +30,23 @@ function PhotoSlot({
   onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [pickError, setPickError] = useState("");
   const preview = file ? URL.createObjectURL(file) : null;
+
+  // Shrink to a normal JPEG before it ever reaches the form (a big GIF or phone
+  // photo would otherwise exceed the upload size limit and freeze the request).
+  async function handleFile(picked: File) {
+    setPreparing(true);
+    setPickError("");
+    const result = await prepareCardPhoto(picked);
+    setPreparing(false);
+    if (!result.ok) {
+      setPickError(result.error);
+      return;
+    }
+    onPick(result.file);
+  }
 
   return (
     <div>
@@ -48,8 +65,8 @@ function PhotoSlot({
               <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
             </svg>
-            <p className="px-[10px] text-center text-[12px]" style={{ color: "var(--steel)" }}>
-              แตะเพื่ออัปโหลดรูป{label}
+            <p className="px-[10px] text-center text-[12px]" style={{ color: preparing ? "var(--cyan)" : "var(--steel)" }}>
+              {preparing ? "กำลังเตรียมรูป…" : <>แตะเพื่ออัปโหลดรูป{label}</>}
             </p>
           </button>
         ) : (
@@ -74,9 +91,18 @@ function PhotoSlot({
           type="file"
           accept="image/*"
           hidden
-          onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])}
+          onChange={(e) => {
+            const picked = e.target.files?.[0];
+            e.target.value = "";
+            if (picked) handleFile(picked);
+          }}
         />
       </div>
+      {pickError && (
+        <p className="mt-2 text-[12px]" style={{ color: "var(--danger)" }}>
+          {pickError}
+        </p>
+      )}
     </div>
   );
 }
@@ -192,14 +218,13 @@ export function CreateListingForm() {
       if (instantWinPrice.trim()) formData.append("buyNowPrice", instantWinPrice);
     }
 
-    const res = await fetch("/api/listings", { method: "POST", body: formData });
-    const json = await res.json();
+    const sent = await postForm<{ id: string; name: string; startPrice: number; rarity: string }>("/api/listings", formData);
     setSubmitting(false);
-    if (!res.ok) {
-      setSubmitError(json.error ?? "เผยแพร่ประกาศไม่สำเร็จ");
+    if (!sent.ok) {
+      setSubmitError(sent.error || "เผยแพร่ประกาศไม่สำเร็จ");
       return;
     }
-    setResult(json);
+    setResult(sent.data);
     window.scrollTo({ top: 0 });
   }
 

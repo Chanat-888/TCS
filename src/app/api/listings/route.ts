@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
+import { checkPhotoFile } from "@/lib/imageUpload";
 
 // Hours: from a quick "hot time" auction up to a week.
 const DURATIONS_HOURS = [1, 3, 6, 12, 24, 72, 120, 168];
@@ -15,7 +16,13 @@ export async function POST(request: Request) {
   const userId = await getVerifiedUserId();
   if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน", code: "LOGIN_REQUIRED" }, { status: 403 });
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    // The platform cut the body off (over its size limit) or it was malformed.
+    return NextResponse.json({ error: "ไฟล์รูปรวมกันใหญ่เกินไป ลองเลือกรูปที่เล็กลง" }, { status: 413 });
+  }
   const front = formData.get("front");
   const back = formData.get("back");
   const name = String(formData.get("name") ?? "").trim();
@@ -72,6 +79,12 @@ export async function POST(request: Request) {
   if (!details.ok) return NextResponse.json({ error: details.error }, { status: 400 });
   const rarity = details.rarity;
 
+  // Check both photos (size and real type) before creating anything, so a bad photo
+  // can never leave a half-created listing behind.
+  const [frontCheck, backCheck] = await Promise.all([checkPhotoFile(front, "ด้านหน้า"), checkPhotoFile(back, "ด้านหลัง")]);
+  if (!frontCheck.ok) return NextResponse.json({ error: frontCheck.error }, { status: 400 });
+  if (!backCheck.ok) return NextResponse.json({ error: backCheck.error }, { status: 400 });
+
   const supabase = createServiceClient();
   const { data: listing, error: insertError } = await supabase
     .from("listings")
@@ -100,15 +113,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "เผยแพร่ประกาศไม่สำเร็จ ลองอีกครั้ง" }, { status: 500 });
   }
 
-  const uploadOne = async (file: File, slot: "front" | "back") => {
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `${listing.id}/${slot}.${ext}`;
-    const { error } = await supabase.storage.from("listing-photos").upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: true });
+  const uploadOne = async (check: { type: { ext: string; contentType: string }; bytes: ArrayBuffer }, slot: "front" | "back") => {
+    const path = `${listing.id}/${slot}-${crypto.randomUUID()}.${check.type.ext}`;
+    const { error } = await supabase.storage.from("listing-photos").upload(path, check.bytes, { contentType: check.type.contentType });
     if (error) return null;
     return supabase.storage.from("listing-photos").getPublicUrl(path).data.publicUrl;
   };
 
-  const [frontUrl, backUrl] = await Promise.all([uploadOne(front, "front"), uploadOne(back, "back")]);
+  const [frontUrl, backUrl] = await Promise.all([uploadOne(frontCheck, "front"), uploadOne(backCheck, "back")]);
+  if (!frontUrl || !backUrl) {
+    // A listing without its photos must not go live: remove it and report the failure.
+    await supabase.from("listings").delete().eq("id", listing.id);
+    return NextResponse.json({ error: "อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง" }, { status: 500 });
+  }
 
   await supabase.from("listings").update({ photo_front_url: frontUrl, photo_back_url: backUrl }).eq("id", listing.id);
 
