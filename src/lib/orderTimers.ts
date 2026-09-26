@@ -139,11 +139,27 @@ export async function cancelLateShipments(supabase: Supabase, now: number): Prom
   // Before the ship-date migration is applied the columns don't exist: do nothing rather than guess.
   if (agreed.error || unagreed.error) return { processed: 0, error: "read orders failed" };
 
-  let processed = 0;
-  for (const [order, reason] of [
+  const candidates = [
     ...(agreed.data ?? []).map((o) => [o, "ผู้ขายไม่จัดส่งภายในวันที่ตกลงกัน"] as const),
     ...(unagreed.data ?? []).map((o) => [o, "ผู้ขายไม่จัดส่งภายใน 3 วันหลังชำระเงิน"] as const),
-  ]) {
+  ];
+  if (candidates.length === 0) return { processed: 0 };
+
+  // While a ship-date question is open (e.g. the buyer asked to postpone and the
+  // seller has not answered) the deadline is paused: the seller must not lose the
+  // order over a date the other side is still changing. The proposal auto-resolves
+  // after 48h, and the deadline applies again after that.
+  const { data: open, error: openError } = await supabase
+    .from("order_ship_proposals")
+    .select("order_id")
+    .eq("status", "pending")
+    .in("order_id", candidates.map(([o]) => o.id));
+  if (openError) return { processed: 0, error: "read proposals failed" };
+  const paused = new Set((open ?? []).map((p: { order_id: string }) => p.order_id));
+
+  let processed = 0;
+  for (const [order, reason] of candidates) {
+    if (paused.has(order.id)) continue;
     const { data: claimed } = await supabase
       .from("orders")
       .update({ status: "CANCELLED", cancelled_at: iso(now) })

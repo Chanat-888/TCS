@@ -53,6 +53,7 @@ function makeDb({ reads = () => [], claim = () => [{ id: "row" }], top = null, o
           eq(col, v) { filters[col] = ["eq", v]; return chain; },
           lte(col, v) { filters[col] = ["lte", v]; return chain; },
           is(col, v) { filters[col] = ["is", v]; return chain; },
+          in(col, v) { filters[col] = ["in", v]; return chain; },
           not(col, op, v) { filters[col] = ["not", op, v]; return chain; },
           order() { return chain; },
           limit() { return chain; },
@@ -149,13 +150,13 @@ test("orders unpaid past their deadline are cancelled, only from PENDING_PAYMENT
 // ---------- late shipments ----------
 test("a missed agreed ship date (+24h grace) or 3 days with no agreement cancels the order", async () => {
   // The agreed query filters ship_by_at with lte; the unagreed one with `is null`.
-  const reads = (_t, f) => (f.ship_by_at[0] === "lte" ? [{ id: "agreed", seller_id: "s" }] : [{ id: "unagreed", seller_id: "s" }]);
+  const reads = (t, f) => (t !== "orders" ? [] : f.ship_by_at[0] === "lte" ? [{ id: "agreed", seller_id: "s" }] : [{ id: "unagreed", seller_id: "s" }]);
   const { client, calls } = makeDb({ reads });
   const result = await timers.cancelLateShipments(client, NOW);
   assert.equal(result.processed, 2);
 
-  const agreed = calls.reads.find((r) => r.filters.ship_by_at[0] === "lte");
-  const unagreed = calls.reads.find((r) => r.filters.ship_by_at[0] === "is");
+  const agreed = calls.reads.find((r) => r.table === "orders" && r.filters.ship_by_at[0] === "lte");
+  const unagreed = calls.reads.find((r) => r.table === "orders" && r.filters.ship_by_at[0] === "is");
   assert.equal(agreed.filters.ship_by_at[1], ago(24 * HOUR));
   assert.equal(unagreed.filters.paid_at[1], ago(3 * DAY));
   for (const u of calls.updates) {
@@ -175,9 +176,24 @@ test("if the ship-date columns are missing (migration not run) nothing is cancel
 });
 
 test("a shipment that happened at the last moment is not cancelled", async () => {
-  const { client, calls } = makeDb({ reads: () => [{ id: "o", seller_id: "s" }], claim: () => [] });
+  const reads = (t) => (t === "orders" ? [{ id: "o", seller_id: "s" }] : []);
+  const { client, calls } = makeDb({ reads, claim: () => [] });
   assert.equal((await timers.cancelLateShipments(client, NOW)).processed, 0);
   assert.equal(chats(calls).length, 0);
+});
+
+test("an order with an open ship-date question is not cancelled for lateness while it is being renegotiated", async () => {
+  // Two overdue orders; the buyer asked to postpone on one and the seller has not answered yet.
+  const reads = (t, f) => {
+    if (t === "order_ship_proposals") return [{ order_id: "negotiating" }];
+    return f.ship_by_at[0] === "lte" ? [{ id: "negotiating", seller_id: "s" }, { id: "plain", seller_id: "s" }] : [];
+  };
+  const { client, calls } = makeDb({ reads });
+  const result = await timers.cancelLateShipments(client, NOW);
+  assert.equal(result.processed, 1);
+  assert.deepEqual(plain(calls.updates.map((u) => u.filters.id[1])), ["plain"]);
+  const question = calls.reads.find((r) => r.table === "order_ship_proposals");
+  assert.equal(question.filters.status[1], "pending");
 });
 
 // ---------- unanswered proposals ----------

@@ -57,7 +57,7 @@ test("only known fields survive cleaning, so a client cannot smuggle extra colum
 });
 
 // ---------- a tiny Supabase stand-in that records what was written ----------
-function makeDb({ order = null, single = {}, writeFails = [] } = {}) {
+function makeDb({ order = null, single = {}, writeFails = [], claimEmpty = false } = {}) {
   const log = [];
   return {
     log,
@@ -74,7 +74,7 @@ function makeDb({ order = null, single = {}, writeFails = [] } = {}) {
           then(resolve, reject) {
             log.push(plain(state));
             const failed = writeFails.includes(table);
-            return Promise.resolve(failed ? { error: { code: "XX000" } } : { data: [{ id: "row" }], error: null }).then(resolve, reject);
+            return Promise.resolve(failed ? { error: { code: "XX000" } } : { data: claimEmpty ? [] : [{ id: "row" }], error: null }).then(resolve, reject);
           },
         };
         return q;
@@ -88,8 +88,8 @@ const writes = (db, table, op) => db.log.filter((entry) => entry.table === table
 const ORDER = { id: "order-1", buyer_id: "buyer", seller_id: "seller", status: "PENDING_PAYMENT" };
 const SAVED = { id: "addr-1", label: "บ้าน", recipient: "สมชาย ใจดี", phone: "0812345678", address: "99/1 ถนนสุขุมวิท", province: "กรุงเทพมหานคร", postcode: "10110", is_default: true };
 
-function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [], writeFails = [] } = {}) {
-  const db = makeDb({ order, writeFails });
+function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [], writeFails = [], claimEmpty = false } = {}) {
+  const db = makeDb({ order, writeFails, claimEmpty });
   const revalidated = [];
   const actions = load("src/app/checkout/[orderId]/actions.ts", {
     "next/cache": { revalidatePath: (path) => revalidated.push(path) },
@@ -237,6 +237,21 @@ test("making a default clears the old one first, and deleting the default promot
   const promote = writes(del.db, "profile_addresses", "update")[0];
   assert.equal(promote.values.is_default, true);
   assert.deepEqual(promote.filters.sort(), [["id", "next"], ["user_id", "me"]]);
+});
+
+test("paying an order the timer already cancelled is refused, and losing the race is never reported as a payment", async () => {
+  const cancelled = checkout({ order: { ...ORDER, status: "CANCELLED" } });
+  const refused = await cancelled.actions.payOrder("order-1", { method: "promptpay", delivery: { type: "meetup" } });
+  assert.match(refused.error, /ยกเลิก/);
+  assert.equal(writes(cancelled.db, "orders", "update").length, 0);
+
+  // The order was cancelled between the read and the update: the guarded update matches no row.
+  const raced = checkout({ claimEmpty: true });
+  const result = await raced.actions.payOrder("order-1", { method: "promptpay", delivery: { type: "other", address: { recipient: "สมชาย ใจดี", phone: "0812345678", address: "99/1 ถนนสุขุมวิท", province: "กรุงเทพมหานคร", postcode: "10110" }, save: true } });
+  assert.ok(result.error);
+  assert.equal(result.success, undefined);
+  assert.equal(raced.revalidated.length, 0);
+  assert.equal(writes(raced.db, "profile_addresses", "insert").length, 0, "no address is saved for a payment that did not happen");
 });
 
 // ---------- seller ship / hand-over ----------

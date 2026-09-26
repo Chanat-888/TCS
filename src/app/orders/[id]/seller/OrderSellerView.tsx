@@ -145,7 +145,9 @@ export function OrderSellerView({
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--danger-line)" }}>
             <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>คำสั่งขายนี้ถูกยกเลิกแล้ว</h3>
             <p className="mt-[6px] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
-              ทั้งสองฝ่ายตกลงยกเลิก เงินที่พักไว้จะคืนให้ผู้ซื้อ ไม่ต้องจัดส่งสินค้า
+              {order.paid_at
+                ? "เงินที่พักไว้จะคืนให้ผู้ซื้อ ไม่ต้องจัดส่งสินค้า — เหตุผลการยกเลิก (ตกลงยกเลิกร่วมกัน หรือไม่ได้จัดส่งตามกำหนด) ดูได้ในแชท"
+                : "ผู้ซื้อไม่ได้ชำระเงินภายใน 24 ชั่วโมง คำสั่งซื้อจึงถูกยกเลิก ไม่ต้องจัดส่งสินค้า"}
             </p>
           </div>
         </div>
