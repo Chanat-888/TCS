@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PhotoAdjustModal, type AdjustResult } from "@/components/PhotoAdjustModal";
 import { prepareCardPhoto } from "@/lib/clientImage";
+import { transformPins } from "@/lib/photoEdit";
 import { postForm } from "@/lib/postForm";
 import { formatTHB } from "@/lib/format";
 import { CONDITION_OPTIONS, OTHER_RARITY, VANGUARD_RARITIES } from "@/lib/vanguard";
@@ -47,6 +49,8 @@ export function SpreadEditor() {
   const [description, setDescription] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [photoError, setPhotoError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [adjusting, setAdjusting] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [done, setDone] = useState<{ id: string; itemCount: number } | null>(null);
@@ -78,6 +82,7 @@ export function SpreadEditor() {
       setPhotoError("รูปรวมกันใหญ่เกินไป ลบรูปเดิมหรือเลือกรูปที่เล็กลง");
       return;
     }
+    setNotice("");
     setPhotos((prev) => [...prev, { file: result.file, url: URL.createObjectURL(result.file) }]);
     setActivePhoto(photos.length);
   }
@@ -90,6 +95,39 @@ export function SpreadEditor() {
     setItems((prev) => prev.filter((i) => i.photoIndex !== index).map((i) => (i.photoIndex > index ? { ...i, photoIndex: i.photoIndex - 1 } : i)));
     setActivePhoto(0);
     setSelectedKey(null);
+  }
+
+  // Rotating or cropping a photo moves its cards, so the pins on it follow: each pin is
+  // carried through the same turn and crop, and any pin whose card was cropped out goes.
+  function applyAdjust(index: number, result: AdjustResult) {
+    const old = photos[index];
+    setAdjusting(null);
+    if (!old) return;
+    if (usedBytes - old.file.size + result.file.size > MAX_SPREAD_UPLOAD_BYTES) {
+      setPhotoError("รูปรวมกันใหญ่เกินไป ลองตัดรูปให้เล็กลงหรือลบรูปอื่น");
+      return;
+    }
+    setPhotoError("");
+    URL.revokeObjectURL(old.url);
+    setPhotos((prev) => prev.map((p, i) => (i === index ? { file: result.file, url: URL.createObjectURL(result.file) } : p)));
+
+    const onPhoto = items.filter((i) => i.photoIndex === index);
+    const moved = transformPins(onPhoto.map((i) => ({ x: i.x, y: i.y })), result.turns, result.crop);
+    const movedByKey = new Map(onPhoto.map((item, n) => [item.key, moved[n]]));
+    let dropped = 0;
+    setItems(
+      items.flatMap((item) => {
+        const m = movedByKey.get(item.key);
+        if (!m) return [item];
+        if (!m.kept) {
+          dropped++;
+          return [];
+        }
+        return [{ ...item, x: m.x, y: m.y }];
+      })
+    );
+    if (selectedKey && movedByKey.get(selectedKey)?.kept === false) setSelectedKey(null);
+    setNotice(dropped > 0 ? `ลบการ์ด ${dropped} ใบที่อยู่นอกพื้นที่ที่ตัดออกแล้ว` : "");
   }
 
   function pointOf(clientX: number, clientY: number) {
@@ -312,6 +350,15 @@ export function SpreadEditor() {
                 {preparing ? "กำลังเตรียมรูป…" : "+ เพิ่มรูป"}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setAdjusting(activePhoto)}
+              disabled={preparing}
+              className="min-h-11 rounded-[10px] px-4 text-[13.5px]"
+              style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--white)" }}
+            >
+              ↻ หมุน / ตัดรูป
+            </button>
             {photos.length === 1 && (
               <button
                 type="button"
@@ -330,7 +377,20 @@ export function SpreadEditor() {
         {photoError && (
           <p className="mt-2 text-[12.5px]" style={{ color: "var(--danger)" }}>{photoError}</p>
         )}
+        {notice && (
+          <p className="mt-2 text-[12.5px]" style={{ color: "var(--gold)" }}>{notice}</p>
+        )}
       </div>
+
+      {adjusting !== null && photos[adjusting] && (
+        <PhotoAdjustModal
+          file={photos[adjusting].file}
+          maxSide={1800}
+          quality={0.8}
+          onCancel={() => setAdjusting(null)}
+          onDone={(result) => applyAdjust(adjusting, result)}
+        />
+      )}
 
       <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>2. รายละเอียดการ์ดแต่ละใบ ({items.length}/{MAX_SPREAD_ITEMS})</h2>
       {items.length === 0 ? (
