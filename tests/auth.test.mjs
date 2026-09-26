@@ -246,6 +246,7 @@ test("listing API rejects a signed-out request before accepting uploads", async 
   const route = load("src/app/api/listings/route.ts", {
     "next/server": { NextResponse: Response },
     "@/lib/session": sessionFor(null),
+    "@/lib/vanguard": { parseListingDetails: () => ({ ok: false, error: "unused" }) },
     "@/lib/supabase/server": { createServiceClient() { throw new Error("Database must not be touched"); } },
   });
   const result = await route.POST(new Request("https://tcs.test/api/listings", { method: "POST" }));

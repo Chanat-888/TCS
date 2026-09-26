@@ -11,9 +11,9 @@ const PAGE_SIZE = 24;
 
 const TABS = [
   { key: "all", label: "ทั้งหมด", icon: "grid" },
-  { key: "new", label: "บูสเตอร์ใหม่", icon: "gift" },
+  { key: "new", label: "บูสเตอร์ต่างๆ", icon: "gift" },
   { key: "deck", label: "เด็คพร้อมเล่น", icon: "layers" },
-  { key: "rare", label: "การ์ดหายาก", icon: "star" },
+  { key: "rare", label: "การ์ดแยกใบ", icon: "star" },
   { key: "closing", label: "ใกล้ปิดประมูล", icon: "clock" },
 ] as const;
 

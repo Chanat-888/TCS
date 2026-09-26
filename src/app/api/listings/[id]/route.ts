@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
+import { parseListingDetails } from "@/lib/vanguard";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -43,7 +44,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "กรอกข้อมูลให้ครบก่อนบันทึก" }, { status: 400 });
   }
 
+  const details = parseListingDetails(category, {
+    rarity: String(formData.get("rarity") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
+    hasExtras: String(formData.get("hasExtras") ?? ""),
+  });
+  if (!details.ok) return NextResponse.json({ error: details.error }, { status: 400 });
+
   const update: Record<string, unknown> = {
+    rarity: details.rarity,
     name,
     set_name: setName,
     category,
@@ -53,6 +62,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     buy_now_price: buyNowPrice,
     current_price: startPrice,
   };
+
+  // Before migration 0017 these columns don't exist: only write them when they
+  // carry information or the row already has them.
+  if (details.quantity !== 1 || "quantity" in listing) update.quantity = details.quantity;
+  if (details.hasExtras !== null || "has_extras" in listing) update.has_extras = details.hasExtras;
 
   const front = formData.get("front");
   const back = formData.get("back");

@@ -45,6 +45,10 @@ export interface Listing {
   current_price: number;
   /** Absent on rows read before migration 0015 is applied; treat as 100. */
   bid_increment?: number;
+  /** Absent before migration 0017; treat as 1. */
+  quantity?: number;
+  /** Ready-to-play decks only: comes with spare cards/components. */
+  has_extras?: boolean | null;
   ends_at: string;
   status: ListingStatus;
   created_at: string;
