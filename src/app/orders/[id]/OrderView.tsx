@@ -114,7 +114,9 @@ export function OrderView({
   }
 
   const steps: TimelineStep[] = [
-    { label: "เงินถูกพักไว้", state: "done", meta: <>คุณชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
+    order.paid_at
+      ? { label: "เงินถูกพักไว้", state: "done", meta: <>คุณชำระเงินแล้ว · <span className="mono">{formatRelativeTime(order.paid_at)}</span></> }
+      : { label: "ชำระเงิน", state: status === "CANCELLED" ? "pending" : "active", meta: "ยังไม่ได้ชำระเงิน" },
     {
       label: "ผู้ขายส่งของแล้ว",
       state: order.shipped_at ? "done" : "active",
@@ -211,7 +213,9 @@ export function OrderView({
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--danger-line)" }}>
             <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>คำสั่งซื้อนี้ถูกยกเลิกแล้ว</h3>
             <p className="mt-[6px] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
-              ทั้งสองฝ่ายตกลงยกเลิก เงินที่พักไว้จะคืนให้ผู้ซื้อ
+              {order.paid_at
+                ? "เงินที่พักไว้จะคืนให้คุณ — เหตุผลการยกเลิก (ตกลงยกเลิกร่วมกัน หรือผู้ขายไม่จัดส่งตามกำหนด) ดูได้ในแชทของคำสั่งซื้อนี้"
+                : "คำสั่งซื้อถูกยกเลิกเพราะไม่ได้ชำระเงินภายใน 24 ชั่วโมง ไม่มีการเรียกเก็บเงิน"}
             </p>
           </div>
         </div>

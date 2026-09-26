@@ -22,6 +22,7 @@ function load(path, dependencies = {}) {
 }
 
 const listingKind = load("src/lib/listingKind.ts");
+const orderCreate = load("src/lib/orderCreate.ts");
 
 function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null, topBidder = null, topAmount = 1000, userId = "buyer-1", claimSeq = null } = {}) {
   const calls = { updates: [], orders: [], bids: [], bidsDeleted: [] };
@@ -29,6 +30,7 @@ function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidEr
     "next/cache": { revalidatePath() {} },
     "@/lib/session": { requireVerifiedUserId: async () => userId },
     "@/lib/listingKind": listingKind,
+    "@/lib/orderCreate": orderCreate,
     "@/lib/supabase/server": {
       createServiceClient: () => ({
         from: (table) => {
