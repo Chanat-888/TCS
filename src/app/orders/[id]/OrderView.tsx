@@ -7,9 +7,10 @@ import { OrderTimeline, type TimelineStep } from "@/components/OrderTimeline";
 import { StatusPill } from "@/components/StatusPill";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Countdown } from "@/components/Countdown";
+import { ShipDatePanel } from "@/components/ShipDatePanel";
 import { secondsUntil } from "@/lib/countdown";
 import { formatTHB, formatRelativeTime } from "@/lib/format";
-import type { Message, Order } from "@/lib/supabase/types";
+import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { approveOrder, sendOrderMessage } from "./actions";
 import { reportMeetupNoShow } from "./dispute/actions";
 
@@ -33,6 +34,7 @@ export function OrderView({
   sellerId,
   sellerName,
   messages,
+  proposals,
   currentUserId,
 }: {
   order: Order;
@@ -40,6 +42,7 @@ export function OrderView({
   sellerId: string;
   sellerName: string;
   messages: Message[];
+  proposals: ShipProposal[];
   currentUserId: string;
 }) {
   const router = useRouter();
@@ -188,6 +191,31 @@ export function OrderView({
         </h2>
         <OrderTimeline steps={steps} />
       </div>
+
+      {(status === "PAID_HELD" || order.ship_by_at || proposals.length > 0) && status !== "CANCELLED" && (
+        <div className="section">
+          <ShipDatePanel
+            orderId={order.id}
+            role="buyer"
+            currentUserId={currentUserId}
+            shipByAt={order.ship_by_at ?? null}
+            proposals={proposals}
+            isMeetup={isMeetup}
+            canChange={status === "PAID_HELD"}
+          />
+        </div>
+      )}
+
+      {status === "CANCELLED" && (
+        <div className="section">
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--danger-line)" }}>
+            <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>คำสั่งซื้อนี้ถูกยกเลิกแล้ว</h3>
+            <p className="mt-[6px] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              ทั้งสองฝ่ายตกลงยกเลิก เงินที่พักไว้จะคืนให้ผู้ซื้อ
+            </p>
+          </div>
+        </div>
+      )}
 
       {canReportNoShow && (
         <div className="section">
