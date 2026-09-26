@@ -10,7 +10,7 @@ function load(path, dependencies = {}) {
   }).outputText;
   const exports = {};
   vm.runInNewContext(code, {
-    exports, console: { error() {} },
+    exports, console: { error() {} }, URL, URLSearchParams, process: { env: { NEXT_PUBLIC_SITE_URL: "http://localhost:3000" } },
     require(name) {
       if (!(name in dependencies)) throw new Error("Unexpected dependency: " + name);
       return dependencies[name];
@@ -85,12 +85,13 @@ function makeDb({ order = null, single = {}, writeFails = [] } = {}) {
 const writes = (db, table, op) => db.log.filter((entry) => entry.table === table && entry.op === op);
 
 // ---------- checkout ----------
-const ORDER = { id: "order-1", buyer_id: "buyer", seller_id: "seller", status: "PENDING_PAYMENT" };
+const ORDER = { id: "order-1", buyer_id: "buyer", seller_id: "seller", status: "PENDING_PAYMENT", amount: 1500, payment_deadline_at: "2026-09-27T00:00:00.000Z" };
 const SAVED = { id: "addr-1", label: "บ้าน", recipient: "สมชาย ใจดี", phone: "0812345678", address: "99/1 ถนนสุขุมวิท", province: "กรุงเทพมหานคร", postcode: "10110", is_default: true };
 
-function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [], writeFails = [] } = {}) {
+function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [], writeFails = [], omiseFails = false } = {}) {
   const db = makeDb({ order, writeFails });
   const revalidated = [];
+  const charges = [];
   const actions = load("src/app/checkout/[orderId]/actions.ts", {
     "next/cache": { revalidatePath: (path) => revalidated.push(path) },
     "@/lib/supabase/server": { createServiceClient: () => db.client },
@@ -100,18 +101,33 @@ function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [
       listAddresses: async () => existing,
     },
     "@/lib/addresses": addresses,
+    "@/lib/omise": {
+      omise: async (path, params) => {
+        if (omiseFails) throw new Error("omise invalid_charge");
+        charges.push(Object.fromEntries(params));
+        const type = params.get("source[type]");
+        return { id: "chrg_test_1", authorize_uri: type === "truemoney" ? "https://pay.omise.co/x" : null,
+          source: type === "promptpay" ? { scannable_code: { image: { download_uri: "https://api.omise.co/qr.png" } } } : null };
+      },
+      syncCharge: async () => "pending",
+    },
   });
-  return { actions, db, revalidated };
+  return { actions, db, revalidated, charges };
 }
 const orderUpdate = (db) => writes(db, "orders", "update")[0];
 
 test("paying with a saved address copies it into the order and keeps the default delivery method", async () => {
-  const { actions, db } = checkout();
+  const { actions, db, charges } = checkout();
   const result = await actions.payOrder("order-1", { method: "promptpay", delivery: { type: "saved", addressId: "addr-1" } });
   assert.equal(result.success, true);
   assert.equal(result.deliveryMethod, "ship");
+  assert.equal(result.qrUrl, "https://api.omise.co/qr.png");
+  assert.equal(charges[0].amount, "150000", "THB is charged in satang");
+  assert.equal(charges[0]["metadata[order_id]"], "order-1");
+  assert.equal(charges[0].expires_at, ORDER.payment_deadline_at, "the QR dies with the order");
   const update = orderUpdate(db);
-  assert.equal(update.values.status, "PAID_HELD");
+  assert.equal("status" in update.values, false, "only a confirmed Omise charge may mark the order paid");
+  assert.equal(update.values.omise_charge_id, "chrg_test_1");
   assert.equal(update.values.shipping_recipient, SAVED.recipient);
   assert.equal(update.values.shipping_postcode, "10110");
   assert.equal("delivery_method" in update.values, false, "ship is the column default, so checkout works before the migration");
@@ -125,7 +141,8 @@ test("someone else's saved address can never be used", async () => {
 });
 test("meet-up stores no address at all and marks the order as meet-up", async () => {
   const { actions, db } = checkout();
-  const result = await actions.payOrder("order-1", { method: "card", delivery: { type: "meetup" } });
+  const result = await actions.payOrder("order-1", { method: "truemoney", walletPhone: "081-234-5678", delivery: { type: "meetup" } });
+  assert.equal(result.authorizeUri, "https://pay.omise.co/x");
   assert.equal(result.deliveryMethod, "meetup");
   const update = orderUpdate(db);
   assert.equal(update.values.delivery_method, "meetup");
@@ -164,9 +181,13 @@ test("checkout refuses other people's orders, paid orders, and unknown choices",
   const odd = checkout();
   for (const input of [
     { method: "promptpay", delivery: { type: "teleport" } }, { method: "promptpay", delivery: null },
-    { method: "bitcoin", delivery: { type: "meetup" } }, { method: "promptpay" }, null,
+    { method: "bitcoin", delivery: { type: "meetup" } }, { method: "card", delivery: { type: "meetup" } }, { method: "promptpay" }, null,
+    { method: "truemoney", delivery: { type: "meetup" } }, { method: "truemoney", walletPhone: "12345", delivery: { type: "meetup" } },
   ]) assert.ok((await odd.actions.payOrder("order-1", input)).error, JSON.stringify(input));
   assert.equal(writes(odd.db, "orders", "update").length, 0);
+  const down = checkout({ omiseFails: true });
+  assert.ok((await down.actions.payOrder("order-1", { method: "promptpay", delivery: { type: "meetup" } })).error);
+  assert.equal(writes(down.db, "orders", "update").length, 0, "no charge, no order change");
 });
 
 // ---------- address book actions ----------

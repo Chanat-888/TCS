@@ -6,6 +6,7 @@ import { requireVerifiedUserId } from "@/lib/session";
 import { getAddress, listAddresses } from "@/lib/addressBook";
 import { MAX_ADDRESSES, cleanAddressFields, type AddressFields } from "@/lib/addresses";
 import type { PaymentMethod } from "@/lib/supabase/types";
+import { omise, syncCharge } from "@/lib/omise";
 
 export type DeliveryChoice =
   | { type: "saved"; addressId: string }
@@ -15,6 +16,7 @@ export type DeliveryChoice =
 export interface PayOrderInput {
   method: PaymentMethod;
   delivery: DeliveryChoice;
+  walletPhone?: string;
 }
 
 type Resolved = { error: string } | { deliveryMethod: "ship" | "meetup"; address: AddressFields | null; saveAs: AddressFields | null };
@@ -41,13 +43,15 @@ async function resolveDelivery(userId: string, delivery: unknown): Promise<Resol
   return { error: "เลือกวิธีรับสินค้า" };
 }
 
-// Mock escrow: this writes a real PAID_HELD order row and drives the real
-// state machine from here on — only the literal payment call is simulated,
-// since the payment provider (Omise vs 2C2P) is still undecided (PRODUCT.md).
+// Starts an Omise charge (test mode with a skey_test_ key). The order stays
+// PENDING_PAYMENT until syncCharge sees the charge succeed — via the webhook or
+// checkPayment below — so nothing here can mark an order paid.
 export async function payOrder(orderId: string, input: PayOrderInput) {
   const userId = await requireVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
-  if (input?.method !== "promptpay" && input?.method !== "card") return { error: "เลือกวิธีชำระเงิน" as const };
+  if (input?.method !== "promptpay" && input?.method !== "truemoney") return { error: "เลือกวิธีชำระเงิน" as const };
+  const walletPhone = String(input.walletPhone ?? "").replace(/\D/g, "");
+  if (input.method === "truemoney" && !/^0\d{9}$/.test(walletPhone)) return { error: "กรอกเบอร์ TrueMoney 10 หลัก" as const };
 
   const supabase = createServiceClient();
   const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
@@ -57,11 +61,29 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
   const resolved = await resolveDelivery(userId, input.delivery);
   if ("error" in resolved) return { error: resolved.error };
 
+  const params = new URLSearchParams({
+    amount: String(order.amount * 100),
+    currency: "THB",
+    "source[type]": input.method,
+    return_uri: new URL(`/checkout/${orderId}`, process.env.NEXT_PUBLIC_SITE_URL).toString(),
+    "metadata[order_id]": orderId,
+  });
+  if (input.method === "truemoney") params.set("source[phone_number]", walletPhone);
+  // A QR paid after the order auto-cancels would take money for nothing.
+  if (input.method === "promptpay" && order.payment_deadline_at) params.set("expires_at", order.payment_deadline_at);
+  let charge;
+  try {
+    charge = await omise("/charges", params);
+  } catch (e) {
+    console.error("[checkout] could not create charge", (e as Error).message);
+    return { error: "เริ่มการชำระเงินไม่สำเร็จ ลองอีกครั้ง" as const };
+  }
+
   const { error } = await supabase
     .from("orders")
     .update({
-      status: "PAID_HELD",
       payment_method: input.method,
+      omise_charge_id: charge.id,
       // 'ship' is the column default, so it is only written for meet-up. That keeps
       // normal checkout working even before the delivery_method migration is applied.
       ...(resolved.deliveryMethod === "meetup" ? { delivery_method: "meetup" } : {}),
@@ -70,7 +92,6 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
       shipping_address: resolved.address?.address ?? null,
       shipping_province: resolved.address?.province ?? null,
       shipping_postcode: resolved.address?.postcode ?? null,
-      paid_at: new Date().toISOString(),
     })
     .eq("id", orderId)
     .eq("status", "PENDING_PAYMENT");
@@ -90,8 +111,29 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
     }
   }
 
-  revalidatePath(`/checkout/${orderId}`);
-  revalidatePath(`/orders/${orderId}`);
   revalidatePath("/profile");
-  return { success: true as const, deliveryMethod: resolved.deliveryMethod };
+  return {
+    success: true as const,
+    deliveryMethod: resolved.deliveryMethod,
+    qrUrl: charge.source?.scannable_code?.image?.download_uri ?? null,
+    // Omise sets authorize_uri on PromptPay charges too; only TrueMoney must leave the page.
+    authorizeUri: input.method === "truemoney" ? charge.authorize_uri ?? null : null,
+  };
+}
+
+// Polled by the PromptPay QR screen. Only reports; syncCharge does the update.
+export async function checkPayment(orderId: string): Promise<"paid" | "pending" | "failed"> {
+  const userId = await requireVerifiedUserId();
+  if (!userId) return "pending";
+  const { data: order } = await createServiceClient()
+    .from("orders").select("buyer_id, status, omise_charge_id").eq("id", orderId).maybeSingle();
+  if (!order || order.buyer_id !== userId) return "pending";
+  if (order.status === "CANCELLED") return "failed";
+  if (order.status !== "PENDING_PAYMENT") return "paid";
+  if (!order.omise_charge_id) return "pending";
+  // No revalidatePath here: it would refresh this checkout page, which redirects a
+  // paid order away before the success screen shows.
+  const status = await syncCharge(order.omise_charge_id).catch(() => "pending" as const);
+  if (status === "successful") return "paid";
+  return status === "pending" ? "pending" : "failed";
 }

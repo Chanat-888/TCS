@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import { requireVerifiedUserId } from "@/lib/session";
 import { getOrderDetail } from "@/lib/orders";
+import { syncCharge } from "@/lib/omise";
 import { listAddresses } from "@/lib/addressBook";
 import type { SavedAddress } from "@/lib/addresses";
 import { BackHeader } from "@/components/BackHeader";
@@ -16,7 +17,13 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
   const detail = await getOrderDetail(orderId, userId);
   if (!detail || !detail.isBuyer) notFound();
 
-  if (detail.order.status !== "PENDING_PAYMENT") {
+  // Coming back from TrueMoney (Omise's return_uri) lands here: settle the charge
+  // now rather than waiting for the webhook.
+  const chargeId = detail.order.omise_charge_id;
+  const justPaid = detail.order.status === "PENDING_PAYMENT" && chargeId
+    ? (await syncCharge(chargeId).catch(() => null)) === "successful"
+    : false;
+  if (detail.order.status !== "PENDING_PAYMENT" || justPaid) {
     redirect(`/orders/${orderId}`);
   }
 
@@ -46,7 +53,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
           />
         </div>
       </main>
-      <Footer note="เอกสารแนวคิดฉบับพรีวิว — การชำระเงินจำลองไว้เพื่อสาธิตการออกแบบ ไม่มีการเชื่อมต่อผู้ให้บริการชำระเงินจริง และไม่มีการเก็บข้อมูลบัตร" />
+      <Footer note={process.env.OMISE_SECRET_KEY?.startsWith("skey_test_") ? "โหมดทดสอบ — ชำระผ่าน Omise test mode ไม่มีการตัดเงินจริง" : undefined} />
     </div>
   );
 }
