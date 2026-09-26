@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { OrderTimeline, type TimelineStep } from "@/components/OrderTimeline";
 import { StatusPill } from "@/components/StatusPill";
 import { ChatPanel } from "@/components/ChatPanel";
@@ -27,7 +27,29 @@ export function OrderSellerView({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [shipped, setShipped] = useState(Boolean(order.shipped_at));
+  const [packingUrl, setPackingUrl] = useState<string | null>(order.packing_video_url ?? null);
+  const [packingName, setPackingName] = useState<string | null>(order.packing_video_url ? "packing.mp4" : null);
+  const [packingUploading, setPackingUploading] = useState(false);
+  const [packingError, setPackingError] = useState("");
+  const packingInput = useRef<HTMLInputElement>(null);
   const [shippedInfo, setShippedInfo] = useState({ courier: order.courier ?? "", tracking: order.tracking_number ?? "" });
+
+  async function handlePackingFile(file: File) {
+    setPackingUploading(true);
+    setPackingError("");
+    const formData = new FormData();
+    formData.append("video", file);
+    const res = await fetch(`/api/orders/${order.id}/packing-video`, { method: "POST", body: formData });
+    const json = await res.json();
+    setPackingUploading(false);
+    if (!res.ok) {
+      setPackingError(json.error ?? "อัปโหลดไม่สำเร็จ");
+      return;
+    }
+    setPackingUrl(json.url);
+    setPackingName(json.filename);
+    setError("");
+  }
 
   async function handleConfirm() {
     if (!courier || !tracking.trim()) {
@@ -63,6 +85,7 @@ export function OrderSellerView({
   const isDisputed = order.status === "DISPUTED";
   const steps: TimelineStep[] = [
     { label: "เงินถูกพักไว้", state: "done", meta: <>ผู้ซื้อชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
+    { label: "ถ่ายวิดีโอแพ็คของ", state: packingUrl ? "done" : shipped ? "done" : "active", meta: packingUrl ? "อัปโหลดแล้ว — ผู้ซื้อและแอดมินดูได้" : "บังคับทุกออเดอร์ ก่อนยืนยันการจัดส่ง/ส่งมอบ" },
     { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง") },
     { label: "ถึงมือผู้ซื้อ", state: order.delivered_at ? "done" : "pending", meta: "อัปเดตอัตโนมัติเมื่อผู้ซื้อยืนยันว่าได้รับพัสดุ" },
     { label: "ผู้ซื้อยืนยันรับการ์ด", state: isDone ? "done" : "pending", meta: "ผู้ซื้อถ่ายวิดีโอแกะกล่องแล้วกดรับ หรือระบบอนุมัติอัตโนมัติภายใน 48 ชม." },
@@ -136,6 +159,39 @@ export function OrderSellerView({
         </div>
       </div>
 
+      {!shipped && !isDisputed && order.status === "PAID_HELD" && (
+        <div className="section">
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: `1px solid ${packingUrl ? "rgba(79,201,122,0.25)" : "rgba(95,212,255,0.2)"}` }}>
+            <h3 className="text-[15px] font-medium">ถ่ายวิดีโอแพ็คของ (บังคับ)</h3>
+            <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              TCS ต้องมีวิดีโอจากทั้งผู้ขายและผู้ซื้อทุกออเดอร์ — อัดวิดีโอตอนหยิบการ์ดที่ขายใส่ซอง/กล่อง
+              ให้เห็นการ์ดชัดเจนก่อน{isMeetup ? "ส่งมอบ" : "ส่ง"} วิดีโอนี้เป็นหลักฐานปกป้องคุณหากมีข้อพิพาท
+            </p>
+            <input
+              ref={packingInput}
+              type="file"
+              accept="video/mp4,video/quicktime"
+              hidden
+              onChange={(e) => e.target.files?.[0] && handlePackingFile(e.target.files[0])}
+            />
+            <button
+              type="button"
+              onClick={() => packingInput.current?.click()}
+              disabled={packingUploading}
+              className="mt-4 min-h-11 w-full rounded-xl px-4 py-3 text-center text-[13.5px]"
+              style={{ border: "1.5px dashed rgba(95,212,255,0.3)", color: "var(--white)" }}
+            >
+              {packingUploading ? "กำลังอัปโหลด…" : packingUrl ? `อัปโหลดแล้ว: ${packingName} — แตะเพื่อเปลี่ยนไฟล์` : "แตะเพื่อเลือกวิดีโอ (MP4 หรือ MOV)"}
+            </button>
+            {packingError && (
+              <p className="mt-[10px] text-[12px]" style={{ color: "var(--danger)" }}>
+                {packingError}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="section">
         {isDisputed ? (
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(232,102,79,0.3)" }}>
@@ -162,11 +218,11 @@ export function OrderSellerView({
             <button
               type="button"
               onClick={handleHandover}
-              disabled={submitting}
+              disabled={submitting || !packingUrl}
               className="mt-[18px] h-12 w-full rounded-[11px] text-[14.5px] font-semibold"
-              style={{ background: "var(--blue)", color: "#071523" }}
+              style={{ background: "var(--blue)", color: "#071523", opacity: packingUrl ? 1 : 0.5 }}
             >
-              {submitting ? "..." : "ยืนยันส่งมอบแล้ว"}
+              {submitting ? "..." : packingUrl ? "ยืนยันส่งมอบแล้ว" : "อัปโหลดวิดีโอแพ็คของก่อน"}
             </button>
           </div>
         ) : !shipped ? (
@@ -215,11 +271,11 @@ export function OrderSellerView({
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={submitting}
+              disabled={submitting || !packingUrl}
               className="mt-[18px] h-12 w-full rounded-[11px] text-[14.5px] font-semibold"
-              style={{ background: "var(--blue)", color: "#071523" }}
+              style={{ background: "var(--blue)", color: "#071523", opacity: packingUrl ? 1 : 0.5 }}
             >
-              {submitting ? "..." : "ยืนยันการจัดส่ง"}
+              {submitting ? "..." : packingUrl ? "ยืนยันการจัดส่ง" : "อัปโหลดวิดีโอแพ็คของก่อน"}
             </button>
           </div>
         ) : (

@@ -84,6 +84,9 @@ export interface Order {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  /** Seller's packing video (absent before migration 0018). Required before shipping. */
+  packing_video_url?: string | null;
+  packing_video_uploaded_at?: string | null;
   unboxing_video_url: string | null;
   video_uploaded_at: string | null;
   auto_approve_at: string | null;
