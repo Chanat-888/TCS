@@ -4,7 +4,11 @@
 
 ## Implementation update — Google and phone authentication
 
-Phone OTP now calls Supabase Auth, uses verified per-user sessions, supports resend and logout, and provisions profiles through migration 0006. SMS delivery and hosted verification still require project/provider configuration; see [auth setup](docs/auth-setup.md). Google OAuth now supports browsing without a verified phone. Trading mutations require phone verification; adding a phone to a Google account preserves its UUID. Phone-first users can link Google from their profile. Google provider setup and manual linking must be configured in Supabase before live use. The older surface inventory below describes design prototypes and is not a current implementation checklist. Payments remain simulated.
+Phone OTP now calls Supabase Auth, uses verified per-user sessions, supports resend and logout, and provisions profiles through migration 0006. SMS delivery and hosted verification still require project/provider configuration; see [auth setup](docs/auth-setup.md). Google OAuth now supports browsing without a verified phone. Trading mutations require phone verification; adding a phone to a Google account preserves its UUID. Phone-first users can link Google from their profile. Google provider setup and manual linking must be configured in Supabase before live use. The older surface inventory below describes design prototypes and is not a current implementation checklist.
+
+## Implementation update — Omise payments (test mode)
+
+Checkout charges through Omise in test mode (`skey_test_` key): PromptPay QR and TrueMoney Wallet. Card was removed from checkout. An order only becomes `PAID_HELD` after the server re-reads a successful charge from Omise (webhook at `/api/omise/webhook`, the QR status poll, or the TrueMoney return page). Not built yet: seller payout on `COMPLETED`, refunds on disputes, and a live account (Omise approval for an individual-run C2C marketplace is unconfirmed).
 
 ## Platform
 
@@ -12,7 +16,7 @@ web
 
 ## Stack
 
-Next.js (PWA). Supabase (Postgres, Auth with phone OTP, Realtime for live bidding, Storage). Escrow/payments via Omise or 2C2P (Thai, PromptPay support, marketplace split) — provider TBD between the two. Timers (auction end, auto-approve) via Supabase cron / Edge Functions. Hosting on Vercel. Estimated launch cost: 0–1,500 THB/month. PWA first; native app only after there are real sellers.
+Next.js (PWA). Supabase (Postgres, Auth with phone OTP, Realtime for live bidding, Storage). Escrow/payments via Omise (test mode; PromptPay + TrueMoney). 2C2P remains the fallback if Omise cannot support escrow/delayed payout for a live account. Timers (auction end, auto-approve) via Supabase cron / Edge Functions. Hosting on Vercel. Estimated launch cost: 0–1,500 THB/month. PWA first; native app only after there are real sellers.
 
 ## Users
 
@@ -50,7 +54,7 @@ Out of scope for v1: card grading/price guide, in-app shipping label purchase, c
 
 Open/undecided product facts (do not invent answers):
 - Identity level — phone OTP + bank-name match, or full Thai ID (KYC)? Deferred, but must be decided before payment code is written (changes the database).
-- Payment provider — Omise vs 2C2P, pending escrow/delayed-capture support and fee comparison.
+- Payment provider for live money — building on Omise; still unconfirmed whether Omise will approve escrow/delayed seller payout (2C2P is the fallback).
 - Who pays the payment fee — buyer, seller, or split.
 - Condition-grading standard — allowed condition terms and dispute authority.
 - Shipping — whether insured/tracked courier is required for high-value cards.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
@@ -9,7 +9,7 @@ import { ProvinceCombobox } from "@/components/ProvinceCombobox";
 import { formatTHB } from "@/lib/format";
 import { MAX_ADDRESSES, type SavedAddress } from "@/lib/addresses";
 import type { PaymentMethod } from "@/lib/supabase/types";
-import { payOrder, type DeliveryChoice } from "./actions";
+import { checkPayment, payOrder, type DeliveryChoice } from "./actions";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -90,9 +90,8 @@ export function CheckoutForm({
   const [province, setProvince] = useState("");
   const [postcode, setPostcode] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("promptpay");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [walletPhone, setWalletPhone] = useState("");
+  const [qr, setQr] = useState<null | { url: string; delivery: "ship" | "meetup" }>(null);
 
   const [addressError, setAddressError] = useState("");
   const [methodError, setMethodError] = useState(false);
@@ -101,6 +100,24 @@ export function CheckoutForm({
   const [done, setDone] = useState<null | "ship" | "meetup">(null);
 
   const canSaveNew = savedAddresses.length < MAX_ADDRESSES;
+
+  // While the PromptPay QR is up, ask the server every few seconds whether Omise
+  // has seen the payment (the webhook may also get there first).
+  useEffect(() => {
+    if (!qr) return;
+    const timer = setInterval(async () => {
+      const status = await checkPayment(orderId).catch(() => "pending" as const);
+      if (status === "paid") {
+        setQr(null);
+        setDone(qr.delivery);
+        window.scrollTo({ top: 0 });
+      } else if (status === "failed") {
+        setQr(null);
+        setPayError("QR หมดอายุหรือชำระไม่สำเร็จ กดชำระเงินเพื่อสร้าง QR ใหม่");
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [qr, orderId]);
 
   async function handlePay() {
     setPayError("");
@@ -121,7 +138,7 @@ export function CheckoutForm({
       choice = { type: "other", address: { recipient, phone, address, province, postcode }, save: saveNew && canSaveNew };
     }
     setAddressError("");
-    if (method === "card" && (!cardNumber.trim() || !cardExp.trim() || !cardCvv.trim())) {
+    if (method === "truemoney" && !/^0\d{9}$/.test(walletPhone.replace(/\D/g, ""))) {
       setMethodError(true);
       return;
     }
@@ -129,13 +146,22 @@ export function CheckoutForm({
 
     setSubmitting(true);
     try {
-      const result = await payOrder(orderId, { method, delivery: choice });
+      const result = await payOrder(orderId, { method, delivery: choice, walletPhone });
       if ("error" in result) {
         // Address problems are shown next to the address; anything else at the button.
         setPayError(result.error ?? "ชำระเงินไม่สำเร็จ ลองอีกครั้ง");
         return;
       }
-      setDone(result.deliveryMethod);
+      if (result.authorizeUri) {
+        // TrueMoney: OTP on Omise's page, which returns to /checkout/[orderId].
+        window.location.assign(result.authorizeUri);
+        return;
+      }
+      if (!result.qrUrl) {
+        setPayError("เริ่มการชำระเงินไม่สำเร็จ ลองอีกครั้ง");
+        return;
+      }
+      setQr({ url: result.qrUrl, delivery: result.deliveryMethod });
       window.scrollTo({ top: 0 });
     } catch {
       setPayError("เชื่อมต่อไม่ได้ กรุณาลองอีกครั้ง");
@@ -193,6 +219,25 @@ export function CheckoutForm({
             กลับหน้าหลัก
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (qr) {
+    return (
+      <div className="py-6 text-center">
+        <h1 className="text-[1.4rem]">สแกนเพื่อชำระเงิน</h1>
+        <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
+          เปิดแอปธนาคาร สแกน QR พร้อมเพย์ แล้วชำระ <strong style={{ color: "var(--white)" }}>{formatTHB(amount)}</strong>
+        </p>
+        {/* eslint-disable-next-line @next/next/no-img-element -- Omise-hosted QR, not a static asset */}
+        <img src={qr.url} alt="QR พร้อมเพย์สำหรับชำระเงิน" className="mx-auto mt-5 rounded-xl bg-white p-3" style={{ width: 260, maxWidth: "100%" }} />
+        <p className="mt-4 text-[12.5px]" role="status" style={{ color: "var(--steel-dim)" }}>
+          รอการยืนยันการชำระเงิน… หน้านี้จะเปลี่ยนเองเมื่อชำระสำเร็จ
+        </p>
+        <button type="button" onClick={() => setQr(null)} className="mt-5 text-[13px] underline" style={{ color: "var(--steel)" }}>
+          เปลี่ยนวิธีชำระเงิน
+        </button>
       </div>
     );
   }
@@ -340,31 +385,23 @@ export function CheckoutForm({
             {(
               [
                 { key: "promptpay" as const, label: "พร้อมเพย์ (PromptPay)", sub: "สแกน QR ผ่านแอปธนาคารของคุณ" },
-                { key: "card" as const, label: "บัตรเครดิต / เดบิต", sub: "Visa, Mastercard, JCB" },
+                { key: "truemoney" as const, label: "TrueMoney Wallet", sub: "ยืนยันด้วยรหัส OTP ที่ส่งไปยังเบอร์ TrueMoney" },
               ]
             ).map((opt) => (
               <ChoiceCard key={opt.key} selected={method === opt.key} onSelect={() => { setMethod(opt.key); setMethodError(false); }} title={opt.label} sub={opt.sub} />
             ))}
           </div>
 
-          {method === "card" && (
+          {method === "truemoney" && (
             <div className="mt-[14px]">
-              <Field label="หมายเลขบัตร">
-                <input className="mono" style={inputStyle} value={cardNumber} onChange={(e) => { setCardNumber(e.target.value); setMethodError(false); }} placeholder="XXXX XXXX XXXX XXXX" />
+              <Field label="เบอร์ TrueMoney Wallet">
+                <input className="mono" style={inputStyle} value={walletPhone} onChange={(e) => { setWalletPhone(e.target.value); setMethodError(false); }} placeholder="08X-XXX-XXXX" inputMode="tel" autoComplete="tel" />
               </Field>
-              <div className="mt-[14px] grid grid-cols-2 gap-3">
-                <Field label="วันหมดอายุ">
-                  <input className="mono" style={inputStyle} value={cardExp} onChange={(e) => { setCardExp(e.target.value); setMethodError(false); }} placeholder="MM/YY" />
-                </Field>
-                <Field label="CVV">
-                  <input className="mono" style={inputStyle} value={cardCvv} onChange={(e) => { setCardCvv(e.target.value); setMethodError(false); }} placeholder="XXX" />
-                </Field>
-              </div>
             </div>
           )}
           {methodError && (
             <p className="mt-[8px] text-[12px]" style={{ color: "var(--danger)" }}>
-              กรอกข้อมูลบัตรให้ครบก่อนดำเนินการต่อ
+              กรอกเบอร์ TrueMoney 10 หลักก่อนดำเนินการต่อ
             </p>
           )}
         </div>

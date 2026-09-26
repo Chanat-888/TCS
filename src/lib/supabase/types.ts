@@ -9,7 +9,7 @@ export type OrderStatus =
   | "DISPUTED"
   | "CANCELLED"
   | "REFUNDED";
-export type PaymentMethod = "promptpay" | "card";
+export type PaymentMethod = "promptpay" | "truemoney" | "card";
 export type DisputeReason = "condition" | "wrong" | "authenticity" | "other" | "not_received";
 export type DisputeDecision = "refund" | "release";
 
@@ -71,6 +71,7 @@ export interface Order {
   amount: number;
   status: OrderStatus;
   payment_method: PaymentMethod | null;
+  omise_charge_id: string | null;
   shipping_recipient: string | null;
   shipping_phone: string | null;
   shipping_address: string | null;
