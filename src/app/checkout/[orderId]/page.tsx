@@ -45,7 +45,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
       <BackHeader href={`/listings/${detail.listing.id}`} title="ชำระเงิน" />
       <main className="py-7 pb-20">
         <div className="wrap">
-          <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
+          <OrderItemsList items={orderItems} />
           <CheckoutForm
             orderId={detail.order.id}
             listingName={detail.listing.name}

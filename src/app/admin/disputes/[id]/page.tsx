@@ -47,7 +47,7 @@ export default async function AdminDisputePage({ params }: { params: Promise<{ i
       <main className="py-7 pb-[70px]">
         <div className="wrap grid gap-7 max-[880px]:grid-cols-1" style={{ gridTemplateColumns: "1.4fr 1fr", alignItems: "start" }}>
           <div className="flex flex-col gap-[22px]">
-            <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
+            <OrderItemsList items={orderItems} />
             <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
               <h2 className="mb-[14px] text-[14px] font-medium" style={{ color: "var(--steel)" }}>
                 สรุปคำสั่งซื้อ

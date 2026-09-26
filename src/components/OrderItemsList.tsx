@@ -1,10 +1,9 @@
-import { ItemThumb } from "@/components/ItemThumb";
 import { formatTHB } from "@/lib/format";
 import { totalPrice } from "@/lib/spreadPost";
 import type { ListingItem } from "@/lib/supabase/types";
 
 /** The individual cards in an order made from a spread post (nothing for an ordinary order). */
-export function OrderItemsList({ items, photos }: { items: ListingItem[]; photos: string[] }) {
+export function OrderItemsList({ items }: { items: ListingItem[] }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-5 rounded-2xl p-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
@@ -14,12 +13,9 @@ export function OrderItemsList({ items, photos }: { items: ListingItem[]; photos
       <ul className="mt-3 flex flex-col gap-2">
         {items.map((item) => (
           <li key={item.id} className="flex items-center gap-3">
-            <ItemThumb photoUrl={photos[item.photo_index]} item={item} size={48} />
+            <span className="mono w-9 flex-shrink-0 text-[13px]" style={{ color: "var(--cyan)" }}>#{item.position}</span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px]" style={{ color: "var(--white)" }}>
-                <span className="mono mr-[6px]" style={{ color: "var(--cyan)" }}>#{item.position}</span>
-                {item.name}
-              </span>
+              <span className="block truncate text-[13.5px]" style={{ color: "var(--white)" }}>{item.name}</span>
               <span className="block text-[12px]" style={{ color: "var(--steel)" }}>
                 {item.rarity} · {item.condition}
               </span>

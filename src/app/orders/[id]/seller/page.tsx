@@ -25,7 +25,7 @@ export default async function OrderSellerPage({ params }: { params: Promise<{ id
       <BackHeader href={`/profile/${userId}`} title="คำสั่งขาย" subtitle={`#${detail.order.order_code}`} />
       <main className="py-7 pb-[70px]">
         <div className="wrap">
-          <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
+          <OrderItemsList items={orderItems} />
           <OrderSellerView order={detail.order} listingName={detail.listing.name} messages={messages} proposals={proposals} currentUserId={userId} />
         </div>
       </main>

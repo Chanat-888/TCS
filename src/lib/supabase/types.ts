@@ -181,11 +181,6 @@ export interface ListingItem {
   id: string;
   listing_id: string;
   position: number;
-  photo_index: number;
-  aspect: number;
-  x: number;
-  y: number;
-  r: number;
   name: string;
   rarity: string;
   condition: string;

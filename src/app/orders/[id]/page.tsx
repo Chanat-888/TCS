@@ -25,7 +25,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       <BackHeader href="/browse" title="สถานะคำสั่งซื้อ" subtitle={`#${detail.order.order_code}`} />
       <main className="py-7 pb-[70px]">
         <div className="wrap">
-          <OrderItemsList items={orderItems} photos={detail.listing.photo_urls ?? []} />
+          <OrderItemsList items={orderItems} />
           <OrderView
             order={detail.order}
             listingName={detail.listing.name}

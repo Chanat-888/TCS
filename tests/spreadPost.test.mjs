@@ -25,56 +25,44 @@ const spread = load("src/lib/spreadPost.ts", { "@/lib/vanguard": vanguard });
 const imageUpload = load("src/lib/imageUpload.ts");
 const orderCreate = load("src/lib/orderCreate.ts");
 
-const good = (over = {}) => ({ photoIndex: 0, aspect: 1.4, x: 30, y: 40, r: 6, name: "Blaster Blade", rarity: "RRR", condition: "สภาพสมบูรณ์ (Near Mint)", price: 500, ...over });
+let counter = 0;
+const good = (over = {}) => ({ position: ++counter, name: "Blaster Blade", rarity: "RRR", condition: "สภาพสมบูรณ์ (Near Mint)", price: 500, ...over });
+const fresh = (n, over = {}) => Array.from({ length: n }, (_, i) => good({ position: i + 1, ...over }));
 
 // ---------- validation ----------
-test("a spread post needs 1-30 valid, priced, circled cards", () => {
-  assert.equal(spread.parseSpreadItems([good()], 1).ok, true);
-  assert.equal(spread.parseSpreadItems([], 1).ok, false);
-  assert.equal(spread.parseSpreadItems("nope", 1).ok, false);
-  assert.equal(spread.parseSpreadItems(Array.from({ length: 31 }, () => good()), 1).ok, false);
-  assert.equal(spread.parseSpreadItems(Array.from({ length: 30 }, () => good()), 1).ok, true);
+test("a spread post needs 1-30 valid, priced cards", () => {
+  assert.equal(spread.parseSpreadItems([good({ position: 1 })]).ok, true);
+  assert.equal(spread.parseSpreadItems([]).ok, false);
+  assert.equal(spread.parseSpreadItems("nope").ok, false);
+  assert.equal(spread.parseSpreadItems(fresh(31)).ok, false);
+  assert.equal(spread.parseSpreadItems(fresh(30)).ok, true);
 });
 
-test("each card's fields are checked and the error names the card", () => {
+test("each card's fields are checked and the error names the row", () => {
   for (const bad of [
     { name: "" }, { name: "x".repeat(81) }, { rarity: "MYTHIC" }, { rarity: "" }, { condition: "" },
     { price: 0 }, { price: -5 }, { price: 1.5 }, { price: 2_000_000 }, { price: "abc" },
-    { photoIndex: 1 }, { photoIndex: -1 }, { x: -1 }, { y: 101 }, { r: 1 }, { r: 31 }, { aspect: 0 },
+    { position: 0 }, { position: 61 }, { position: 1.5 }, { position: "x" },
   ]) {
-    const result = spread.parseSpreadItems([good(), good(bad)], 1);
+    const result = spread.parseSpreadItems([good({ position: 1 }), good({ position: 2, ...bad })]);
     assert.equal(result.ok, false, JSON.stringify(bad));
-    assert.match(result.error, /ใบที่ 2/);
+    assert.match(result.error, /แถวที่ 2/);
   }
-  assert.equal(spread.parseSpreadItems([good({ price: "1200", x: "10", y: "20", r: "5" })], 1).ok, true);
-  assert.equal(spread.parseSpreadItems([null], 1).ok, false);
+  assert.equal(spread.parseSpreadItems([good({ position: "7", price: "1200" })]).ok, true);
+  assert.equal(spread.parseSpreadItems([null]).ok, false);
 });
 
-test("a card may sit on any of the uploaded photos", () => {
-  assert.equal(spread.parseSpreadItems([good({ photoIndex: 2 })], 3).ok, true);
-  assert.equal(spread.parseSpreadItems([good({ photoIndex: 3 })], 3).ok, false);
+test("card numbers must be unique so a buyer's #3 is unambiguous", () => {
+  const result = spread.parseSpreadItems([good({ position: 3 }), good({ position: 5 }), good({ position: 3 })]);
+  assert.equal(result.ok, false);
+  assert.match(result.error, /ซ้ำ/);
+  assert.equal(spread.parseSpreadItems([good({ position: 60 }), good({ position: 1 })]).ok, true);
 });
 
 test("totals and the headline price come from the cards", () => {
   const items = [{ price: 500 }, { price: 120 }, { price: 999 }];
   assert.equal(spread.cheapestPrice(items), 120);
   assert.equal(spread.totalPrice(items), 1619);
-});
-
-// ---------- thumbnail geometry ----------
-test("the thumbnail crop centres the circled card in a square box", () => {
-  // A circle of radius 10% at the middle of a square photo: the photo is drawn 5x the box
-  // width, shifted so its centre stays in the middle of the box.
-  const c = spread.cropStyle({ x: 50, y: 50, r: 10 }, 1);
-  assert.equal(c.width, "500%");
-  assert.equal(c.left, "-200%");
-  assert.equal(c.top, "-200%");
-
-  // Top-left corner card, portrait photo (1.5x taller than wide).
-  const corner = spread.cropStyle({ x: 10, y: 10, r: 10 }, 1.5);
-  assert.equal(corner.width, "500%");
-  assert.equal(corner.left, "0%");
-  assert.equal(Number(corner.top.replace("%", "")), (0.5 - 0.1 * 5 * 1.5) * 100);
 });
 
 // ---------- server actions ----------
@@ -234,7 +222,7 @@ function routeDb({ itemsError = null, uploadFails = false } = {}) {
   return { route, calls };
 }
 
-function post({ photos = 1, items = [good()], title = "การ์ดชุดใหม่ทั้งกอง", extra = {} } = {}) {
+function post({ photos = 1, items = [good({ position: 1 })], title = "การ์ดชุดใหม่ทั้งกอง", extra = {} } = {}) {
   const fd = new FormData();
   for (let i = 0; i < photos; i++) fd.append(`photo${i}`, new File([JPEG], `p${i}.jpg`, { type: "image/jpeg" }));
   fd.append("title", title);
@@ -245,14 +233,14 @@ function post({ photos = 1, items = [good()], title = "การ์ดชุด�
 
 test("a valid spread post creates the listing, one row per card, and stores the photos", async () => {
   const { route, calls } = routeDb();
-  const res = await route.POST(post({ photos: 2, items: [good({ price: 900 }), good({ price: 300, name: "Gancelot", x: 60 })] }));
+  const res = await route.POST(post({ photos: 2, items: [good({ position: 4, price: 900 }), good({ position: 9, price: 300, name: "Gancelot" })] }));
   assert.equal(res.status, 200);
   const listing = calls.listings[0];
   assert.equal(listing.post_kind, "spread");
   assert.equal(listing.start_price, 300); // headline price = cheapest card
   assert.equal(listing.buy_now_price, 300);
   assert.equal(calls.items[0].length, 2);
-  assert.deepEqual(plain(calls.items[0].map((i) => i.position)), [1, 2]);
+  assert.deepEqual(plain(calls.items[0].map((i) => i.position)), [4, 9]); // the seller's own numbers
   assert.equal(calls.uploads.length, 2);
   assert.match(calls.uploads[0].path, /^L1\/post-0-[0-9a-f-]+\.jpg$/);
   assert.equal(calls.uploads[0].opts.contentType, "image/jpeg");
@@ -265,7 +253,7 @@ test("bad input creates nothing: no photos, bad cards, bad title, or a fake imag
     post({ items: [] }),
     post({ items: [good({ price: 0 })] }),
     post({ title: "x" }),
-    post({ items: [good({ photoIndex: 3 })] }),
+    post({ items: [good({ position: 3 }), good({ position: 3 })] }),
   ]) {
     const { route, calls } = routeDb();
     const res = await route.POST(req);
@@ -275,7 +263,7 @@ test("bad input creates nothing: no photos, bad cards, bad title, or a fake imag
   const fake = new FormData();
   fake.append("photo0", new File(["<svg onload=alert(1)>............"], "a.jpg", { type: "image/jpeg" }));
   fake.append("title", "ชื่อโพสต์");
-  fake.append("items", JSON.stringify([good()]));
+  fake.append("items", JSON.stringify([good({ position: 1 })]));
   const { route, calls } = routeDb();
   assert.equal((await route.POST(new Request("https://tcs.test/x", { method: "POST", body: fake }))).status, 400);
   assert.equal(calls.listings.length, 0);

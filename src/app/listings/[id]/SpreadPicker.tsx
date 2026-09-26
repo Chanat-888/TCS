@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ItemThumb } from "@/components/ItemThumb";
 import { formatTHB } from "@/lib/format";
 import { totalPrice } from "@/lib/spreadPost";
 import type { ListingItem } from "@/lib/supabase/types";
@@ -12,9 +11,8 @@ import { closeSpreadPost, reserveItems } from "./spreadActions";
 const STATUS_LABEL = { available: "", reserved: "มีคนจองแล้ว", sold: "ขายแล้ว" } as const;
 
 /**
- * One big photo with every card circled. The buyer taps a circle on the photo, or
- * ticks the card in the list below (each row shows a zoomed-in crop), then buys all
- * the picked cards in one order.
+ * The seller's photo(s) of the cards laid out, with a list of every card by its
+ * number. The buyer ticks the cards they want and buys them all in one order.
  */
 export function SpreadPicker({
   listingId,
@@ -30,7 +28,6 @@ export function SpreadPicker({
   isOpen: boolean;
 }) {
   const router = useRouter();
-  const [activePhoto, setActivePhoto] = useState(0);
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -82,81 +79,32 @@ export function SpreadPicker({
     router.refresh();
   }
 
-  const markers = items.filter((i) => i.photo_index === activePhoto);
-
   return (
     <div>
-      {photos.length > 1 && (
-        <div className="mb-3 flex gap-2">
-          {photos.map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => setActivePhoto(index)}
-              className="min-h-11 rounded-full px-4 text-[13px]"
-              style={
-                index === activePhoto
-                  ? { background: "var(--blue)", color: "#071523", fontWeight: 600 }
-                  : { background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }
-              }
-            >
-              รูปที่ {index + 1}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="relative overflow-hidden rounded-2xl" style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photos[activePhoto]} alt="รูปการ์ดทั้งหมดในโพสต์" className="block h-auto w-full" draggable={false} />
-        {markers.map((item) => {
-          const isPicked = selected.includes(item.id);
-          const available = item.status === "available";
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => toggle(item)}
-              disabled={!canPick || !available}
-              aria-pressed={isPicked}
-              aria-label={`การ์ดใบที่ ${item.position} ${item.name} ${formatTHB(item.price)} ${STATUS_LABEL[item.status]}`}
-              className="absolute rounded-full transition-colors"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                width: `${item.r * 2}%`,
-                aspectRatio: "1",
-                transform: "translate(-50%, -50%)",
-                minWidth: 28,
-                border: `2.5px ${available ? "solid" : "dashed"} ${isPicked ? "var(--good)" : available ? "var(--cyan)" : "rgba(255,255,255,0.35)"}`,
-                background: isPicked ? "rgba(79,201,122,0.28)" : available ? "rgba(95,212,255,0.08)" : "rgba(10,12,16,0.6)",
-                cursor: canPick && available ? "pointer" : "default",
-              }}
-            >
-              <span
-                className="mono absolute flex items-center justify-center rounded-full text-[11px] font-semibold"
-                style={{
-                  left: -6,
-                  top: -6,
-                  minWidth: 20,
-                  height: 20,
-                  padding: "0 4px",
-                  background: isPicked ? "var(--good)" : available ? "var(--cyan)" : "rgba(140,147,163,0.9)",
-                  color: "#071523",
-                }}
-              >
-                {isPicked ? "✓" : item.position}
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-3">
+        {photos.map((url, index) => (
+          <a
+            key={url}
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="block overflow-hidden rounded-2xl"
+            style={{ background: "var(--panel-2)", border: "1px solid var(--line)" }}
+            aria-label={`เปิดรูปที่ ${index + 1} ขนาดเต็ม`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`รูปการ์ดทั้งหมดในโพสต์ รูปที่ ${index + 1}`} className="block h-auto w-full" />
+          </a>
+        ))}
       </div>
       <p className="mt-2 text-[12.5px]" style={{ color: "var(--steel)" }}>
-        {canPick ? "แตะวงกลมบนรูป หรือติ๊กในรายการด้านล่าง เพื่อเลือกการ์ดที่ต้องการ" : "วงกลมแต่ละวงคือการ์ด 1 ใบ"} ·{" "}
-        ว่าง {counts.available} · จองแล้ว {counts.reserved} · ขายแล้ว {counts.sold}
+        แตะรูปเพื่อดูขนาดเต็ม · หมายเลขในรายการตรงกับหมายเลขที่ผู้ขายวางไว้ข้างการ์ดในรูป
       </p>
 
-      <ul className="mt-5 flex flex-col gap-2">
+      <h2 className="mb-2 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>
+        รายการการ์ด — {canPick ? "ติ๊กใบที่ต้องการ" : "การ์ดทั้งหมดในโพสต์"} · ว่าง {counts.available} · จองแล้ว {counts.reserved} · ขายแล้ว {counts.sold}
+      </h2>
+      <ul className="flex flex-col gap-2">
         {items.map((item) => {
           const isPicked = selected.includes(item.id);
           const available = item.status === "available";
@@ -164,24 +112,19 @@ export function SpreadPicker({
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => {
-                  if (item.photo_index !== activePhoto) setActivePhoto(item.photo_index);
-                  toggle(item);
-                }}
+                onClick={() => toggle(item)}
                 disabled={!canPick || !available}
-                className="flex min-h-[64px] w-full items-center gap-3 rounded-xl p-2 text-left"
+                aria-pressed={isPicked}
+                className="flex min-h-[60px] w-full items-center gap-3 rounded-xl p-3 text-left"
                 style={{
                   background: isPicked ? "rgba(79,201,122,0.08)" : "var(--panel)",
                   border: `1px solid ${isPicked ? "var(--good)" : "var(--line)"}`,
                   opacity: available ? 1 : 0.55,
                 }}
               >
-                <ItemThumb photoUrl={photos[item.photo_index]} item={item} size={56} />
+                <span className="mono w-10 flex-shrink-0 text-[15px]" style={{ color: "var(--cyan)" }}>#{item.position}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium" style={{ color: "var(--white)" }}>
-                    <span className="mono mr-[6px]" style={{ color: "var(--cyan)" }}>#{item.position}</span>
-                    {item.name}
-                  </span>
+                  <span className="block truncate text-[14px] font-medium" style={{ color: "var(--white)" }}>{item.name}</span>
                   <span className="block text-[12px]" style={{ color: "var(--steel)" }}>
                     {item.rarity} · {item.condition}
                   </span>
@@ -229,7 +172,7 @@ export function SpreadPicker({
       {isOwner ? (
         <div className="mt-6 rounded-2xl p-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
           <p className="text-[13px]" style={{ color: "var(--steel)" }}>
-            นี่คือโพสต์ของคุณเอง ผู้ซื้อเลือกการ์ดเป็นใบ ๆ แล้วระบบสร้างคำสั่งซื้อให้ คุณจะเห็นคำสั่งขายในหน้าโปรไฟล์
+            นี่คือโพสต์ของคุณเอง ผู้ซื้อติ๊กเลือกการ์ดเป็นใบ ๆ แล้วระบบสร้างคำสั่งซื้อให้ คุณจะเห็นคำสั่งขายในหน้าโปรไฟล์
           </p>
           {isOpen ? (
             confirmClose ? (
