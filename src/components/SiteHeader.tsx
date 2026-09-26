@@ -81,7 +81,7 @@ const SearchIcon = (
 const AUCTION_ITEMS: NavItem[] = [
   { href: "/browse?type=auction", label: "ทั้งหมด", desc: "ดูประมูลทั้งหมดที่เปิดอยู่ตอนนี้", icon: GridIcon },
   { href: "/browse?type=auction&category=closing", label: "ใกล้ปิดประมูล", desc: "ประมูลที่กำลังจะปิดเร็ว ๆ นี้", icon: ClockIcon },
-  { href: "/browse?type=auction&category=rare", label: "การ์ดหายาก", desc: "การ์ดเรตสูงที่หายากในตลาด", icon: StarIcon },
+  { href: "/browse?type=auction&category=rare", label: "การ์ดแยกใบ", desc: "การ์ดเรตสูงที่หายากในตลาด", icon: StarIcon },
 ];
 
 const PRODUCT_ITEMS: NavItem[] = [
@@ -92,7 +92,7 @@ const PRODUCT_ITEMS: NavItem[] = [
 
 const WANTED_ITEMS: NavItem[] = [
   { href: "/browse?type=wanted", label: "ทั้งหมด", desc: "ดูประกาศหาการ์ดทั้งหมด", icon: GridIcon },
-  { href: "/browse?type=wanted&category=rare", label: "การ์ดหายาก", desc: "คนกำลังตามหาการ์ดหายาก", icon: StarIcon },
+  { href: "/browse?type=wanted&category=rare", label: "การ์ดแยกใบ", desc: "คนกำลังตามหาการ์ดหายาก", icon: StarIcon },
 ];
 
 function NavDropdown({

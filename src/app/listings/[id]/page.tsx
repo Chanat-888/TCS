@@ -13,6 +13,23 @@ import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
 import { bidIncrementOf, isBuyNowAvailable, isFixedPrice } from "@/lib/listingKind";
 import { BuyNowBox } from "./BuyNowBox";
+import { PRODUCT_TYPE_LABELS, describeQuantity } from "@/lib/vanguard";
+import type { Listing } from "@/lib/supabase/types";
+
+function detailRows(listing: Listing): [string, string][] {
+  const rows: [string, string][] = [
+    ["ประเภท", PRODUCT_TYPE_LABELS[listing.category]],
+    ["ชุด", listing.set_name],
+  ];
+  if (listing.category === "rare") rows.push(["ความหายาก", listing.rarity]);
+  const quantity = describeQuantity(listing.category, listing.quantity ?? 1);
+  if (quantity) rows.push(["จำนวน", quantity]);
+  if (listing.category === "deck" && listing.has_extras != null) {
+    rows.push(["อะไหล่", listing.has_extras ? "มีอะไหล่" : "ไม่มีอะไหล่"]);
+  }
+  rows.push(["สภาพ", listing.condition], ["ราคาเริ่มต้น", formatTHB(listing.start_price)]);
+  return rows;
+}
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -131,12 +148,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                   className="mt-4 grid gap-px overflow-hidden rounded-xl"
                   style={{ background: "var(--line-soft)", border: "1px solid var(--line-soft)" }}
                 >
-                  {[
-                    ["ชุด", listing.set_name],
-                    ["ความหายาก", listing.rarity],
-                    ["สภาพ", listing.condition],
-                    ["ราคาเริ่มต้น", formatTHB(listing.start_price)],
-                  ].map(([k, v]) => (
+                  {detailRows(listing).map(([k, v]) => (
                     <div key={k} className="flex justify-between gap-3 px-4 py-3" style={{ background: "var(--panel)" }}>
                       <span className="text-[12.5px]" style={{ color: "var(--steel)" }}>
                         {k}

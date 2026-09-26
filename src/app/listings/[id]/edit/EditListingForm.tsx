@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from "react";
 import { formatTHB } from "@/lib/format";
 import type { Listing } from "@/lib/supabase/types";
+import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -47,6 +48,11 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
   const [setName2, setSetName] = useState(listing.set_name);
   const [category, setCategory] = useState(listing.category);
   const [condition, setCondition] = useState(listing.condition);
+  const [rarity, setRarity] = useState(
+    (VANGUARD_RARITIES as readonly string[]).includes(listing.rarity) ? listing.rarity : listing.category === "rare" ? OTHER_RARITY : ""
+  );
+  const [quantity, setQuantity] = useState(String(listing.quantity ?? 1));
+  const [hasExtras, setHasExtras] = useState(listing.has_extras == null ? "" : String(listing.has_extras));
   const [startPrice, setStartPrice] = useState(String(listing.start_price));
   const [buyNowPrice, setBuyNowPrice] = useState(listing.buy_now_price ? String(listing.buy_now_price) : "");
 
@@ -67,6 +73,9 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
       formData.append("set", setName2);
       formData.append("category", category);
       formData.append("condition", condition);
+      formData.append("rarity", rarity);
+      formData.append("quantity", quantity);
+      formData.append("hasExtras", hasExtras);
       formData.append("startPrice", startPrice);
       if (buyNowPrice) formData.append("buyNowPrice", buyNowPrice);
     }
@@ -130,7 +139,7 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
           <div>
             <SpecRow k="ชื่อการ์ด" v={listing.name} />
             <SpecRow k="ชุด" v={listing.set_name} />
-            <SpecRow k="หมวดหมู่" v={listing.category} />
+            <SpecRow k="ประเภทสินค้า" v={PRODUCT_TYPE_LABELS[listing.category]} />
             <SpecRow k="สภาพการ์ด" v={listing.condition} />
           </div>
         ) : (
@@ -145,14 +154,61 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
                 <input style={inputStyle} value={setName2} onChange={(e) => setSetName(e.target.value)} />
               </div>
               <div>
-                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>หมวดหมู่</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value as Listing["category"])} style={{ ...inputStyle, color: "var(--white)" }}>
-                  <option value="new">บูสเตอร์ใหม่</option>
-                  <option value="deck">เด็คพร้อมเล่น</option>
-                  <option value="rare">การ์ดหายาก</option>
+                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>ประเภทสินค้า</label>
+                <select
+                  value={category}
+                  onChange={(e) => { setCategory(e.target.value as Listing["category"]); setQuantity("1"); }}
+                  style={{ ...inputStyle, color: "var(--white)" }}
+                >
+                  <option value="rare">{PRODUCT_TYPE_LABELS.rare}</option>
+                  <option value="deck">{PRODUCT_TYPE_LABELS.deck}</option>
+                  <option value="new">{PRODUCT_TYPE_LABELS.new}</option>
                 </select>
               </div>
             </div>
+            {category === "rare" && (
+              <div className="mt-[14px] grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>ความหายาก</label>
+                  <select value={rarity} onChange={(e) => setRarity(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                    <option value="">เลือกความหายาก</option>
+                    {VANGUARD_RARITIES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                    <option value={OTHER_RARITY}>{OTHER_RARITY}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>จำนวนการ์ด</label>
+                  <select value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                    <option value="1">1 ใบ (แยกใบ)</option>
+                    <option value="2">เป็นชุด 2 ใบ</option>
+                    <option value="3">เป็นชุด 3 ใบ</option>
+                    <option value="4">เป็นชุด 4 ใบ</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            {category === "deck" && (
+              <div className="mt-[14px]">
+                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>อะไหล่ / ส่วนประกอบเสริม</label>
+                <select value={hasExtras} onChange={(e) => setHasExtras(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                  <option value="">เลือก</option>
+                  <option value="true">มีอะไหล่ (การ์ดหรืออุปกรณ์เสริม)</option>
+                  <option value="false">ไม่มีอะไหล่ (เด็คเท่านั้น)</option>
+                </select>
+              </div>
+            )}
+            {category === "new" && (
+              <div className="mt-[14px]">
+                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>จำนวนกล่อง</label>
+                <select value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, color: "var(--white)" }}>
+                  {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 24].map((n) => (
+                    <option key={n} value={String(n)}>{n} กล่อง</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="mt-[14px]">
               <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>สภาพการ์ด</label>
               <input style={inputStyle} value={condition} onChange={(e) => setCondition(e.target.value)} />

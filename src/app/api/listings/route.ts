@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
+import { parseListingDetails } from "@/lib/vanguard";
 
 // Hours: from a quick "hot time" auction up to a week.
 const DURATIONS_HOURS = [1, 3, 6, 12, 24, 72, 120, 168];
@@ -53,10 +54,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "ราคาชนะทันทีต้องไม่ต่ำกว่าราคาเริ่มต้น" }, { status: 400 });
   }
 
+  if (!Number.isInteger(bidIncrement) || bidIncrement < MIN_BID_INCREMENT || bidIncrement > MAX_BID_INCREMENT) {
+    return NextResponse.json({ error: `บิดขั้นต่ำต้องอยู่ระหว่าง ฿${MIN_BID_INCREMENT} – ฿${MAX_BID_INCREMENT.toLocaleString("en-US")}` }, { status: 400 });
+  }
+  if (buyNowPrice != null && (!Number.isFinite(buyNowPrice) || buyNowPrice < startPrice)) {
+    return NextResponse.json({ error: "ราคาชนะทันทีต้องไม่ต่ำกว่าราคาเริ่มต้น" }, { status: 400 });
+  }
+
   // Rarity isn't a separate form field yet (create-listing brief doesn't ask
   // for it) — derive a simple placeholder from category until a real
   // rarity picker is designed.
-  const rarity = category === "new" ? "NEW" : category === "deck" ? "DECK" : "RARE";
+  const details = parseListingDetails(category, {
+    rarity: String(formData.get("rarity") ?? ""),
+    quantity: String(formData.get("quantity") ?? ""),
+    hasExtras: String(formData.get("hasExtras") ?? ""),
+  });
+  if (!details.ok) return NextResponse.json({ error: details.error }, { status: 400 });
+  const rarity = details.rarity;
 
   const supabase = createServiceClient();
   const { data: listing, error: insertError } = await supabase
@@ -74,6 +88,9 @@ export async function POST(request: Request) {
       current_price: startPrice,
       // Only sent when non-default so listing still works before migration 0015 is applied.
       ...(bidIncrement !== 100 ? { bid_increment: bidIncrement } : {}),
+      // Only sent when non-default so listing still works before migration 0017 is applied.
+      ...(details.quantity !== 1 ? { quantity: details.quantity } : {}),
+      ...(details.hasExtras !== null ? { has_extras: details.hasExtras } : {}),
       ends_at: new Date(customEndsAt ?? Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
     })
     .select()
