@@ -7,9 +7,10 @@ import { OrderTimeline, type TimelineStep } from "@/components/OrderTimeline";
 import { StatusPill } from "@/components/StatusPill";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Countdown } from "@/components/Countdown";
+import { ShipDatePanel } from "@/components/ShipDatePanel";
 import { secondsUntil } from "@/lib/countdown";
 import { formatTHB, formatRelativeTime } from "@/lib/format";
-import type { Message, Order } from "@/lib/supabase/types";
+import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { approveOrder, sendOrderMessage } from "./actions";
 import { reportMeetupNoShow } from "./dispute/actions";
 
@@ -33,6 +34,7 @@ export function OrderView({
   sellerId,
   sellerName,
   messages,
+  proposals,
   currentUserId,
 }: {
   order: Order;
@@ -40,6 +42,7 @@ export function OrderView({
   sellerId: string;
   sellerName: string;
   messages: Message[];
+  proposals: ShipProposal[];
   currentUserId: string;
 }) {
   const router = useRouter();
@@ -111,7 +114,9 @@ export function OrderView({
   }
 
   const steps: TimelineStep[] = [
-    { label: "เงินถูกพักไว้", state: "done", meta: <>คุณชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
+    order.paid_at
+      ? { label: "เงินถูกพักไว้", state: "done", meta: <>คุณชำระเงินแล้ว · <span className="mono">{formatRelativeTime(order.paid_at)}</span></> }
+      : { label: "ชำระเงิน", state: status === "CANCELLED" ? "pending" : "active", meta: "ยังไม่ได้ชำระเงิน" },
     {
       label: "ผู้ขายส่งของแล้ว",
       state: order.shipped_at ? "done" : "active",
@@ -188,6 +193,33 @@ export function OrderView({
         </h2>
         <OrderTimeline steps={steps} />
       </div>
+
+      {(status === "PAID_HELD" || order.ship_by_at || proposals.length > 0) && status !== "CANCELLED" && (
+        <div className="section">
+          <ShipDatePanel
+            orderId={order.id}
+            role="buyer"
+            currentUserId={currentUserId}
+            shipByAt={order.ship_by_at ?? null}
+            proposals={proposals}
+            isMeetup={isMeetup}
+            canChange={status === "PAID_HELD"}
+          />
+        </div>
+      )}
+
+      {status === "CANCELLED" && (
+        <div className="section">
+          <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--danger-line)" }}>
+            <h3 className="text-[15px] font-medium" style={{ color: "var(--danger)" }}>คำสั่งซื้อนี้ถูกยกเลิกแล้ว</h3>
+            <p className="mt-[6px] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
+              {order.paid_at
+                ? "เงินที่พักไว้จะคืนให้คุณ — เหตุผลการยกเลิก (ตกลงยกเลิกร่วมกัน หรือผู้ขายไม่จัดส่งตามกำหนด) ดูได้ในแชทของคำสั่งซื้อนี้"
+                : "คำสั่งซื้อถูกยกเลิกเพราะไม่ได้ชำระเงินภายใน 24 ชั่วโมง ไม่มีการเรียกเก็บเงิน"}
+            </p>
+          </div>
+        </div>
+      )}
 
       {canReportNoShow && (
         <div className="section">
