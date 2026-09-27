@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
-import { bidIncrementOf, isBuyNowAvailable, isFixedPrice } from "@/lib/listingKind";
+import { bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
 import { createPendingOrder } from "@/lib/orderCreate";
 import type { Bid } from "@/lib/supabase/types";
 
@@ -37,6 +37,7 @@ async function attemptBid(listingId: string, amount: number, userId: string, ret
   if (listing.seller_id === userId) return { error: "คุณไม่สามารถบิดประกาศของตัวเองได้" };
   if (listing.status !== "active") return { error: "ประกาศนี้ปิดการประมูลแล้ว" };
   if (new Date(listing.ends_at).getTime() <= Date.now()) return { error: "หมดเวลาประมูลแล้ว" };
+  if (isSpread(listing)) return { error: "โพสต์นี้เลือกซื้อเป็นใบ ๆ ไม่มีการประมูล" };
   if (isFixedPrice(listing)) return { error: "ประกาศนี้ขายราคาตายตัว ไม่มีการประมูล" };
 
   // Bidding up to the seller's buy-now price wins instantly, so that price is
@@ -121,6 +122,8 @@ export async function buyNow(listingId: string) {
     .eq("id", listingId)
     .maybeSingle();
   if (fetchError || !listing) return { error: "ไม่พบประกาศนี้" as const };
+  // A spread post's headline price is only "from ฿X": its cards are bought one by one.
+  if (isSpread(listing)) return { error: "โพสต์นี้เลือกซื้อเป็นใบ ๆ กรุณาเลือกการ์ดที่ต้องการ" as const };
   if (listing.buy_now_price == null) return { error: "ประกาศนี้ไม่รองรับการซื้อทันที" as const };
   if (listing.seller_id === userId) return { error: "คุณไม่สามารถซื้อประกาศของตัวเองได้" as const };
   if (listing.status !== "active") return { error: "ประกาศนี้ถูกขายไปแล้ว" as const };
@@ -168,6 +171,7 @@ export async function endAuctionNow(listingId: string) {
   if (fetchError || !listing) return { error: "ไม่พบประกาศนี้" as const };
   if (listing.seller_id !== userId) return { error: "เฉพาะเจ้าของประกาศเท่านั้นที่ปิดประมูลได้" as const };
   if (listing.status !== "active") return { error: "ประกาศนี้ปิดไปแล้ว" as const };
+  if (isSpread(listing)) return { error: "โพสต์นี้ปิดด้วยปุ่ม \"ปิดโพสต์\" (การ์ดที่มีคนจองแล้วยังคงอยู่ในคำสั่งซื้อของเขา)" as const };
 
   const { data: topBid } = await supabase
     .from("bids")

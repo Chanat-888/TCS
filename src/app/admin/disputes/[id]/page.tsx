@@ -7,6 +7,8 @@ import { getDisputeDetail, getMessagesForOrder } from "@/lib/orders";
 import { Footer } from "@/components/Footer";
 import { formatTHB, formatRelativeTime, maskUserLabel } from "@/lib/format";
 import { DISPUTE_REASON_LABELS } from "@/lib/disputeReasons";
+import { getOrderItems } from "@/lib/listingItems";
+import { OrderItemsList } from "@/components/OrderItemsList";
 import { DecisionPanel } from "./DecisionPanel";
 import { VideoEvidenceBox } from "./VideoEvidenceBox";
 
@@ -19,6 +21,7 @@ export default async function AdminDisputePage({ params }: { params: Promise<{ i
   if (!detail) notFound();
 
   const messages = await getMessagesForOrder(detail.order.id);
+  const orderItems = await getOrderItems(detail.order.id);
   const buyerMask = maskUserLabel(detail.buyer.id);
 
   const evidenceCaption = (label: string, src: string) => (
@@ -44,6 +47,7 @@ export default async function AdminDisputePage({ params }: { params: Promise<{ i
       <main className="py-7 pb-[70px]">
         <div className="wrap grid gap-7 max-[880px]:grid-cols-1" style={{ gridTemplateColumns: "1.4fr 1fr", alignItems: "start" }}>
           <div className="flex flex-col gap-[22px]">
+            <OrderItemsList items={orderItems} />
             <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
               <h2 className="mb-[14px] text-[14px] font-medium" style={{ color: "var(--steel)" }}>
                 สรุปคำสั่งซื้อ

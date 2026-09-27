@@ -4,6 +4,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { formatTHB } from "@/lib/format";
 import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
+import { PhotoAdjustModal } from "@/components/PhotoAdjustModal";
 import { prepareCardPhoto } from "@/lib/clientImage";
 import { postForm } from "@/lib/postForm";
 
@@ -33,6 +34,7 @@ function PhotoSlot({
   const inputRef = useRef<HTMLInputElement>(null);
   const [preparing, setPreparing] = useState(false);
   const [pickError, setPickError] = useState("");
+  const [adjusting, setAdjusting] = useState(false);
   const preview = file ? URL.createObjectURL(file) : null;
 
   // Shrink to a normal JPEG before it ever reaches the form (a big GIF or phone
@@ -76,6 +78,14 @@ function PhotoSlot({
             <img src={preview} alt={label} className="h-full w-full object-cover" />
             <button
               type="button"
+              onClick={() => setAdjusting(true)}
+              className="absolute bottom-2 left-2 flex min-h-11 items-center rounded-lg px-3 text-[12.5px]"
+              style={{ background: "rgba(10,12,16,0.75)", backdropFilter: "blur(6px)", border: "1px solid rgba(140,147,163,0.25)", color: "var(--white)" }}
+            >
+              ↻ หมุน / ตัด
+            </button>
+            <button
+              type="button"
               onClick={onRemove}
               aria-label={`ลบรูป${label}`}
               className="absolute right-2 top-2 flex items-center justify-center rounded-lg"
@@ -103,6 +113,16 @@ function PhotoSlot({
         <p className="mt-2 text-[12px]" style={{ color: "var(--danger)" }}>
           {pickError}
         </p>
+      )}
+      {adjusting && file && (
+        <PhotoAdjustModal
+          file={file}
+          onCancel={() => setAdjusting(false)}
+          onDone={(result) => {
+            setAdjusting(false);
+            onPick(result.file);
+          }}
+        />
       )}
     </div>
   );

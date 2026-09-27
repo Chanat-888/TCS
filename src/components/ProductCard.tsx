@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Countdown } from "@/components/Countdown";
 import { secondsUntil } from "@/lib/countdown";
 import { formatTHB, formatThaiDateTime } from "@/lib/format";
-import { isFixedPrice } from "@/lib/listingKind";
+import { isFixedPrice, isSpread } from "@/lib/listingKind";
 import type { Listing, Profile } from "@/lib/supabase/types";
 
 const CREST_PATHS = {
@@ -31,6 +31,7 @@ export function ProductCard({
   /** Owner's-own-profile variant: floating edit button instead of the seller row. */
   ownerEditHref?: string;
 }) {
+  const spread = isSpread(listing);
   const isBuyNow = isFixedPrice(listing);
   const price = isBuyNow ? listing.buy_now_price! : listing.current_price;
 
@@ -118,7 +119,7 @@ export function ProductCard({
           <div className="flex items-end justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[11px]" style={{ color: "var(--steel)" }}>
-                {isBuyNow ? "ราคา" : "ราคาประมูลตอนนี้"}
+                {spread ? "เริ่มต้น" : isBuyNow ? "ราคา" : "ราคาประมูลตอนนี้"}
               </p>
               <p className="mono text-[17px] leading-tight" style={{ color: "var(--white)" }}>
                 {formatTHB(price!)}
@@ -132,7 +133,7 @@ export function ProductCard({
                   : { color: "var(--cyan)", background: "var(--cyan-tint)", border: "1px solid var(--cyan-line)" }
               }
             >
-              {isBuyNow ? "ซื้อทันที" : "ประมูล"}
+              {spread ? "เลือกเป็นใบ" : isBuyNow ? "ซื้อทันที" : "ประมูล"}
             </span>
           </div>
 

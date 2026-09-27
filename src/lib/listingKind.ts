@@ -13,6 +13,11 @@ export function isFixedPrice(listing: Pick<Listing, "buy_now_price" | "start_pri
   return listing.buy_now_price != null && listing.buy_now_price <= listing.start_price;
 }
 
+/** A spread post: one photo, many separately purchasable cards. It is never bid on or bought whole. */
+export function isSpread(listing: Pick<Listing, "post_kind">) {
+  return listing.post_kind === "spread";
+}
+
 export function hasBids(listing: Pick<Listing, "start_price" | "current_price">) {
   return listing.current_price > listing.start_price;
 }
