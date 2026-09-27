@@ -5,6 +5,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
 import { bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
 import { createPendingOrder } from "@/lib/orderCreate";
+import { notify, notifyWatchers } from "@/lib/notifications";
+import { formatTHB } from "@/lib/format";
 import type { Bid } from "@/lib/supabase/types";
 
 const ANTI_SNIPE_WINDOW_SECONDS = 120;
@@ -102,11 +104,36 @@ async function attemptBid(listingId: string, amount: number, userId: string, ret
       await reopen();
       return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" };
     }
+    const outbidId = topBid && topBid.bidder_id !== userId ? [topBid.bidder_id] : [];
+    if (outbidId.length) {
+      await notify(supabase, {
+        userId: outbidId[0],
+        type: "auction_ended",
+        title: "ประมูลปิดแล้ว",
+        body: `"${listing.name}" ถูกซื้อทันทีโดยผู้อื่น คุณไม่ได้เป็นผู้ชนะ`,
+        listingId,
+      });
+    }
+    await notifyWatchers(supabase, listingId, {
+      type: "auction_ended",
+      title: "ประมูลปิดแล้ว",
+      body: `"${listing.name}" ถูกซื้อทันทีและปิดประมูลแล้ว`,
+      exclude: [userId, ...outbidId],
+    });
     revalidatePath(`/listings/${listingId}`);
     revalidatePath("/browse");
     return { success: true, won: true, orderId: order.id as string, extended: false, newEndsAt, newPrice: amount, bid };
   }
 
+  if (topBid) {
+    await notify(supabase, {
+      userId: topBid.bidder_id,
+      type: "outbid",
+      title: "คุณถูกบิดแซงแล้ว",
+      body: `มีคนบิด "${listing.name}" สูงกว่าคุณที่ ${formatTHB(amount)}`,
+      listingId,
+    });
+  }
   revalidatePath(`/listings/${listingId}`);
   return { success: true, won: false, extended, newEndsAt, newPrice: amount, bid };
 }
@@ -200,6 +227,11 @@ export async function endAuctionNow(listingId: string) {
   if (!claimed || claimed.length === 0) return { error: "มีการบิดเข้ามาใหม่ กรุณารีเฟรชแล้วลองอีกครั้ง" as const };
 
   if (!topBid) {
+    await notifyWatchers(supabase, listingId, {
+      type: "auction_ended",
+      title: "ประมูลถูกยกเลิก",
+      body: `ผู้ขายปิด "${listing.name}" ก่อนกำหนดโดยไม่มีผู้บิด`,
+    });
     revalidatePath(`/listings/${listingId}`);
     revalidatePath("/browse");
     return { success: true as const, outcome: "cancelled" as const };
@@ -210,6 +242,21 @@ export async function endAuctionNow(listingId: string) {
     await supabase.from("listings").update({ status: "active" }).eq("id", listingId);
     return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" as const };
   }
+
+  await notify(supabase, {
+    userId: topBid.bidder_id,
+    type: "auction_won",
+    title: "คุณชนะการประมูล",
+    body: `คุณชนะประมูล "${listing.name}" ที่ ${formatTHB(topBid.amount)} — ไปชำระเงินได้เลย`,
+    listingId,
+    orderId: order.id as string,
+  });
+  await notifyWatchers(supabase, listingId, {
+    type: "auction_ended",
+    title: "ประมูลปิดแล้ว",
+    body: `ผู้ขายปิด "${listing.name}" ก่อนกำหนดและขายแล้ว`,
+    exclude: [topBid.bidder_id],
+  });
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/browse");

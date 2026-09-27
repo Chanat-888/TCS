@@ -1,5 +1,5 @@
 import "server-only";
-import { createPublicClient } from "@/lib/supabase/server";
+import { createPublicClient, createServiceClient } from "@/lib/supabase/server";
 import type { Bid, Listing, Profile, Review } from "@/lib/supabase/types";
 
 export type ListingWithSeller = Listing & { seller: Profile };
@@ -34,6 +34,18 @@ export async function searchListings(query: string): Promise<ListingWithSeller[]
     merged.push(row);
   }
   return merged;
+}
+
+/** Uses the service client (not the public RLS-scoped one) since watchlist rows are private to their owner. */
+export async function isWatchingListing(userId: string, listingId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("watchlist")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("listing_id", listingId)
+    .maybeSingle();
+  return Boolean(data);
 }
 
 export async function getListingById(id: string): Promise<ListingWithSeller | null> {

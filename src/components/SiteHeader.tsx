@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { CartLink } from "@/components/CartLink";
 import { AccountMenu, MobileMenu } from "@/components/HeaderMenus";
+import { NotificationBell } from "@/components/NotificationBell";
 
 type NavItem = {
   href: string;
@@ -221,6 +222,7 @@ export function SiteHeader({ userId }: { userId: string }) {
             <span className="text-[14px] font-semibold max-[859px]:hidden">ลงขาย</span>
           </Link>
           <CartLink />
+          <NotificationBell userId={userId} />
           <AccountMenu userId={userId} />
           <MobileMenu />
         </div>

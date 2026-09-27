@@ -238,6 +238,8 @@ test("direct bids and purchases require a signed-in user before database writes"
     "@/lib/session": session,
     "@/lib/listingKind": { isBuyNowAvailable: () => true },
     "@/lib/orderCreate": {},
+    "@/lib/notifications": { notify: async () => {}, notifyWatchers: async () => {} },
+    "@/lib/format": { formatTHB: (n) => `฿${n}` },
     "@/lib/supabase/server": { createServiceClient() { throw new Error("Database must not be touched"); } },
   });
   await assert.rejects(actions.placeBid("listing", 100), /redirect:\/login/);

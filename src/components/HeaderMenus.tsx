@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 /** Click/tap/Escape/outside-click disclosure, so menus work without a mouse. */
-function useDisclosure() {
+export function useDisclosure() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,13 +25,13 @@ function useDisclosure() {
   return { open, setOpen, ref };
 }
 
-const panelClass = (open: boolean) =>
+export const panelClass = (open: boolean) =>
   `absolute top-full z-10 pt-3 transition-all duration-150 ${open ? "visible opacity-100" : "invisible opacity-0"}`;
 
-const itemClass =
+export const itemClass =
   "flex min-h-11 items-center gap-3 rounded-xl px-3 no-underline transition-colors hover:bg-[var(--line-soft)]";
 
-const circleButtonStyle = { width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" };
+export const circleButtonStyle = { width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" };
 
 export function AccountMenu({ userId }: { userId: string }) {
   const { open, setOpen, ref } = useDisclosure();
