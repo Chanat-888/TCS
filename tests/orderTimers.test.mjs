@@ -29,7 +29,15 @@ function load(path, dependencies = {}, extra = {}) {
 }
 
 const orderCreate = load("src/lib/orderCreate.ts");
-const timers = load("src/lib/orderTimers.ts", { "@/lib/orderCreate": orderCreate });
+const notifications = load("src/lib/notifications.ts", {
+  "server-only": {},
+  "@/lib/supabase/server": {},
+});
+const timers = load("src/lib/orderTimers.ts", {
+  "@/lib/orderCreate": orderCreate,
+  "@/lib/notifications": notifications,
+  "@/lib/format": { formatTHB: (n) => `฿${n}` },
+});
 const plain = (x) => JSON.parse(JSON.stringify(x));
 
 const HOUR = 60 * 60 * 1000;
@@ -38,13 +46,18 @@ const NOW = Date.parse("2026-10-01T12:00:00.000Z");
 const ago = (ms) => new Date(NOW - ms).toISOString();
 
 // A Supabase stand-in that records every read filter and every guarded update.
-function makeDb({ reads = () => [], claim = () => [{ id: "row" }], top = null, orderError = null, throwOn = null } = {}) {
+// `watchers` is separate from `reads` (which the tests key to their own
+// table) so every existing test keeps meaning "no one is watching" by default.
+function makeDb({ reads = () => [], claim = () => [{ id: "row" }], top = null, orderError = null, throwOn = null, watchers = [] } = {}) {
   const calls = { updates: [], inserts: [], reads: [] };
   return {
     calls,
     client: {
       from(table) {
         if (throwOn === table) throw new Error("boom");
+        if (table === "watchlist") {
+          return { select: () => ({ eq: async () => ({ data: watchers, error: null }) }) };
+        }
         const filters = {};
         let mode = "select";
         let values = null;
@@ -52,6 +65,7 @@ function makeDb({ reads = () => [], claim = () => [{ id: "row" }], top = null, o
           select() { return chain; },
           eq(col, v) { filters[col] = ["eq", v]; return chain; },
           lte(col, v) { filters[col] = ["lte", v]; return chain; },
+          gt(col, v) { filters[col] = ["gt", v]; return chain; },
           is(col, v) { filters[col] = ["is", v]; return chain; },
           in(col, v) { filters[col] = ["in", v]; return chain; },
           not(col, op, v) { filters[col] = ["not", op, v]; return chain; },
@@ -113,6 +127,29 @@ test("an ended auction with no bids simply expires", async () => {
   assert.equal(calls.inserts.length, 0);
 });
 
+test("the winner is notified they won, and watchers (besides the winner) that it ended", async () => {
+  const { client, calls } = makeDb({
+    reads: () => [ENDED],
+    top: { bidder_id: "bidder", amount: 1500 },
+    watchers: [{ user_id: "bidder" }, { user_id: "watcher-2" }],
+  });
+  await timers.closeEndedListings(client, NOW);
+  const notified = calls.inserts.filter((i) => i.table === "notifications").map((i) => i.values);
+  assert.equal(notified.length, 2);
+  assert.ok(notified.some((n) => n.user_id === "bidder" && n.type === "auction_won"));
+  assert.ok(notified.some((n) => n.user_id === "watcher-2" && n.type === "auction_ended"));
+  assert.ok(!notified.some((n) => n.user_id === "bidder" && n.type === "auction_ended"));
+});
+
+test("an auction that expired with no bids notifies its watchers", async () => {
+  const { client, calls } = makeDb({ reads: () => [{ ...ENDED, current_price: 1000 }], top: null, watchers: [{ user_id: "watcher-1" }] });
+  await timers.closeEndedListings(client, NOW);
+  const notified = calls.inserts.filter((i) => i.table === "notifications").map((i) => i.values);
+  assert.equal(notified.length, 1);
+  assert.equal(notified[0].user_id, "watcher-1");
+  assert.equal(notified[0].type, "auction_ended");
+});
+
 test("a bid that is mid-landing (price and bid list disagree) is left for the next run", async () => {
   const stale = makeDb({ reads: () => [ENDED], top: { bidder_id: "bidder", amount: 1000 } });
   assert.equal((await timers.closeEndedListings(stale.client, NOW)).processed, 0);
@@ -131,6 +168,34 @@ test("losing the claim to a simultaneous bid creates no order; a failed order re
   const failed = makeDb({ reads: () => [ENDED], top: { bidder_id: "b", amount: 1500 }, orderError: { message: "x" } });
   assert.equal((await timers.closeEndedListings(failed.client, NOW)).processed, 0);
   assert.equal(failed.calls.updates.at(-1).values.status, "active");
+});
+
+// ---------- ending soon ----------
+const SOON = { id: "l2", name: "Almost Done" };
+
+test("watched auctions under an hour from ending get a heads-up, guarded by a flag so it fires once", async () => {
+  const { client, calls } = makeDb({ reads: () => [SOON], watchers: [{ user_id: "watcher-1" }, { user_id: "watcher-2" }] });
+  const result = await timers.notifyEndingSoon(client, NOW);
+  assert.equal(result.processed, 1);
+  assert.equal(calls.updates[0].values.ending_soon_notified, true);
+  assert.equal(calls.updates[0].filters.ending_soon_notified[1], false);
+  const notified = calls.inserts.filter((i) => i.table === "notifications").map((i) => i.values);
+  assert.equal(notified.length, 2);
+  assert.ok(notified.every((n) => n.type === "auction_ending_soon" && n.listing_id === "l2"));
+});
+
+test("a listing another run already flagged is skipped, so its watchers are never notified twice", async () => {
+  const { client, calls } = makeDb({ reads: () => [SOON], watchers: [{ user_id: "watcher-1" }], claim: () => [] });
+  const result = await timers.notifyEndingSoon(client, NOW);
+  assert.equal(result.processed, 0);
+  assert.equal(calls.inserts.filter((i) => i.table === "notifications").length, 0);
+});
+
+test("if the ending_soon_notified column is missing (migration not run) nothing is notified", async () => {
+  const { client } = makeDb({ reads: () => "ERROR" });
+  const result = await timers.notifyEndingSoon(client, NOW);
+  assert.equal(result.processed, 0);
+  assert.ok(result.error);
 });
 
 // ---------- unpaid orders ----------

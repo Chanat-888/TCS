@@ -25,12 +25,17 @@ const listingKind = load("src/lib/listingKind.ts");
 const orderCreate = load("src/lib/orderCreate.ts");
 
 function fixture(listing, { claimRows = [{ id: "l1" }], orderError = null, bidError = null, topBidder = null, topAmount = 1000, userId = "buyer-1", claimSeq = null } = {}) {
-  const calls = { updates: [], orders: [], bids: [], bidsDeleted: [] };
+  const calls = { updates: [], orders: [], bids: [], bidsDeleted: [], notified: [], notifiedWatchers: [] };
   const actions = load("src/app/listings/[id]/actions.ts", {
     "next/cache": { revalidatePath() {} },
     "@/lib/session": { requireVerifiedUserId: async () => userId },
     "@/lib/listingKind": listingKind,
     "@/lib/orderCreate": orderCreate,
+    "@/lib/notifications": {
+      notify: async (supabase, params) => { calls.notified.push(params); },
+      notifyWatchers: async (supabase, listingId, params) => { calls.notifiedWatchers.push({ listingId, ...params }); },
+    },
+    "@/lib/format": { formatTHB: (n) => `฿${n}` },
     "@/lib/supabase/server": {
       createServiceClient: () => ({
         from: (table) => {
@@ -92,6 +97,16 @@ test("buyNow claims the listing atomically (active + unbid) before creating the 
   assert.equal(calls.updates[0].filters.status, "active");
   assert.equal(calls.updates[0].filters.current_price, 1000);
   assert.equal(calls.orders.length, 1);
+});
+
+test("buyNow notifies watchers the listing closed, but not the buyer", async () => {
+  const { actions, calls } = fixture(base);
+  const result = await actions.buyNow("l1");
+  assert.equal(result.success, true);
+  assert.equal(calls.notifiedWatchers.length, 1);
+  assert.equal(calls.notifiedWatchers[0].listingId, "l1");
+  assert.equal(calls.notifiedWatchers[0].type, "auction_ended");
+  assert.deepEqual(Array.from(calls.notifiedWatchers[0].exclude), ["buyer-1"]);
 });
 
 test("buyNow loses the race cleanly: no rows claimed means no order", async () => {
@@ -162,6 +177,33 @@ test("a bid below the buy-now price stays a normal bid", async () => {
   assert.equal(calls.updates[0].fields.status, undefined);
 });
 
+test("a normal bid that overtakes an existing top bidder notifies them they were outbid", async () => {
+  const { actions, calls } = fixture(base, { topBidder: "bidder-old", topAmount: 1000 });
+  const result = await actions.placeBid("l1", 1100);
+  assert.equal(result.won, false);
+  assert.equal(calls.notified.length, 1);
+  assert.equal(calls.notified[0].userId, "bidder-old");
+  assert.equal(calls.notified[0].type, "outbid");
+});
+
+test("an instant win notifies the previous top bidder they lost, and watchers the auction ended, but not the winner", async () => {
+  const { actions, calls } = fixture({ ...base, current_price: 3900 }, { topBidder: "bidder-old", topAmount: 3900 });
+  const result = await actions.placeBid("l1", 4000);
+  assert.equal(result.won, true);
+  assert.equal(calls.notified.length, 1);
+  assert.equal(calls.notified[0].userId, "bidder-old");
+  assert.equal(calls.notified[0].type, "auction_ended");
+  assert.equal(calls.notifiedWatchers.length, 1);
+  // The excluded ids come out of a different vm context, so compare as plain values, not by array identity.
+  assert.deepEqual(Array.from(calls.notifiedWatchers[0].exclude).sort(), ["bidder-old", "buyer-1"]);
+});
+
+test("a bid with no previous top bidder notifies no one", async () => {
+  const { actions, calls } = fixture(base);
+  await actions.placeBid("l1", 1100);
+  assert.equal(calls.notified.length, 0);
+});
+
 test("an instant win whose order fails is rolled back: bid removed, listing reopened", async () => {
   const { actions, calls } = fixture({ ...base, current_price: 3900 }, { orderError: { message: "x" } });
   const result = await actions.placeBid("l1", 4000);
@@ -216,6 +258,21 @@ test("ending an auction with bids sells to the top bidder at their bid", async (
   assert.equal(calls.orders[0].buyer_id, "bidder-9");
   assert.equal(calls.orders[0].seller_id, "seller-1");
   assert.equal(calls.orders[0].amount, 1500);
+  assert.equal(calls.notified.length, 1);
+  assert.equal(calls.notified[0].userId, "bidder-9");
+  assert.equal(calls.notified[0].type, "auction_won");
+  assert.equal(calls.notifiedWatchers.length, 1);
+  assert.deepEqual(Array.from(calls.notifiedWatchers[0].exclude), ["bidder-9"]);
+});
+
+test("ending an auction early with no bids notifies watchers it was cancelled", async () => {
+  const listing = { ...base, buy_now_price: null, current_price: 1000 };
+  const { actions, calls } = fixture(listing, { userId: "seller-1" });
+  const result = await actions.endAuctionNow("l1");
+  assert.equal(result.outcome, "cancelled");
+  assert.equal(calls.notified.length, 0);
+  assert.equal(calls.notifiedWatchers.length, 1);
+  assert.equal(calls.notifiedWatchers[0].type, "auction_ended");
 });
 
 test("ending early loses cleanly to a bid that lands first, and reopens if the order fails", async () => {

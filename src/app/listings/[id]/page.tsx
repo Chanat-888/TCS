@@ -4,7 +4,8 @@ import { SpreadPicker } from "./SpreadPicker";
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
-import { getListingById, getBidsForListing, getSellerStats, getListingsBySeller } from "@/lib/queries";
+import { getListingById, getBidsForListing, getSellerStats, getListingsBySeller, isWatchingListing } from "@/lib/queries";
+import { WatchButton } from "@/components/WatchButton";
 import { secondsUntil } from "@/lib/countdown";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
@@ -82,10 +83,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     );
   }
 
-  const [bids, sellerStats, otherListings] = await Promise.all([
+  const isOwner = listing.seller_id === userId;
+  const [bids, sellerStats, otherListings, watching] = await Promise.all([
     getBidsForListing(id),
     getSellerStats(listing.seller_id),
     getListingsBySeller(listing.seller_id, { status: "active", excludeId: id }),
+    isOwner ? Promise.resolve(false) : isWatchingListing(userId, id),
   ]);
 
   const conditionTag = listing.condition;
@@ -108,7 +111,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               />
 
               <div className="min-[901px]:col-start-2 min-[901px]:row-span-2 min-[901px]:row-start-1">
-                <h1 className="text-[clamp(1.35rem,2.6vw,1.7rem)] leading-tight">{listing.name}</h1>
+                <div className="flex items-start justify-between gap-3">
+                  <h1 className="text-[clamp(1.35rem,2.6vw,1.7rem)] leading-tight">{listing.name}</h1>
+                  {!isOwner && <WatchButton listingId={listing.id} initialWatching={watching} />}
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {["Cardfight!! Vanguard", conditionTag, listing.set_name].map((tag) => (
                     <span

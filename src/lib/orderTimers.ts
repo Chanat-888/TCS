@@ -1,5 +1,7 @@
 import type { createServiceClient } from "@/lib/supabase/server";
 import { createPendingOrder } from "@/lib/orderCreate";
+import { notify, notifyWatchers } from "@/lib/notifications";
+import { formatTHB } from "@/lib/format";
 
 type Supabase = ReturnType<typeof createServiceClient>;
 
@@ -25,6 +27,7 @@ export const DEFAULT_SHIP_WINDOW_MS = 3 * DAY;
 export const PROPOSAL_AUTO_ACCEPT_MS = 48 * HOUR;
 export const AUTO_COMPLETE_AFTER_DELIVERY_MS = 2 * DAY;
 export const DELIVERY_ESTIMATE_MS = 5 * DAY;
+export const ENDING_SOON_WINDOW_MS = 1 * HOUR;
 
 const BATCH = 50;
 
@@ -89,7 +92,59 @@ export async function closeEndedListings(supabase: Supabase, now: number): Promi
         await supabase.from("listings").update({ status: "active" }).eq("id", listing.id).eq("status", "sold");
         continue;
       }
+      await notify(supabase, {
+        userId: top.bidder_id,
+        type: "auction_won",
+        title: "คุณชนะการประมูล",
+        body: `คุณชนะประมูล "${listing.name}" ที่ ${formatTHB(top.amount)} — ไปชำระเงินได้เลย`,
+        listingId: listing.id,
+        orderId: order.id as string,
+      });
+      await notifyWatchers(supabase, listing.id, {
+        type: "auction_ended",
+        title: "ประมูลปิดแล้ว",
+        body: `"${listing.name}" ปิดประมูลและขายแล้ว`,
+        exclude: [top.bidder_id],
+      });
+    } else {
+      await notifyWatchers(supabase, listing.id, {
+        type: "auction_ended",
+        title: "ประมูลปิดแล้วโดยไม่มีผู้บิด",
+        body: `"${listing.name}" หมดเวลาประมูลโดยไม่มีผู้บิด`,
+      });
     }
+    processed++;
+  }
+  return { processed };
+}
+
+/** Watched auctions with under an hour left get one heads-up, guarded so it fires only once. */
+export async function notifyEndingSoon(supabase: Supabase, now: number): Promise<StepResult> {
+  const { data: listings, error } = await supabase
+    .from("listings")
+    .select("id, name")
+    .eq("status", "active")
+    .eq("ending_soon_notified", false)
+    .lte("ends_at", iso(now + ENDING_SOON_WINDOW_MS))
+    .gt("ends_at", iso(now))
+    .limit(BATCH);
+  if (error) return { processed: 0, error: "read listings failed" };
+
+  let processed = 0;
+  for (const listing of listings ?? []) {
+    // Guarded so two overlapping runs never send the heads-up twice.
+    const { data: claimed } = await supabase
+      .from("listings")
+      .update({ ending_soon_notified: true })
+      .eq("id", listing.id)
+      .eq("ending_soon_notified", false)
+      .select("id");
+    if (!claimed || claimed.length === 0) continue;
+    await notifyWatchers(supabase, listing.id, {
+      type: "auction_ending_soon",
+      title: "ใกล้ปิดประมูลแล้ว",
+      body: `"${listing.name}" กำลังจะปิดประมูลภายใน 1 ชั่วโมง`,
+    });
     processed++;
   }
   return { processed };
@@ -277,6 +332,7 @@ export async function autoCompleteOrders(supabase: Supabase, now: number): Promi
 
 const STEPS = {
   closeEndedListings,
+  notifyEndingSoon,
   cancelUnpaidOrders,
   cancelLateShipments,
   resolveStaleProposals,
