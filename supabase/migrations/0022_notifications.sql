@@ -25,12 +25,14 @@ create index if not exists notifications_user_id_idx on public.notifications (us
 
 alter table public.notifications enable row level security;
 
+drop policy if exists "users read own notifications" on public.notifications;
 create policy "users read own notifications" on public.notifications
   for select using (auth.uid() = user_id);
 
 -- The only edit the app ever makes is marking one's own notification read;
 -- letting a user update their own row (id and user_id are still theirs by
 -- the same check) is an acceptable trade for not needing a server round trip.
+drop policy if exists "users mark own notifications read" on public.notifications;
 create policy "users mark own notifications read" on public.notifications
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -47,10 +49,21 @@ create index if not exists watchlist_listing_id_idx on public.watchlist (listing
 
 alter table public.watchlist enable row level security;
 
+drop policy if exists "users manage own watchlist" on public.watchlist;
 create policy "users manage own watchlist" on public.watchlist
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-alter publication supabase_realtime add table notifications;
+-- alter publication ... add table errors if the table is already a member,
+-- so guard it (there's no "add table if not exists").
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end $$;
 
 -- Guards the "ending soon" timer step so a watched auction is only pinged
 -- once, no matter how many times the step runs before it closes.

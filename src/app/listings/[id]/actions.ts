@@ -175,6 +175,13 @@ export async function buyNow(listingId: string) {
     return { error: "สร้างคำสั่งซื้อไม่สำเร็จ ลองอีกครั้ง" as const };
   }
 
+  await notifyWatchers(supabase, listingId, {
+    type: "auction_ended",
+    title: "ประกาศถูกซื้อไปแล้ว",
+    body: `"${listing.name}" ถูกซื้อทันทีโดยผู้อื่นแล้ว`,
+    exclude: [userId],
+  });
+
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/browse");
   return { success: true as const, orderId: order.id as string };

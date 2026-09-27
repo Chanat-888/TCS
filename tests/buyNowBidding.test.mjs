@@ -99,6 +99,16 @@ test("buyNow claims the listing atomically (active + unbid) before creating the 
   assert.equal(calls.orders.length, 1);
 });
 
+test("buyNow notifies watchers the listing closed, but not the buyer", async () => {
+  const { actions, calls } = fixture(base);
+  const result = await actions.buyNow("l1");
+  assert.equal(result.success, true);
+  assert.equal(calls.notifiedWatchers.length, 1);
+  assert.equal(calls.notifiedWatchers[0].listingId, "l1");
+  assert.equal(calls.notifiedWatchers[0].type, "auction_ended");
+  assert.deepEqual(Array.from(calls.notifiedWatchers[0].exclude), ["buyer-1"]);
+});
+
 test("buyNow loses the race cleanly: no rows claimed means no order", async () => {
   const { actions, calls } = fixture(base, { claimRows: [] });
   const result = await actions.buyNow("l1");
