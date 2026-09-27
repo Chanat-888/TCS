@@ -307,7 +307,7 @@ test("phone verification cannot switch to another account or confirm a different
   }
 });
 
-function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfile = true, googleRecovery = false, deleteError = null } = {}) {
+function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfile = true, googleRecovery = false, deleteError = null, onboardedAt = "2026-01-01T00:00:00Z" } = {}) {
   const calls = [];
   const jar = new Map([
     ...(expectedId ? [["tcs_link_user", expectedId]] : []),
@@ -334,7 +334,7 @@ function oauthFixture({ user = null, expectedId, exchangeError = null, hasProfil
       createAuthClient: async () => ({
         auth,
         from: () => ({ select: () => ({ eq: () => ({
-          maybeSingle: async () => ({ data: hasProfile ? { id: user?.id } : null, error: null }),
+          maybeSingle: async () => ({ data: hasProfile ? { id: user?.id, onboarded_at: onboardedAt } : null, error: null }),
         }) }) }),
       }),
       createServiceClient: () => ({
@@ -380,6 +380,12 @@ test("OAuth callback exchanges PKCE code and ignores external next destinations"
   assert.equal(fixture.calls[0][0], "exchange");
   assert.equal(fixture.calls[0][1], "test");
   assert.equal(result.headers.get("Cache-Control"), "private, no-store");
+});
+test("an account that has not seen the welcome page is sent there once", async () => {
+  const fixture = oauthFixture({ user: { id: "new-user", email_confirmed_at: "yes" }, onboardedAt: null });
+  const route = load("src/app/auth/callback/route.ts", fixture.dependencies);
+  const result = await route.GET(new Request("https://tcs.test/auth/callback?code=test"));
+  assert.equal(result.headers.get("Location"), "https://tcs.test/welcome");
 });
 test("cancelled, missing, and invalid OAuth codes never reach the marketplace", async () => {
   for (const query of ["?error=access_denied", "", "?code=expired"]) {

@@ -57,14 +57,15 @@ export async function GET(request: Request) {
       return finish("/auth/error?reason=no_account");
     }
     const { data: profile, error: profileError } = await supabase
-      .from("profiles").select("id").eq("id", user.id).maybeSingle();
+      .from("profiles").select("id, onboarded_at").eq("id", user.id).maybeSingle();
     if (profileError || !profile) {
       logAuthError("oauth callback: profile", profileError ?? new Error("no profile row for the signed-in user (is migration 0006 applied?)"));
       await supabase.auth.signOut({ scope: "local" });
       return finish("/auth/error");
     }
     // Fixed local destinations: never follow an untrusted next/redirect URL.
-    return finish(expectedUserId ? "/profile" : "/browse");
+    if (expectedUserId) return finish("/profile");
+    return finish(profile.onboarded_at ? "/browse" : "/welcome");
   } catch (e) {
     logAuthError("oauth callback exception", e);
     return finish("/auth/error");

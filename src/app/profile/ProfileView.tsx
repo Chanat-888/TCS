@@ -375,6 +375,9 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
               </div>
             )}
             <div className="wrap flex flex-col items-center gap-3" style={{ paddingTop: 32, paddingBottom: 56 }}>
+              <Link href="/welcome" className="text-[13px]" style={{ color: "var(--steel)" }}>
+                วิธีใช้งาน TCS
+              </Link>
               <form action="/logout" method="post">
                 <button
                   type="submit"
