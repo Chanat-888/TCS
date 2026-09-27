@@ -9,6 +9,8 @@ import { formatTHB, maskUserLabel, formatRelativeTime } from "@/lib/format";
 import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
+import { postForm } from "@/lib/postForm";
+import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
 
 const COURIERS = ["Flash Express", "Kerry Express", "ไปรษณีย์ไทย (EMS)", "J&T Express"];
 
@@ -38,19 +40,22 @@ export function OrderSellerView({
   const [shippedInfo, setShippedInfo] = useState({ courier: order.courier ?? "", tracking: order.tracking_number ?? "" });
 
   async function handlePackingFile(file: File) {
-    setPackingUploading(true);
     setPackingError("");
-    const formData = new FormData();
-    formData.append("video", file);
-    const res = await fetch(`/api/orders/${order.id}/packing-video`, { method: "POST", body: formData });
-    const json = await res.json();
-    setPackingUploading(false);
-    if (!res.ok) {
-      setPackingError(json.error ?? "อัปโหลดไม่สำเร็จ");
+    if (file.size > MAX_VIDEO_BYTES) {
+      setPackingError(`วิดีโอใหญ่เกินไป (สูงสุด ${MAX_VIDEO_BYTES / 1024 / 1024} MB ในตอนนี้) ลองอัดให้สั้นลงหรือลดความละเอียด`);
       return;
     }
-    setPackingUrl(json.url);
-    setPackingName(json.filename);
+    setPackingUploading(true);
+    const formData = new FormData();
+    formData.append("video", file);
+    const sent = await postForm<{ url: string; filename: string }>(`/api/orders/${order.id}/packing-video`, formData);
+    setPackingUploading(false);
+    if (!sent.ok) {
+      setPackingError(sent.error || "อัปโหลดไม่สำเร็จ");
+      return;
+    }
+    setPackingUrl(sent.data.url);
+    setPackingName(sent.data.filename);
     setError("");
   }
 

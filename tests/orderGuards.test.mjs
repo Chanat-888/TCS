@@ -95,6 +95,9 @@ test("only real MP4/MOV bytes are accepted, whatever the file claims to be", () 
 test("an oversized or empty file is rejected before its bytes are read", async () => {
   const empty = await video.checkVideoFile(new File([], "a.mp4", { type: "video/mp4" }));
   assert.equal(empty.ok, false);
+  const oversized = await video.checkVideoFile(new File([new Uint8Array(video.MAX_VIDEO_BYTES + 1)], "big.mp4", { type: "video/mp4" }));
+  assert.equal(oversized.ok, false);
+  assert.match(oversized.error, /ใหญ่เกินไป/);
   const fake = await video.checkVideoFile(new File(["not a video at all, just text"], "evil.mp4", { type: "video/mp4" }));
   assert.equal(fake.ok, false);
   const good = await video.checkVideoFile(new File([mp4()], "clip.bin", { type: "text/html" }));

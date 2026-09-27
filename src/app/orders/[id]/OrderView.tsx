@@ -13,6 +13,8 @@ import { formatTHB, formatRelativeTime } from "@/lib/format";
 import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { approveOrder, sendOrderMessage } from "./actions";
 import { reportMeetupNoShow } from "./dispute/actions";
+import { postForm } from "@/lib/postForm";
+import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
 
 const TRUCK_ICON = (
   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -67,21 +69,27 @@ export function OrderView({
   const canReportNoShow = isMeetup && !hasVideo && (status === "PAID_HELD" || status === "SHIPPED");
 
   async function handleFile(file: File) {
-    setUploading(true);
     setUploadError("");
-    const formData = new FormData();
-    formData.append("video", file);
-    const res = await fetch(`/api/orders/${order.id}/video`, { method: "POST", body: formData });
-    const json = await res.json();
-    setUploading(false);
-    if (!res.ok) {
-      setUploadError(json.error ?? "อัปโหลดไม่สำเร็จ");
+    if (file.size > MAX_VIDEO_BYTES) {
+      setUploadError(`วิดีโอใหญ่เกินไป (สูงสุด ${MAX_VIDEO_BYTES / 1024 / 1024} MB ในตอนนี้) ลองอัดให้สั้นลงหรือลดความละเอียด`);
       return;
     }
-    setVideoUrl(json.url);
-    setVideoFilename(json.filename);
-    setAutoApproveAt(json.autoApproveAt);
-    setDeliveredAt(json.deliveredAt);
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("video", file);
+    const sent = await postForm<{ url: string; filename: string; autoApproveAt: string; deliveredAt: string }>(
+      `/api/orders/${order.id}/video`,
+      formData
+    );
+    setUploading(false);
+    if (!sent.ok) {
+      setUploadError(sent.error || "อัปโหลดไม่สำเร็จ");
+      return;
+    }
+    setVideoUrl(sent.data.url);
+    setVideoFilename(sent.data.filename);
+    setAutoApproveAt(sent.data.autoApproveAt);
+    setDeliveredAt(sent.data.deliveredAt);
     setStatus("DELIVERED");
   }
 

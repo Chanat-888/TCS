@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
+import { checkPhotoFile } from "@/lib/imageUpload";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,7 +17,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { count: bidCount } = await supabase.from("bids").select("id", { count: "exact", head: true }).eq("listing_id", id);
   const locked = (bidCount ?? 0) > 0;
 
-  const formData = await request.formData();
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "ไฟล์รูปรวมกันใหญ่เกินไป ลองเลือกรูปที่เล็กลง" }, { status: 413 });
+  }
   const description = String(formData.get("description") ?? "").trim();
 
   if (locked) {
@@ -70,17 +76,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const front = formData.get("front");
   const back = formData.get("back");
-  if (front instanceof File) {
-    const ext = front.name.split(".").pop() ?? "jpg";
-    const path = `${id}/front.${ext}`;
-    await supabase.storage.from("listing-photos").upload(path, await front.arrayBuffer(), { contentType: front.type, upsert: true });
-    update.photo_front_url = supabase.storage.from("listing-photos").getPublicUrl(path).data.publicUrl;
-  }
-  if (back instanceof File) {
-    const ext = back.name.split(".").pop() ?? "jpg";
-    const path = `${id}/back.${ext}`;
-    await supabase.storage.from("listing-photos").upload(path, await back.arrayBuffer(), { contentType: back.type, upsert: true });
-    update.photo_back_url = supabase.storage.from("listing-photos").getPublicUrl(path).data.publicUrl;
+  for (const [file, slot, label] of [[front, "front", "ด้านหน้า"], [back, "back", "ด้านหลัง"]] as const) {
+    if (!(file instanceof File)) continue;
+    const checked = await checkPhotoFile(file, label);
+    if (!checked.ok) return NextResponse.json({ error: checked.error }, { status: 400 });
+    const path = `${id}/${slot}-${crypto.randomUUID()}.${checked.type.ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("listing-photos")
+      .upload(path, checked.bytes, { contentType: checked.type.contentType });
+    if (uploadError) return NextResponse.json({ error: "อัปโหลดรูปไม่สำเร็จ ลองอีกครั้ง" }, { status: 500 });
+    update[slot === "front" ? "photo_front_url" : "photo_back_url"] = supabase.storage.from("listing-photos").getPublicUrl(path).data.publicUrl;
   }
 
   const { error } = await supabase.from("listings").update(update).eq("id", id);

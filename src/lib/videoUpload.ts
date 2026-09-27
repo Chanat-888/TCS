@@ -4,7 +4,11 @@
  * the file type is decided from the bytes, never from the client-supplied
  * type or filename, so nothing but a real MP4/MOV can be stored there.
  */
-export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+// Uploads currently pass through our own server, and hosting caps a request body at
+// about 4.5 MB (Vercel) / 10 MB (Next's proxy). Anything larger never arrives, so the
+// limit is set to what works instead of letting a bigger file hang. Real phone videos
+// need uploads that go straight to storage (signed upload URLs) — see the PR notes.
+export const MAX_VIDEO_BYTES = 4 * 1024 * 1024;
 
 export interface VideoType {
   ext: "mp4" | "mov";
