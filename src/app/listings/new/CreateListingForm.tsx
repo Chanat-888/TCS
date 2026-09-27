@@ -7,6 +7,7 @@ import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vang
 import { PhotoAdjustModal } from "@/components/PhotoAdjustModal";
 import { prepareCardPhoto } from "@/lib/clientImage";
 import { postForm } from "@/lib/postForm";
+import { MIN_PRICE } from "@/lib/listingKind";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -190,7 +191,7 @@ export function CreateListingForm() {
     }
     setDetailsError(false);
     const price = mode === "sell" ? sellPrice : startPrice;
-    if (!price.trim()) {
+    if (!price.trim() || Number(price) < MIN_PRICE) {
       setPriceError(true);
       return;
     }
@@ -632,7 +633,7 @@ export function CreateListingForm() {
 
         {priceError && (
           <p className="mt-2 text-[12px]" style={{ color: "var(--danger)" }}>
-            กรอกราคาก่อนเผยแพร่ประกาศ
+            กรอกราคาอย่างน้อย ฿{MIN_PRICE}
           </p>
         )}
       </div>

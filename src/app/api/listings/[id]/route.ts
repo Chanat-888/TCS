@@ -4,6 +4,7 @@ import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
 import { checkPhotoFile } from "@/lib/imageUpload";
+import { MIN_PRICE } from "@/lib/listingKind";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -48,6 +49,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (!name || !setName || !category || !condition || !startPrice) {
     return NextResponse.json({ error: "กรอกข้อมูลให้ครบก่อนบันทึก" }, { status: 400 });
+  }
+  if (!Number.isInteger(startPrice) || startPrice < MIN_PRICE) {
+    return NextResponse.json({ error: `ราคาต้องไม่ต่ำกว่า ฿${MIN_PRICE}` }, { status: 400 });
   }
 
   const details = parseListingDetails(category, {

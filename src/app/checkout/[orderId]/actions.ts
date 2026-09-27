@@ -7,6 +7,7 @@ import { getAddress, listAddresses } from "@/lib/addressBook";
 import { MAX_ADDRESSES, cleanAddressFields, type AddressFields } from "@/lib/addresses";
 import type { PaymentMethod } from "@/lib/supabase/types";
 import { omise, syncCharge } from "@/lib/omise";
+import { MIN_PRICE } from "@/lib/listingKind";
 
 export type DeliveryChoice =
   | { type: "saved"; addressId: string }
@@ -58,6 +59,8 @@ export async function payOrder(orderId: string, input: PayOrderInput) {
   if (!order || order.buyer_id !== userId) return { error: "ไม่พบคำสั่งซื้อนี้" as const };
   if (order.status === "CANCELLED") return { error: "คำสั่งซื้อนี้ถูกยกเลิกแล้ว (เกินกำหนดชำระเงิน 24 ชั่วโมง)" as const };
   if (order.status !== "PENDING_PAYMENT") return { error: "คำสั่งซื้อนี้ชำระเงินไปแล้ว" as const };
+  // Orders from before the ฿20 floor: Omise would refuse the charge anyway.
+  if (order.amount < MIN_PRICE) return { error: `ยอดชำระขั้นต่ำคือ ฿${MIN_PRICE} คำสั่งซื้อนี้ชำระผ่านระบบไม่ได้ กรุณาติดต่อผู้ขาย` };
 
   const resolved = await resolveDelivery(userId, input.delivery);
   if ("error" in resolved) return { error: resolved.error };

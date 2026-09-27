@@ -21,7 +21,7 @@ function load(path, dependencies = {}) {
 
 const plain = (x) => JSON.parse(JSON.stringify(x));
 const vanguard = load("src/lib/vanguard.ts");
-const spread = load("src/lib/spreadPost.ts", { "@/lib/vanguard": vanguard });
+const spread = load("src/lib/spreadPost.ts", { "@/lib/vanguard": vanguard, "@/lib/listingKind": { MIN_PRICE: 20 } });
 const imageUpload = load("src/lib/imageUpload.ts");
 const orderCreate = load("src/lib/orderCreate.ts");
 
