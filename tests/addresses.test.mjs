@@ -101,7 +101,7 @@ function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [
       listAddresses: async () => existing,
     },
     "@/lib/addresses": addresses,
-    "@/lib/omise": {
+    "@/lib/listingKind": { MIN_PRICE: 20 }, "@/lib/omise": {
       omise: async (path, params) => {
         if (omiseFails) throw new Error("omise invalid_charge");
         charges.push(Object.fromEntries(params));
@@ -188,6 +188,13 @@ test("checkout refuses other people's orders, paid orders, and unknown choices",
   const down = checkout({ omiseFails: true });
   assert.ok((await down.actions.payOrder("order-1", { method: "promptpay", delivery: { type: "meetup" } })).error);
   assert.equal(writes(down.db, "orders", "update").length, 0, "no charge, no order change");
+});
+test("an order under Omise's ฿20 minimum gets a clear message and never reaches Omise", async () => {
+  const cheap = checkout({ order: { ...ORDER, amount: 15 } });
+  const result = await cheap.actions.payOrder("order-1", { method: "promptpay", delivery: { type: "meetup" } });
+  assert.match(result.error, /฿20/);
+  assert.equal(cheap.charges.length, 0);
+  assert.equal(writes(cheap.db, "orders", "update").length, 0);
 });
 
 // ---------- address book actions ----------

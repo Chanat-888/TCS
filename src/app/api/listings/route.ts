@@ -4,6 +4,7 @@ import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
 import { checkPhotoFile } from "@/lib/imageUpload";
+import { MIN_PRICE } from "@/lib/listingKind";
 
 // Hours: from a quick "hot time" auction up to a week.
 const DURATIONS_HOURS = [1, 3, 6, 12, 24, 72, 120, 168];
@@ -52,6 +53,9 @@ export async function POST(request: Request) {
   }
   if (!name || !setName || !category || !condition || !startPrice) {
     return NextResponse.json({ error: "กรอกข้อมูลให้ครบก่อนเผยแพร่ประกาศ" }, { status: 400 });
+  }
+  if (!Number.isInteger(startPrice) || startPrice < MIN_PRICE) {
+    return NextResponse.json({ error: `ราคาต้องไม่ต่ำกว่า ฿${MIN_PRICE}` }, { status: 400 });
   }
 
   if (!Number.isInteger(bidIncrement) || bidIncrement < MIN_BID_INCREMENT || bidIncrement > MAX_BID_INCREMENT) {

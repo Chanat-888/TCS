@@ -8,6 +8,7 @@ import { transformPins } from "@/lib/photoEdit";
 import { postForm } from "@/lib/postForm";
 import { formatTHB } from "@/lib/format";
 import { CONDITION_OPTIONS, OTHER_RARITY, VANGUARD_RARITIES } from "@/lib/vanguard";
+import { MIN_PRICE } from "@/lib/listingKind";
 import { MAX_SPREAD_ITEMS, MAX_SPREAD_PHOTOS, MAX_SPREAD_UPLOAD_BYTES, cheapestPrice } from "@/lib/spreadPost";
 
 interface EditorPhoto {
@@ -187,7 +188,7 @@ export function SpreadEditor() {
       if (!item.name.trim()) return setError(`${label}: กรอกชื่อการ์ด`);
       if (!item.rarity) return setError(`${label}: เลือกความหายาก`);
       const price = Number(item.price);
-      if (!Number.isInteger(price) || price < 1) return setError(`${label}: กรอกราคา (จำนวนเต็ม)`);
+      if (!Number.isInteger(price) || price < MIN_PRICE) return setError(`${label}: กรอกราคาอย่างน้อย ฿${MIN_PRICE} (จำนวนเต็ม)`);
     }
 
     setPublishing(true);

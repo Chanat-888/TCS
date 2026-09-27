@@ -2,6 +2,9 @@ import type { Listing } from "@/lib/supabase/types";
 
 type PricedListing = Pick<Listing, "buy_now_price" | "start_price" | "current_price">;
 
+// Omise will not create a PromptPay or TrueMoney charge below ฿20, so no price can go lower.
+export const MIN_PRICE = 20;
+
 export const DEFAULT_BID_INCREMENT = 100;
 
 export function bidIncrementOf(listing: Pick<Listing, "bid_increment">) {

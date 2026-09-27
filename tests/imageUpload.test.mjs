@@ -97,7 +97,7 @@ function route() {
     "next/server": { NextResponse: Response },
     "@/lib/session": { getVerifiedUserId: async () => "seller" },
     "@/lib/supabase/server": { createServiceClient: () => supabase },
-    "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },
+    "@/lib/listingKind": { MIN_PRICE: 20 }, "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },
     "@/lib/imageUpload": img,
   });
   return { listingRoute, calls };

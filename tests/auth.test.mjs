@@ -247,7 +247,7 @@ test("listing API rejects a signed-out request before accepting uploads", async 
   const route = load("src/app/api/listings/route.ts", {
     "next/server": { NextResponse: Response },
     "@/lib/session": sessionFor(null),
-    "@/lib/vanguard": { parseListingDetails: () => ({ ok: false, error: "unused" }) },
+    "@/lib/listingKind": { MIN_PRICE: 20 }, "@/lib/vanguard": { parseListingDetails: () => ({ ok: false, error: "unused" }) },
     "@/lib/imageUpload": {},
     "@/lib/supabase/server": { createServiceClient() { throw new Error("Database must not be touched"); } },
   });

@@ -1,4 +1,5 @@
 import { OTHER_RARITY, VANGUARD_RARITIES } from "@/lib/vanguard";
+import { MIN_PRICE } from "@/lib/listingKind";
 
 /**
  * Rules for "spread" posts: a photo (or a few) of many cards laid out; the seller taps
@@ -53,8 +54,8 @@ export function parseSpreadItems(raw: unknown, photoCount: number): ParsedItems 
     const knownRarity = (VANGUARD_RARITIES as readonly string[]).includes(rarity) || rarity === OTHER_RARITY;
     if (!knownRarity) return { ok: false, error: `${label}: เลือกความหายาก` };
     if (!condition || condition.length > 60) return { ok: false, error: `${label}: เลือกสภาพการ์ด` };
-    if (!Number.isInteger(price) || price < 1 || price > MAX_ITEM_PRICE) {
-      return { ok: false, error: `${label}: ราคาต้องเป็นจำนวนเต็ม ฿1 – ฿${MAX_ITEM_PRICE.toLocaleString("en-US")}` };
+    if (!Number.isInteger(price) || price < MIN_PRICE || price > MAX_ITEM_PRICE) {
+      return { ok: false, error: `${label}: ราคาต้องเป็นจำนวนเต็ม ฿${MIN_PRICE} – ฿${MAX_ITEM_PRICE.toLocaleString("en-US")}` };
     }
     if (!Number.isInteger(photoIndex) || photoIndex < 0 || photoIndex >= photoCount) {
       return { ok: false, error: `${label}: ตำแหน่งรูปไม่ถูกต้อง` };
