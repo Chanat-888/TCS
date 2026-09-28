@@ -3,14 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
-import { bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
+import { antiSnipeSecondsOf, bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
 import { createPendingOrder } from "@/lib/orderCreate";
 import { notify, notifyWatchers } from "@/lib/notifications";
 import { formatTHB } from "@/lib/format";
 import type { Bid } from "@/lib/supabase/types";
-
-const ANTI_SNIPE_WINDOW_SECONDS = 120;
-const ANTI_SNIPE_EXTENSION_SECONDS = 120;
 
 type PlaceBidResult =
   | { error: string }
@@ -60,10 +57,12 @@ async function attemptBid(listingId: string, amount: number, userId: string, ret
   const instantWin = buyNowPrice != null && amount >= buyNowPrice;
   if (instantWin) amount = buyNowPrice;
 
+  // 0 means the seller turned anti-snipe off: a hard deadline, never extended.
+  const antiSnipeSeconds = antiSnipeSecondsOf(listing);
   const secondsLeft = (new Date(listing.ends_at).getTime() - Date.now()) / 1000;
-  const extended = !instantWin && secondsLeft < ANTI_SNIPE_WINDOW_SECONDS;
+  const extended = !instantWin && antiSnipeSeconds > 0 && secondsLeft < antiSnipeSeconds;
   const newEndsAt = extended
-    ? new Date(new Date(listing.ends_at).getTime() + ANTI_SNIPE_EXTENSION_SECONDS * 1000).toISOString()
+    ? new Date(new Date(listing.ends_at).getTime() + antiSnipeSeconds * 1000).toISOString()
     : listing.ends_at;
 
   // Claim the price move first, conditional on the listing still being active at

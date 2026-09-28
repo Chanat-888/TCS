@@ -45,6 +45,8 @@ export interface Listing {
   current_price: number;
   /** Absent on rows read before migration 0015 is applied; treat as 100. */
   bid_increment?: number;
+  /** Absent on rows read before migration 0023 is applied; treat as 120 (2 min). 0 = off. */
+  anti_snipe_seconds?: number;
   /** 'spread' = one big photo of many separately purchasable cards (absent before migration 0020). */
   post_kind?: "single" | "spread";
   photo_urls?: string[];

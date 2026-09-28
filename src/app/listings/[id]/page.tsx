@@ -14,7 +14,7 @@ import { SellerRow } from "@/components/SellerRow";
 import { formatTHB } from "@/lib/format";
 import { PhotoViewer } from "./PhotoViewer";
 import { LiveBidding } from "./LiveBidding";
-import { bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
+import { antiSnipeSecondsOf, bidIncrementOf, isBuyNowAvailable, isFixedPrice, isSpread } from "@/lib/listingKind";
 import { BuyNowBox } from "./BuyNowBox";
 import { PRODUCT_TYPE_LABELS, describeQuantity } from "@/lib/vanguard";
 import type { Listing } from "@/lib/supabase/types";
@@ -162,6 +162,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     startPrice={listing.start_price}
                     buyNowPrice={listing.buy_now_price}
                     bidIncrement={bidIncrementOf(listing)}
+                    antiSnipeSeconds={antiSnipeSecondsOf(listing)}
                     initialPrice={listing.current_price}
                     initialEndsAt={listing.ends_at}
                     initialSecondsLeft={listing.status === "active" ? secondsUntil(listing.ends_at) : 0}

@@ -79,10 +79,10 @@ test("postForm turns network failures and non-JSON error pages into readable err
 
 // ---------- create route ----------
 function route() {
-  const calls = { inserted: 0, deleted: 0, uploads: [] };
+  const calls = { inserted: 0, inserts: [], deleted: 0, uploads: [] };
   const supabase = {
     from: () => ({
-      insert: () => { calls.inserted++; return { select: () => ({ single: async () => ({ data: { id: "L1", name: "n", start_price: 100 }, error: null }) }) }; },
+      insert: (row) => { calls.inserted++; calls.inserts.push(row); return { select: () => ({ single: async () => ({ data: { id: "L1", name: "n", start_price: 100 }, error: null }) }) }; },
       update: () => ({ eq: async () => ({}) }),
       delete: () => { calls.deleted++; return { eq: async () => ({}) }; },
     }),
@@ -97,17 +97,18 @@ function route() {
     "next/server": { NextResponse: Response },
     "@/lib/session": { getVerifiedUserId: async () => "seller" },
     "@/lib/supabase/server": { createServiceClient: () => supabase },
-    "@/lib/listingKind": { MIN_PRICE: 20 }, "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },
+    "@/lib/listingKind": { MIN_PRICE: 20, ANTI_SNIPE_PRESETS_SECONDS: [0, 60, 120, 300, 600], DEFAULT_ANTI_SNIPE_SECONDS: 120 },
+    "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },
     "@/lib/imageUpload": img,
   });
   return { listingRoute, calls };
 }
 
-function listingRequest({ front, back }) {
+function listingRequest({ front, back, ...extra }) {
   const fd = new FormData();
   fd.append("front", front);
   fd.append("back", back);
-  for (const [k, v] of Object.entries({ name: "n", set: "s", category: "rare", condition: "c", startPrice: "100", description: "" })) fd.append(k, v);
+  for (const [k, v] of Object.entries({ name: "n", set: "s", category: "rare", condition: "c", startPrice: "100", description: "", ...extra })) fd.append(k, v);
   return new Request("https://tcs.test/api/listings", { method: "POST", body: fd });
 }
 
@@ -132,6 +133,28 @@ test("valid photos are stored under a fresh path with the sniffed type, not the 
   assert.equal(calls.uploads[0].opts.contentType, "image/gif");
   assert.match(calls.uploads[1].path, /^L1\/back-[0-9a-f-]+\.png$/);
   assert.equal(calls.uploads[1].opts.contentType, "image/png");
+});
+
+test("a non-default anti-snipe length is stored; the default is left out so old rows still work pre-migration", async () => {
+  const { listingRoute, calls } = route();
+  const good = new File([JPEG], "f.jpg", { type: "image/jpeg" });
+
+  await listingRoute.POST(listingRequest({ front: good, back: good, antiSnipeSeconds: "300" }));
+  assert.equal(calls.inserts[0].anti_snipe_seconds, 300);
+
+  await listingRoute.POST(listingRequest({ front: good, back: good, antiSnipeSeconds: "120" }));
+  assert.equal("anti_snipe_seconds" in calls.inserts[1], false);
+
+  await listingRoute.POST(listingRequest({ front: good, back: good })); // not sent at all: same as the default
+  assert.equal("anti_snipe_seconds" in calls.inserts[2], false);
+});
+
+test("an anti-snipe length outside the seller's preset choices is refused", async () => {
+  const { listingRoute, calls } = route();
+  const good = new File([JPEG], "f.jpg", { type: "image/jpeg" });
+  const res = await listingRoute.POST(listingRequest({ front: good, back: good, antiSnipeSeconds: "45" }));
+  assert.equal(res.status, 400);
+  assert.equal(calls.inserted, 0);
 });
 
 test("an unreadable (over-limit) request body gives a clear 413 instead of a bare server error", async () => {

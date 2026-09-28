@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { Countdown } from "@/components/Countdown";
 import { formatTHB, formatRelativeTime, formatThaiDateTime, maskUserLabel } from "@/lib/format";
+import { formatAntiSnipeDuration } from "@/lib/listingKind";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import type { Bid } from "@/lib/supabase/types";
 import { endAuctionNow, placeBid } from "./actions";
@@ -15,6 +16,7 @@ export function LiveBidding({
   startPrice,
   buyNowPrice,
   bidIncrement,
+  antiSnipeSeconds,
   initialPrice,
   initialEndsAt,
   initialSecondsLeft,
@@ -28,6 +30,8 @@ export function LiveBidding({
   startPrice: number;
   buyNowPrice: number | null;
   bidIncrement: number;
+  /** 0 = the seller turned anti-snipe off; the auction closes at a hard deadline. */
+  antiSnipeSeconds: number;
   initialPrice: number;
   initialEndsAt: string;
   initialSecondsLeft: number;
@@ -165,7 +169,7 @@ export function LiveBidding({
   const visibleBids = showAllBids ? bids : bids.slice(0, BIDS_SHOWN);
   // One always-mounted live region, so realtime changes (price, outbid, extension) are announced.
   const announcement = [
-    showExtend ? "ระบบขยายเวลาปิดประมูลอีก 2 นาที" : "",
+    showExtend ? `ระบบขยายเวลาปิดประมูลอีก ${formatAntiSnipeDuration(antiSnipeSeconds)}` : "",
     !isOwner && youHaveBid && !ended ? (youAreTop ? "คุณเป็นผู้บิดสูงสุด" : "มีคนบิดสูงกว่าคุณแล้ว") : "",
     `ราคาปัจจุบัน ${formatTHB(price)}`,
   ]
@@ -219,7 +223,7 @@ export function LiveBidding({
             style={{ ...hairline, color: "var(--cyan)", background: "var(--cyan-tint)" }}
           >
             <ClockIcon />
-            <span>มีการบิดในช่วงโค้งสุดท้าย ระบบขยายเวลาให้อีก 2 นาที</span>
+            <span>มีการบิดในช่วงโค้งสุดท้าย ระบบขยายเวลาให้อีก {formatAntiSnipeDuration(antiSnipeSeconds)}</span>
           </div>
         )}
 
@@ -410,7 +414,9 @@ export function LiveBidding({
             <span className="mt-[3px]">
               <ClockIcon />
             </span>
-            หากมีการบิดภายใน 2 นาทีสุดท้ายก่อนปิดประมูล เวลาจะขยายอีก 2 นาทีโดยอัตโนมัติ เพื่อป้องกันการบิดชิงจังหวะสุดท้าย
+            {antiSnipeSeconds > 0
+              ? `หากมีการบิดภายใน ${formatAntiSnipeDuration(antiSnipeSeconds)}สุดท้ายก่อนปิดประมูล เวลาจะขยายอีก ${formatAntiSnipeDuration(antiSnipeSeconds)}โดยอัตโนมัติ เพื่อป้องกันการบิดชิงจังหวะสุดท้าย`
+              : "ประกาศนี้ปิดประมูลตรงเวลาที่กำหนด ผู้ขายเลือกไม่ขยายเวลาแม้มีบิดในช่วงโค้งสุดท้าย"}
           </p>
         )}
       </div>

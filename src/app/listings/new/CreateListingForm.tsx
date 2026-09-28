@@ -7,7 +7,15 @@ import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vang
 import { PhotoAdjustModal } from "@/components/PhotoAdjustModal";
 import { prepareCardPhoto } from "@/lib/clientImage";
 import { postForm } from "@/lib/postForm";
-import { MIN_PRICE } from "@/lib/listingKind";
+import { DEFAULT_ANTI_SNIPE_SECONDS, MIN_PRICE, formatAntiSnipeDuration } from "@/lib/listingKind";
+
+const ANTI_SNIPE_OPTIONS = [
+  { value: "0", label: "ปิด (ปิดประมูลตรงเวลาเป๊ะ)" },
+  { value: "60", label: "1 นาที" },
+  { value: "120", label: "2 นาที (แนะนำ)" },
+  { value: "300", label: "5 นาที" },
+  { value: "600", label: "10 นาที" },
+];
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -164,6 +172,7 @@ export function CreateListingForm() {
   });
   const customEndIso = endDate ? `${endDate}T${endHour}:${endMinute}:00+07:00` : "";
   const [bidIncrement, setBidIncrement] = useState("100");
+  const [antiSnipeSeconds, setAntiSnipeSeconds] = useState(String(DEFAULT_ANTI_SNIPE_SECONDS));
   const [instantWinPrice, setInstantWinPrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
 
@@ -237,6 +246,7 @@ export function CreateListingForm() {
       if (duration === "custom") formData.append("endsAt", new Date(customEndIso).toISOString());
       else formData.append("durationHours", duration);
       formData.append("bidIncrement", bidIncrement);
+      formData.append("antiSnipeSeconds", antiSnipeSeconds);
       if (instantWinPrice.trim()) formData.append("buyNowPrice", instantWinPrice);
     }
 
@@ -538,6 +548,20 @@ export function CreateListingForm() {
             </div>
             <div>
               <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                ขยายเวลาเมื่อมีบิดในช่วงโค้งสุดท้าย
+              </label>
+              <select
+                value={antiSnipeSeconds}
+                onChange={(e) => setAntiSnipeSeconds(e.target.value)}
+                style={{ ...inputStyle, color: "var(--white)" }}
+              >
+                {ANTI_SNIPE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
                 ราคาชนะทันที (ไม่บังคับ)
               </label>
               <div className="relative">
@@ -599,7 +623,9 @@ export function CreateListingForm() {
                 </p>
               )}
               <p className="mt-2 text-[12px]" style={{ color: "var(--steel-dim)" }}>
-                เวลาประเทศไทย เลือกได้ตั้งแต่ 1 ชั่วโมง ถึง 30 วันจากตอนนี้ · ถ้ามีคนบิดในช่วง 2 นาทีสุดท้าย เวลาจะขยายให้อัตโนมัติ
+                เวลาประเทศไทย เลือกได้ตั้งแต่ 1 ชั่วโมง ถึง 30 วันจากตอนนี้
+                {antiSnipeSeconds !== "0" &&
+                  ` · ถ้ามีคนบิดในช่วง ${formatAntiSnipeDuration(Number(antiSnipeSeconds))} สุดท้าย เวลาจะขยายให้อัตโนมัติ`}
               </p>
             </div>
           )}
