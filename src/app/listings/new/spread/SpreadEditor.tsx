@@ -73,6 +73,9 @@ export function SpreadEditor() {
   useEffect(() => () => urlsRef.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
   const usedBytes = photos.reduce((sum, p) => sum + p.file.size, 0);
+  // Rotate/crop re-encodes through a canvas, which would flatten a GIF/WebP to a
+  // still frame — so it's hidden for those rather than silently killing the animation.
+  const activeCanAdjust = photos[activePhoto] ? photos[activePhoto].file.type !== "image/gif" && photos[activePhoto].file.type !== "image/webp" : false;
 
   async function addPhoto(picked: File) {
     setPhotoError("");
@@ -356,15 +359,17 @@ export function SpreadEditor() {
                 {preparing ? "กำลังเตรียมรูป…" : "+ เพิ่มรูป"}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setAdjusting(activePhoto)}
-              disabled={preparing}
-              className="min-h-11 rounded-[10px] px-4 text-[13.5px]"
-              style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--white)" }}
-            >
-              ↻ หมุน / ตัดรูป
-            </button>
+            {activeCanAdjust && (
+              <button
+                type="button"
+                onClick={() => setAdjusting(activePhoto)}
+                disabled={preparing}
+                className="min-h-11 rounded-[10px] px-4 text-[13.5px]"
+                style={{ background: "var(--panel-2)", border: "1px solid var(--line)", color: "var(--white)" }}
+              >
+                ↻ หมุน / ตัดรูป
+              </button>
+            )}
             {photos.length === 1 && (
               <button
                 type="button"
