@@ -89,7 +89,7 @@ function loadImageModule(globals) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, Promise, ...globals }, { filename: "loadImage.ts" });
+  vm.runInNewContext(code, { exports, Promise, setTimeout, ...globals }, { filename: "loadImage.ts" });
   return exports;
 }
 
@@ -118,6 +118,19 @@ test("if createImageBitmap is missing or fails, an <img> element is used instead
     image.close();
   }
   assert.deepEqual(revoked, ["blob:x", "blob:x"]); // the temporary URL is always released
+});
+
+test("a createImageBitmap() call that never settles (some browsers hang on certain GIF/WebP files) times out and falls back to <img>", async () => {
+  let closedLate = false;
+  const { loadImage } = loadImageModule({
+    createImageBitmap: () => new Promise(() => {}), // never resolves or rejects
+    Image: class { async decode() { this.naturalWidth = 500; this.naturalHeight = 500; } },
+    URL: { createObjectURL: () => "blob:z", revokeObjectURL: () => {} },
+  });
+  const image = await loadImage({}, 20); // short timeout so the test stays fast
+  assert.equal(image.width, 500);
+  assert.equal(image.height, 500);
+  image.close();
 });
 
 test("a file that cannot be decoded at all is reported, and its temporary URL is released", async () => {
