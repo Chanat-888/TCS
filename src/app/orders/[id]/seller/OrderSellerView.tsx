@@ -10,6 +10,7 @@ import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 import { postForm } from "@/lib/postForm";
+import { splitPayout } from "@/lib/commission";
 import { trackingUrl } from "@/lib/trackingUrl";
 import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
 
@@ -91,6 +92,13 @@ export function OrderSellerView({
 
   const isMeetup = order.delivery_method === "meetup";
   const isDone = order.status === "COMPLETED";
+  const { commission, payout } = splitPayout(order.amount);
+  const payoutMeta = (
+    <>
+      {formatTHB(payout)} (ยอดขาย {formatTHB(order.amount)} หักค่าธรรมเนียม 5% {formatTHB(commission)}){" "}
+      {order.payout_status === "sent" ? "โอนเข้าบัญชีของคุณแล้ว" : isDone ? "— เพิ่มบัญชีรับเงินที่หน้าโปรไฟล์เพื่อรับเงิน" : "จะโอนเมื่อผู้ซื้อรับสินค้า"}
+    </>
+  );
   const isDisputed = order.status === "DISPUTED";
   const steps: TimelineStep[] = [
     { label: "เงินถูกพักไว้", state: "done", meta: <>ผู้ซื้อชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
@@ -98,7 +106,7 @@ export function OrderSellerView({
     { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง") },
     { label: "ถึงมือผู้ซื้อ", state: order.delivered_at ? "done" : "pending", meta: "อัปเดตอัตโนมัติเมื่อผู้ซื้อยืนยันว่าได้รับพัสดุ" },
     { label: "ผู้ซื้อยืนยันรับการ์ด", state: isDone ? "done" : "pending", meta: "ผู้ซื้อถ่ายวิดีโอแกะกล่องแล้วกดรับ หรือระบบอนุมัติอัตโนมัติภายใน 48 ชม." },
-    { label: "เงินโอนเข้าบัญชีคุณ", state: isDone ? "done" : "pending", meta: <>{formatTHB(order.amount)} โอนเข้าบัญชีที่ยืนยันตัวตนไว้</> },
+    { label: "เงินโอนเข้าบัญชีคุณ", state: isDone ? "done" : "pending", meta: payoutMeta },
   ];
 
   return (

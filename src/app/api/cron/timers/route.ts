@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runAllTimers } from "@/lib/orderTimers";
+import { payOutOrders } from "@/lib/payout";
 
 // A busy minute can touch a few hundred rows; allow more than the default limit.
 export const maxDuration = 60;
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
   if (!secret) return NextResponse.json({ error: "timers not configured" }, { status: 503 });
   if (!authorized(request, secret)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const results = await runAllTimers(createServiceClient());
-  return NextResponse.json({ ok: true, results });
+  const supabase = createServiceClient();
+  const results = await runAllTimers(supabase);
+  // After the timers, so an order they just auto-completed is paid out in the same run.
+  const payouts = await payOutOrders(supabase, Date.now());
+  return NextResponse.json({ ok: true, results, payouts });
 }
