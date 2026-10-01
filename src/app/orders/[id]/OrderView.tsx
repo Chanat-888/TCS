@@ -9,6 +9,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { Countdown } from "@/components/Countdown";
 import { ShipDatePanel } from "@/components/ShipDatePanel";
 import { secondsUntil } from "@/lib/countdown";
+import { trackingUrl } from "@/lib/trackingUrl";
 import { formatTHB, formatRelativeTime } from "@/lib/format";
 import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { approveOrder, sendOrderMessage } from "./actions";
@@ -131,7 +132,7 @@ export function OrderView({
       icon: TRUCK_ICON,
       meta: order.shipped_at ? (
         <>
-          {order.delivery_method === "meetup" ? "ส่งมอบแล้ว (นัดรับ)" : <>{order.courier} · เลขพัสดุ <span className="mono">{order.tracking_number}</span></>} · <span className="mono">{formatRelativeTime(order.shipped_at)}</span>
+          {order.delivery_method === "meetup" ? "ส่งมอบแล้ว (นัดรับ)" : <>{order.courier} · เลขพัสดุ <span className="mono">{order.tracking_number}</span>{trackingUrl(order.courier, order.tracking_number) && <>{" "}(<a href={trackingUrl(order.courier, order.tracking_number)!} target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>ติดตามพัสดุ</a>)</>}</>} · <span className="mono">{formatRelativeTime(order.shipped_at)}</span>
           {order.packing_video_url && (
             <>
               {" "}· <a href={order.packing_video_url} target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>ดูวิดีโอแพ็คของจากผู้ขาย</a>

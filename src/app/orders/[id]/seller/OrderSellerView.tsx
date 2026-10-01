@@ -10,6 +10,7 @@ import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 import { postForm } from "@/lib/postForm";
+import { trackingUrl } from "@/lib/trackingUrl";
 import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
 
 const COURIERS = ["Flash Express", "Kerry Express", "ไปรษณีย์ไทย (EMS)", "J&T Express"];
@@ -327,6 +328,9 @@ export function OrderSellerView({
                 </p>
                 <p className="mono mt-[2px] text-[12px]" style={{ color: "var(--steel)" }}>
                   {isMeetup ? "ส่งมอบแล้ว · นัดรับ" : `${shippedInfo.courier} · ${shippedInfo.tracking}`}
+                  {!isMeetup && trackingUrl(shippedInfo.courier, shippedInfo.tracking) && (
+                    <>{" "}· <a href={trackingUrl(shippedInfo.courier, shippedInfo.tracking)!} target="_blank" rel="noreferrer" style={{ color: "var(--cyan)" }}>ติดตามพัสดุ</a></>
+                  )}
                 </p>
               </div>
             </div>
