@@ -12,10 +12,10 @@ export interface OmiseCharge {
 }
 
 // Test vs live is decided by the key alone: skey_test_… charges no real money.
-export async function omise(path: string, body?: URLSearchParams): Promise<OmiseCharge> {
+export async function omise<T = OmiseCharge>(path: string, body?: URLSearchParams, headers: Record<string, string> = {}): Promise<T> {
   const res = await fetch(`https://api.omise.co${path}`, {
     method: body ? "POST" : "GET",
-    headers: { Authorization: "Basic " + Buffer.from(`${process.env.OMISE_SECRET_KEY}:`).toString("base64") },
+    headers: { Authorization: "Basic " + Buffer.from(`${process.env.OMISE_SECRET_KEY}:`).toString("base64"), ...headers },
     body,
     cache: "no-store",
   });

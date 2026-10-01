@@ -345,6 +345,7 @@ function route(secret, ran = []) {
       "next/server": { NextResponse: Response },
       "@/lib/supabase/server": { createServiceClient: () => ({}) },
       "@/lib/orderTimers": { runAllTimers: async () => { ran.push(1); return { closeEndedListings: { processed: 0 } }; } },
+      "@/lib/payout": { payOutOrders: async () => ({ processed: 0 }) },
     },
     { process: { env: { CRON_SECRET: secret } } }
   );

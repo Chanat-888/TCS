@@ -101,6 +101,11 @@ export interface Order {
   approved_at: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
+  /** Payout fields (absent before migration 0024). */
+  payout_status?: "pending" | "processing" | "sent" | null;
+  commission?: number | null;
+  payout_amount?: number | null;
+  payout_error?: string | null;
   created_at: string;
 }
 
