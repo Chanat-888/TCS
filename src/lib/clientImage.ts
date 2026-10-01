@@ -1,4 +1,5 @@
 import { loadImage } from "@/lib/loadImage";
+import { sniffImageType, MAX_PHOTO_BYTES } from "@/lib/imageUpload";
 
 /** Browser-side card photo preparation. Runs in the seller's browser before upload. */
 const MAX_ORIGINAL_BYTES = 40 * 1024 * 1024;
@@ -8,9 +9,13 @@ const JPEG_QUALITY = 0.85;
 export type PreparedPhoto = { ok: true; file: File; width: number; height: number } | { ok: false; error: string };
 
 /**
- * Turns whatever the seller picked (a huge phone photo, a PNG, an animated GIF)
- * into a normal JPEG of at most 1600px on its longest side. That keeps uploads small
- * and fast, uses a GIF's first frame, and drops any animation or odd file structure.
+ * Turns whatever the seller picked (a huge phone photo, a PNG) into a normal JPEG of
+ * at most 1600px on its longest side. That keeps uploads small and fast.
+ *
+ * A GIF or WebP is kept as the seller uploaded it instead: these are the two formats
+ * a card photo would use an animation for (a holo/foil sparkle effect), and flattening
+ * them to a JPEG would silently kill that. They're still size-checked like anything
+ * else that reaches storage — just not resized or re-encoded.
  */
 export async function prepareCardPhoto(
   file: File,
@@ -18,6 +23,22 @@ export async function prepareCardPhoto(
 ): Promise<PreparedPhoto> {
   if (!file.type.startsWith("image/")) return { ok: false, error: "เลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WebP หรือ GIF)" };
   if (file.size > MAX_ORIGINAL_BYTES) return { ok: false, error: "ไฟล์ใหญ่เกินไป (เกิน 40 MB) ลองเลือกรูปอื่น" };
+
+  const header = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const sniffed = sniffImageType(header);
+  if (sniffed && (sniffed.ext === "gif" || sniffed.ext === "webp")) {
+    if (file.size > MAX_PHOTO_BYTES) {
+      return { ok: false, error: `ไฟล์ภาพเคลื่อนไหวใหญ่เกินไป (สูงสุด ${MAX_PHOTO_BYTES / 1024 / 1024} MB) ลองไฟล์ที่เล็กลงหรือเฟรมน้อยลง` };
+    }
+    try {
+      const image = await loadImage(file);
+      const { width, height } = image;
+      image.close();
+      return { ok: true, file, width, height };
+    } catch {
+      return { ok: false, error: "เปิดรูปนี้ไม่ได้ ไฟล์อาจเสียหาย ลองเลือกรูปอื่น" };
+    }
+  }
 
   try {
     const bitmap = await loadImage(file);

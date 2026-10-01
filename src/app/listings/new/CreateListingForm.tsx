@@ -37,6 +37,9 @@ function PhotoSlot({
   const [pickError, setPickError] = useState("");
   const [adjusting, setAdjusting] = useState(false);
   const preview = file ? URL.createObjectURL(file) : null;
+  // Rotate/crop re-encodes through a canvas, which would flatten a GIF/WebP to a
+  // still frame — so it's hidden for those rather than silently killing the animation.
+  const canAdjust = file ? file.type !== "image/gif" && file.type !== "image/webp" : false;
 
   // Shrink to a normal JPEG before it ever reaches the form (a big GIF or phone
   // photo would otherwise exceed the upload size limit and freeze the request).
@@ -77,14 +80,16 @@ function PhotoSlot({
           <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-[13px]" style={{ background: "var(--panel-2)", border: "1.5px solid rgba(95,212,255,0.35)" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt={label} className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={() => setAdjusting(true)}
-              className="absolute bottom-2 left-2 flex min-h-11 items-center rounded-lg px-3 text-[12.5px]"
-              style={{ background: "rgba(10,12,16,0.75)", backdropFilter: "blur(6px)", border: "1px solid rgba(140,147,163,0.25)", color: "var(--white)" }}
-            >
-              ↻ หมุน / ตัด
-            </button>
+            {canAdjust && (
+              <button
+                type="button"
+                onClick={() => setAdjusting(true)}
+                className="absolute bottom-2 left-2 flex min-h-11 items-center rounded-lg px-3 text-[12.5px]"
+                style={{ background: "rgba(10,12,16,0.75)", backdropFilter: "blur(6px)", border: "1px solid rgba(140,147,163,0.25)", color: "var(--white)" }}
+              >
+                ↻ หมุน / ตัด
+              </button>
+            )}
             <button
               type="button"
               onClick={onRemove}
