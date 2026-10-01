@@ -82,6 +82,15 @@ test("buy-now is available only until the first bid", () => {
   assert.equal(listingKind.isAuction({ ...base, buy_now_price: null }), true);
 });
 
+test("anti-snipe seconds default to 120 (2 min) for rows from before the column existed", () => {
+  assert.equal(listingKind.antiSnipeSecondsOf(base), 120);
+  assert.equal(listingKind.antiSnipeSecondsOf({ ...base, anti_snipe_seconds: 0 }), 0);
+  assert.equal(listingKind.antiSnipeSecondsOf({ ...base, anti_snipe_seconds: 300 }), 300);
+  assert.equal(listingKind.formatAntiSnipeDuration(120), "2 นาที");
+  assert.equal(listingKind.formatAntiSnipeDuration(60), "1 นาที");
+  assert.equal(listingKind.formatAntiSnipeDuration(45), "45 วินาที");
+});
+
 test("buyNow refuses once a bid exists", async () => {
   const { actions, calls } = fixture({ ...base, current_price: 1100 });
   const result = await actions.buyNow("l1");
@@ -221,6 +230,37 @@ test("the seller's bid increment sets the minimum bid, and defaults to 100", asy
   const legacy = fixture({ ...base, buy_now_price: null });
   assert.ok((await legacy.actions.placeBid("l1", 1050)).error);
   assert.equal((await legacy.actions.placeBid("l1", 1100)).success, true);
+});
+
+test("a bid in the closing window extends the listing by the seller's chosen anti-snipe length, and defaults to 2 minutes", async () => {
+  const soon = { ...base, buy_now_price: null, ends_at: new Date(Date.now() + 90_000).toISOString() }; // 90s left
+  const custom = fixture({ ...soon, anti_snipe_seconds: 300 });
+  const result = await custom.actions.placeBid("l1", 1100);
+  assert.equal(result.extended, true);
+  const gained = new Date(result.newEndsAt).getTime() - new Date(soon.ends_at).getTime();
+  assert.ok(Math.abs(gained - 300_000) < 1000);
+
+  const legacy = fixture(soon); // no anti_snipe_seconds column: default 120s
+  const legacyResult = await legacy.actions.placeBid("l1", 1100);
+  assert.equal(legacyResult.extended, true);
+  const legacyGained = new Date(legacyResult.newEndsAt).getTime() - new Date(soon.ends_at).getTime();
+  assert.ok(Math.abs(legacyGained - 120_000) < 1000);
+});
+
+test("a seller who turned anti-snipe off gets a hard deadline: a last-second bid never extends it", async () => {
+  const soon = { ...base, buy_now_price: null, anti_snipe_seconds: 0, ends_at: new Date(Date.now() + 5_000).toISOString() };
+  const { actions } = fixture(soon);
+  const result = await actions.placeBid("l1", 1100);
+  assert.equal(result.extended, false);
+  assert.equal(result.newEndsAt, soon.ends_at);
+});
+
+test("a bid outside the anti-snipe window doesn't extend, even with plenty of time left in a short auction", async () => {
+  const soon = { ...base, buy_now_price: null, anti_snipe_seconds: 60, ends_at: new Date(Date.now() + 90_000).toISOString() }; // 90s > 60s window
+  const { actions } = fixture(soon);
+  const result = await actions.placeBid("l1", 1100);
+  assert.equal(result.extended, false);
+  assert.equal(result.newEndsAt, soon.ends_at);
 });
 
 test("a fixed-price listing (buy-now equals start) cannot be bid on", async () => {

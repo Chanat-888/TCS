@@ -4,7 +4,7 @@ import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
 import { checkPhotoFile } from "@/lib/imageUpload";
-import { MIN_PRICE } from "@/lib/listingKind";
+import { ANTI_SNIPE_PRESETS_SECONDS, DEFAULT_ANTI_SNIPE_SECONDS, MIN_PRICE } from "@/lib/listingKind";
 
 // Hours: from a quick "hot time" auction up to a week.
 const DURATIONS_HOURS = [1, 3, 6, 12, 24, 72, 120, 168];
@@ -47,6 +47,8 @@ export async function POST(request: Request) {
   }
   const bidIncrementRaw = String(formData.get("bidIncrement") ?? "").trim();
   const bidIncrement = bidIncrementRaw ? parseInt(bidIncrementRaw, 10) : 100;
+  const antiSnipeRaw = String(formData.get("antiSnipeSeconds") ?? "").trim();
+  const antiSnipeSeconds = antiSnipeRaw ? parseInt(antiSnipeRaw, 10) : DEFAULT_ANTI_SNIPE_SECONDS;
 
   if (!(front instanceof File) || !(back instanceof File)) {
     return NextResponse.json({ error: "อัปโหลดรูปทั้งด้านหน้าและด้านหลังก่อนเผยแพร่ประกาศ" }, { status: 400 });
@@ -64,12 +66,8 @@ export async function POST(request: Request) {
   if (buyNowPrice != null && (!Number.isFinite(buyNowPrice) || buyNowPrice < startPrice)) {
     return NextResponse.json({ error: "ราคาชนะทันทีต้องไม่ต่ำกว่าราคาเริ่มต้น" }, { status: 400 });
   }
-
-  if (!Number.isInteger(bidIncrement) || bidIncrement < MIN_BID_INCREMENT || bidIncrement > MAX_BID_INCREMENT) {
-    return NextResponse.json({ error: `บิดขั้นต่ำต้องอยู่ระหว่าง ฿${MIN_BID_INCREMENT} – ฿${MAX_BID_INCREMENT.toLocaleString("en-US")}` }, { status: 400 });
-  }
-  if (buyNowPrice != null && (!Number.isFinite(buyNowPrice) || buyNowPrice < startPrice)) {
-    return NextResponse.json({ error: "ราคาชนะทันทีต้องไม่ต่ำกว่าราคาเริ่มต้น" }, { status: 400 });
+  if (!(ANTI_SNIPE_PRESETS_SECONDS as readonly number[]).includes(antiSnipeSeconds)) {
+    return NextResponse.json({ error: "ตั้งค่าการขยายเวลาไม่ถูกต้อง" }, { status: 400 });
   }
 
   // Rarity isn't a separate form field yet (create-listing brief doesn't ask
@@ -108,6 +106,8 @@ export async function POST(request: Request) {
       // Only sent when non-default so listing still works before migration 0017 is applied.
       ...(details.quantity !== 1 ? { quantity: details.quantity } : {}),
       ...(details.hasExtras !== null ? { has_extras: details.hasExtras } : {}),
+      // Only sent when non-default so listing still works before migration 0023 is applied.
+      ...(antiSnipeSeconds !== DEFAULT_ANTI_SNIPE_SECONDS ? { anti_snipe_seconds: antiSnipeSeconds } : {}),
       ends_at: new Date(customEndsAt ?? Date.now() + durationHours * 60 * 60 * 1000).toISOString(),
     })
     .select()

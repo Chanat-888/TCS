@@ -11,6 +11,21 @@ export function bidIncrementOf(listing: Pick<Listing, "bid_increment">) {
   return listing.bid_increment ?? DEFAULT_BID_INCREMENT;
 }
 
+// The seller's choice of anti-snipe window/extension, in seconds. 0 means off
+// (a hard deadline). A bid landing within this many seconds of closing pushes
+// ends_at out by the same amount, repeating until a bid-free window passes.
+export const DEFAULT_ANTI_SNIPE_SECONDS = 120;
+export const ANTI_SNIPE_PRESETS_SECONDS = [0, 60, 120, 300, 600] as const;
+
+export function antiSnipeSecondsOf(listing: Pick<Listing, "anti_snipe_seconds">) {
+  return listing.anti_snipe_seconds ?? DEFAULT_ANTI_SNIPE_SECONDS;
+}
+
+/** "2 นาที" / "5 นาที" — all current presets are whole minutes. */
+export function formatAntiSnipeDuration(seconds: number) {
+  return seconds % 60 === 0 ? `${seconds / 60} นาที` : `${seconds} วินาที`;
+}
+
 /** A plain fixed-price listing: the buy-now price is the start price, so there is nothing to bid on. */
 export function isFixedPrice(listing: Pick<Listing, "buy_now_price" | "start_price">) {
   return listing.buy_now_price != null && listing.buy_now_price <= listing.start_price;
