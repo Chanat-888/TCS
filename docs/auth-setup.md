@@ -1,7 +1,7 @@
-# Phone login setup
+# Login setup
 
-TCS now uses Supabase phone OTP and cookie-based SSR sessions. The old
-`tcs_session=1` demo cookie no longer authenticates anyone.
+TCS signs in with LINE (primary) or Google (backup) and uses cookie-based SSR
+sessions. The old `tcs_session=1` demo cookie no longer authenticates anyone.
 
 ## Configure the project
 
@@ -16,45 +16,7 @@ TCS now uses Supabase phone OTP and cookie-based SSR sessions. The old
    - `SUPABASE_SERVICE_ROLE_KEY` (existing marketplace server operations only;
      never put it in a NEXT_PUBLIC variable).
    The login endpoints themselves do not require the service-role key.
-3. In Supabase Authentication, enable the Phone provider and configure an
-   SMS provider that can deliver to Thai (+66) mobile numbers. Configure the
-   provider credentials inside Supabase, not in the repository.
-4. Keep the SMS OTP length at six digits to match this UI. Set expiry and
-   SMS rate limits in Supabase. The UI shows a 60-second resend cooldown;
-   Supabase enforces rate limits even when a caller bypasses the UI.
-5. Restart local development or redeploy after updating environment variables.
-
-Official setup reference: https://supabase.com/docs/guides/auth/phone-login
-
-## Test without buying SMS first
-
-Use Supabase's **test phone numbers / test OTP** configuration in a dedicated
-development project (availability and dashboard location depend on your
-Supabase configuration). This still exercises Supabase verification and
-sessions; there is no hard-coded OTP or authentication bypass in TCS.
-
-Use only development test numbers/codes and remove test overrides before
-public launch. If your dashboard requires provider configuration before
-enabling Phone, complete that setup first; the application cannot deliver
-SMS by itself.
-
-## Acceptance checks against the configured Supabase project
-
-- New number: request OTP, reject an incorrect code, accept the real code.
-- Confirm a matching public profile exists with the Auth user's UUID.
-- Profile phone remains null: the real number lives only in auth.users.
-- Confirm verified, bank_name_matched and is_admin remain false.
-- Refresh the page and open a protected page in another tab.
-- After access-token expiry, confirm the refresh cookie preserves login.
-- Log out from the marketplace or your profile; protected pages must require login.
-- Log in again with the same number: profile ID stays the same.
-- Log in with another number: it receives a different profile and cannot access
-  the first user's orders or edit their listings.
-- Resend OTP, test expired OTP and provider rate-limit responses.
-- Setting the old tcs_session cookie must not grant access.
-
-Do not transfer ownership of seeded listings/orders or grant admin roles
-automatically based on a phone number or signup metadata.
+3. Restart local development or redeploy after updating environment variables.
 
 ## Local automated checks
 
@@ -65,12 +27,9 @@ npm run build
 ```
 
 The tests cover authentication boundaries with stubbed Supabase responses;
-they do not prove actual SMS delivery, migration application, or production
-session refresh. Complete the acceptance checks above after provider setup.
+they do not prove migration application or production
+session refresh. Complete the acceptance checks below after provider setup.
 
-The current implementation uses Supabase's server-enforced OTP limits.
-If enabling CAPTCHA in Supabase before public launch, add its matching client
-widget and pass its token to signInWithOtp as part of that configuration.
 Bank identity verification and payments remain separate, unfinished features.
 
 
@@ -95,35 +54,20 @@ Bank identity verification and payments remain separate, unfinished features.
 6. Enable **manual identity linking** in Supabase Authentication settings for
    the profile's Link Google button. The login button itself does not require it.
 
-Google-only accounts may browse. Buying, bidding, listing, and order mutations
-check phone verification on the server. `/verify-phone` uses
-`updateUser({ phone })` followed by OTP type `phone_change`; this keeps the
-Google account's existing UUID instead of signing into a second account.
-
-For a phone-first user, sign in with SMS and choose **Link Google** on that
-user's profile before signing in separately with Google. Both methods then
-use the same profile, listings, and order history.
-
-Already-created separate Google and phone accounts are not automatically
-merged. A phone or Google identity already attached to another account is
-rejected; contact support for ownership-verified recovery. Do not reassign
-orders or identities merely because someone supplies a matching number.
-
-Google login works without an SMS provider for browsing. SMS setup remains
-necessary to verify a phone and unlock trading. Phone verification does not
-grant bank verification or administrator privileges.
+Accounts sign in with LINE or Google. Buying, bidding, listing, and order
+mutations require a confirmed sign-in, enforced on the server. Already-created
+separate LINE and Google accounts are not automatically merged; a Google
+identity already attached to another account is rejected. Do not reassign
+orders or identities merely because someone supplies matching details.
 
 ### Additional acceptance checks
 
-- Google consent success opens browse with a phone-verification notice.
 - Cancelled consent or a stale callback shows a retry page.
-- Unverified Google users are redirected to phone verification before bids,
-  buy-now, checkout, and selling; direct listing API writes return 403.
-- Verify a new phone while signed in with Google. Check the UUID is unchanged.
-- Log out and sign in by that phone: confirm the same UUID and profile.
-- On a phone-first account, link an unused Google identity from the profile;
+- Signed-out users are blocked from bids, buy-now, checkout, and selling;
+  direct listing API writes return 403.
+- From a LINE account, link an unused Google identity from the profile;
   Google login must return to that same UUID.
-- A phone/Google identity belonging to a different account must not merge data.
+- A Google identity belonging to a different account must not merge data.
 - Both methods retain login on refresh and clear the local session on logout.
 
 References:
@@ -131,7 +75,7 @@ References:
 - https://supabase.com/docs/guides/auth/auth-identity-linking
 
 Automated tests stub provider responses. Real Google consent, live account
-linking, SMS delivery, and hosted session behavior still need verification
+linking and hosted session behavior still need verification
 after the external provider configuration is complete.
 
 ## Page speed: asymmetric JWT signing keys
@@ -165,7 +109,7 @@ sign in; while Developing, only accounts listed under Roles can.
 TCS requests the `openid profile` scopes. LINE users may have no email, so
 `getSessionUser` also accepts a `custom:line` identity (read from the Auth
 server's identities, never from user-editable metadata). Any confirmed sign-in
-(LINE, Google or phone) can trade; a phone number is optional. Before real
+(LINE or Google) can trade. Before real
 users arrive, add a seller check (for example a bank-account name that matches
 the profile) because this is the only gate on who can sell.
 
@@ -188,7 +132,3 @@ already have LINE linked — several real accounts (including the team's)
 predate LINE and are Google-only by design, and there is currently no way for
 them to add LINE to that same account themselves (linking only runs the other
 direction: Google onto an existing LINE session).
-
-Phone sign-in is hidden on the login page unless `NEXT_PUBLIC_PHONE_LOGIN=true`
-because it needs a paid SMS provider. Adding a phone to an existing account is
-unaffected.

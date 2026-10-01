@@ -1,4 +1,3 @@
-import { PhoneVerificationNotice } from "@/components/PhoneVerificationNotice";
 import { getListingItems } from "@/lib/listingItems";
 import { SpreadPicker } from "./SpreadPicker";
 import type { CSSProperties } from "react";
@@ -48,7 +47,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     return (
       <div style={{ "--wrap-max": "860px" } as CSSProperties}>
         <BackHeader href="/browse" title={listing.name} />
-        <PhoneVerificationNotice />
         <main className="py-7 pb-[70px]">
           <div className="wrap">
             <h1 className="text-[clamp(1.35rem,2.6vw,1.7rem)] leading-tight">{listing.name}</h1>
@@ -96,7 +94,6 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <div style={{ "--wrap-max": "1160px" } as CSSProperties}>
       <BackHeader href="/browse" title={listing.name} />
-      <PhoneVerificationNotice />
 
       <main>
         <section className="pb-2 pt-8">
