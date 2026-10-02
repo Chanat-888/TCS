@@ -198,6 +198,7 @@ function sellerActions(order, opts) {
   const actions = load("src/app/orders/[id]/seller/actions.ts", {
     "next/cache": noop,
     "@/lib/supabase/server": { createServiceClient: () => db.client },
+    "@/lib/trackingUrl": load("src/lib/trackingUrl.ts"),
     "@/lib/session": session("seller"),
   });
   return { actions, db };
@@ -205,7 +206,7 @@ function sellerActions(order, opts) {
 
 test("shipping and meet-up hand-over are refused until the seller has uploaded a packing video", async () => {
   const ship = sellerActions({ ...PAID_ORDER, delivery_method: "ship" });
-  assert.ok((await ship.actions.confirmShipment("o", "Flash Express", "TH1")).error);
+  assert.ok((await ship.actions.confirmShipment("o", "TH012345678A0")).error);
   assert.equal(ship.db.calls.updates.length, 0);
 
   const meet = sellerActions({ ...PAID_ORDER, delivery_method: "meetup" });
@@ -213,7 +214,7 @@ test("shipping and meet-up hand-over are refused until the seller has uploaded a
   assert.equal(meet.db.calls.updates.length, 0);
 
   const withVideo = sellerActions({ ...PAID_ORDER, delivery_method: "ship", packing_video_url: "https://files.test/p.mp4" });
-  assert.equal((await withVideo.actions.confirmShipment("o", "Flash Express", "TH1")).success, true);
+  assert.equal((await withVideo.actions.confirmShipment("o", "TH012345678A0")).success, true);
 });
 
 test("shipping loses cleanly if the order moved on (e.g. was disputed) in the meantime", async () => {
@@ -221,7 +222,7 @@ test("shipping loses cleanly if the order moved on (e.g. was disputed) in the me
     { ...PAID_ORDER, delivery_method: "ship", packing_video_url: "https://files.test/p.mp4" },
     { claim: { orders: [] } }
   );
-  assert.ok((await actions.confirmShipment("o", "Flash Express", "TH1")).error);
+  assert.ok((await actions.confirmShipment("o", "TH012345678A0")).error);
 });
 
 // ---------- approve vs dispute ----------

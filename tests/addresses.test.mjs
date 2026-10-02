@@ -288,6 +288,7 @@ function seller({ userId = "seller", order }) {
   const actions = load("src/app/orders/[id]/seller/actions.ts", {
     "next/cache": { revalidatePath() {} },
     "@/lib/supabase/server": { createServiceClient: () => db.client },
+    "@/lib/trackingUrl": load("src/lib/trackingUrl.ts"),
     "@/lib/session": { requireVerifiedUserId: async () => userId },
   });
   return { actions, db };
@@ -298,12 +299,12 @@ test("shipped orders still need a courier and tracking number", async () => {
   const { actions, db } = seller({ order: PAID });
   assert.ok((await actions.confirmShipment("o", "", "TH1")).error);
   assert.ok((await actions.confirmShipment("o", "Flash Express", " ")).error);
-  assert.equal((await actions.confirmShipment("o", "Flash Express", "TH123")).success, true);
+  assert.equal((await actions.confirmShipment("o", "TH012345678A0")).success, true);
   assert.equal(writes(db, "orders", "update")[0].values.status, "SHIPPED");
 });
 test("a meet-up order cannot be 'shipped', and only meet-up orders can be handed over", async () => {
   const meetup = seller({ order: { ...PAID, delivery_method: "meetup" } });
-  assert.ok((await meetup.actions.confirmShipment("o", "Flash Express", "TH123")).error);
+  assert.ok((await meetup.actions.confirmShipment("o", "TH012345678A0")).error);
   assert.equal(writes(meetup.db, "orders", "update").length, 0);
   assert.equal((await meetup.actions.confirmHandover("o")).success, true);
   const update = writes(meetup.db, "orders", "update")[0];
