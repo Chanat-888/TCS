@@ -30,8 +30,7 @@ Trust is the product. Auction is just the way to sell.
 ### In scope
 
 1. Account and identity
-   - Sign up with phone number (OTP).
-   - One phone number = one account.
+   - Sign in with Google. (Phone OTP / one-phone-one-account was dropped in Oct 2026; do not rebuild.)
    - Bank account name must match the profile name before any payout.
    - Verified badge on profile once bank name is matched.
 
@@ -115,7 +114,7 @@ Rules:
 |---|---|
 | Seller takes money, sends nothing | Escrow. Money only moves on buyer approval. |
 | Seller sends a different / damaged card | Locked listing photos + unboxing video + admin review. |
-| Scammer returns with a new account | Phone OTP + bank name match. New account has no history. |
+| Scammer returns with a new account | Bank name match (phone OTP dropped). New account has no history. |
 | Buyer lies to get a free card | Unboxing video required. Admin compares to listing photos. |
 | Buyer wins and never pays | 24h payment timer. Auto-cancel + strike on the account. |
 | Fake reviews | Reviews only from completed, paid orders. |
@@ -129,7 +128,7 @@ Rules:
 | Frontend | Next.js, PWA | One codebase, works on phone, no app store wait |
 | Backend / DB | Supabase (Postgres) | Auth, database, realtime, storage in one |
 | Live bidding | Supabase Realtime | No separate websocket server |
-| Auth | Supabase Auth + phone OTP | One phone, one account |
+| Auth | Supabase Auth + Google | Phone OTP dropped |
 | Images / video | Supabase Storage or Cloudflare R2 | R2 is cheaper if video gets big |
 | Payments / escrow | Omise or 2C2P (Thai) | PromptPay support, marketplace split, they hold the money |
 | Timers (auction end, auto-approve) | Supabase cron / Edge Functions | No extra server |
@@ -167,7 +166,7 @@ Order status: `PENDING_PAYMENT → PAID_HELD → SHIPPED → DELIVERED → COMPL
 
 ## 10. Open questions
 
-1. Identity level — is phone OTP + bank name match enough, or is Thai ID (KYC) needed? (Deferred. Must decide before writing payment code — it changes the database.)
+1. Identity level — is bank name match enough, or is Thai ID (KYC) needed? (Deferred. Must decide before writing payment code — it changes the database.)
 2. Which payment provider — Omise or 2C2P? Need to check escrow / delayed-capture support and fees.
 3. Who pays the payment fee — buyer, seller, or split?
 4. Condition grading standard — what words are allowed for "condition", and who is right in a dispute?

@@ -2,9 +2,9 @@
 
 <!-- impeccable:product-schema 1 -->
 
-## Implementation update — Google and phone authentication
+## Implementation update — Google authentication only
 
-Phone OTP now calls Supabase Auth, uses verified per-user sessions, supports resend and logout, and provisions profiles through migration 0006. SMS delivery and hosted verification still require project/provider configuration; see [auth setup](docs/auth-setup.md). Google OAuth now supports browsing without a verified phone. Trading mutations require phone verification; adding a phone to a Google account preserves its UUID. Phone-first users can link Google from their profile. Google provider setup and manual linking must be configured in Supabase before live use. The older surface inventory below describes design prototypes and is not a current implementation checklist.
+**DECISION (Oct 2026): phone OTP and "one phone = one account" are dropped; do not rebuild them.** Login is Google OAuth only (PR #33). Older mentions of phone OTP below are historical. Auth uses verified per-user sessions, supports resend and logout, and provisions profiles through migration 0006. SMS delivery and hosted verification still require project/provider configuration; see [auth setup](docs/auth-setup.md). Google OAuth now supports browsing without a verified phone. Trading mutations require phone verification; adding a phone to a Google account preserves its UUID. Phone-first users can link Google from their profile. Google provider setup and manual linking must be configured in Supabase before live use. The older surface inventory below describes design prototypes and is not a current implementation checklist.
 
 ## Implementation update — Omise payments (test mode)
 
@@ -16,7 +16,7 @@ web
 
 ## Stack
 
-Next.js (PWA). Supabase (Postgres, Auth with phone OTP, Realtime for live bidding, Storage). Escrow/payments via Omise (test mode; PromptPay + TrueMoney). 2C2P remains the fallback if Omise cannot support escrow/delayed payout for a live account. Timers (auction end, auto-approve) via Supabase cron / Edge Functions. Hosting on Vercel. Estimated launch cost: 0–1,500 THB/month. PWA first; native app only after there are real sellers.
+Next.js (PWA). Supabase (Postgres, Auth via Google OAuth, Realtime for live bidding, Storage). Escrow/payments via Omise (test mode; PromptPay + TrueMoney). 2C2P remains the fallback if Omise cannot support escrow/delayed payout for a live account. Timers (auction end, auto-approve) via Supabase cron / Edge Functions. Hosting on Vercel. Estimated launch cost: 0–1,500 THB/month. PWA first; native app only after there are real sellers.
 
 ## Users
 
@@ -30,7 +30,7 @@ TCS is a trading-card marketplace for the Thai market where the app holds paymen
 
 ## Positioning
 
-Facebook groups have no escrow (buyer pays first and hopes), no real identity (a scammer just makes a new account), and no structured dispute process. TCS's mechanism a neighboring product can't casually copy: money is held by a licensed payment provider until buyer approval (or an auto-approve timer), gated by phone-OTP + bank-name-matched identity, with mandatory unboxing-video evidence before any dispute can be opened.
+Facebook groups have no escrow (buyer pays first and hopes), no real identity (a scammer just makes a new account), and no structured dispute process. TCS's mechanism a neighboring product can't casually copy: money is held by a licensed payment provider until buyer approval (or an auto-approve timer), gated by bank-name-matched identity, with mandatory unboxing-video evidence before any dispute can be opened.
 
 ## Operating Context
 
@@ -44,7 +44,7 @@ Launch scope is Vanguard-first: TCS launches focused on Cardfight!! Vanguard to 
 
 **Spread posts (pick individual cards):** a seller can post a photo (up to 3) of many cards laid out and taps once on each card to drop a numbered pin (numbers assign themselves in tap order; a pin can be dragged), then gives each card its name, rarity, condition and fixed price. Buyers tap a pin on the photo, or tick the card in the list below, and buy all their picks as ONE order with one shipment, one packing video and one unboxing video; a dispute covers the whole order. Picking reserves the cards for the 24h payment window (first to reserve wins; one unpaid order per buyer per post); an unpaid or cancelled order gives the cards back automatically. Photos can be rotated and cropped before use (pins on a spread photo follow their cards through the turn/crop; a card cropped out is removed). Spread posts are fixed-price only — never bid on or bought whole — and stay open 30 days. (Earlier designs — a circle drawn around each card, and paper numbers placed beside each card — were dropped as too fiddly for sellers.)
 
-In scope for MVP: phone-OTP signup (one phone = one account) with bank-name-matched verified badge; card listings (photos, name, set, condition, start/buy-now price, auction end time); live bidding with anti-sniping and increment rules; escrow held by a licensed payment provider (app never touches money directly); delivery tracking; required in-app/uploaded unboxing video as dispute evidence; 48h dispute window with admin review; per-order buyer/seller chat visible to admin during disputes; post-order reviews (no fake reviews — only from completed orders); profile trust signals (completed sales, dispute count, join date, verified badge).
+In scope for MVP: Google signup with bank-name-matched verified badge (phone OTP dropped); card listings (photos, name, set, condition, start/buy-now price, auction end time); live bidding with anti-sniping and increment rules; escrow held by a licensed payment provider (app never touches money directly); delivery tracking; required in-app/uploaded unboxing video as dispute evidence; 48h dispute window with admin review; per-order buyer/seller chat visible to admin during disputes; post-order reviews (no fake reviews — only from completed orders); profile trust signals (completed sales, dispute count, join date, verified badge).
 
 **Trust-tier tag** (added after the browse/profile design pass): a label on the user's profile unlocked by accumulating good reviews — a tier system derived from data TCS already tracks (reviews), not a new points/currency mechanic. Exact tier names and the review-count thresholds for each are not decided yet; the user (Pan) intends to define the final tag labels.
 
@@ -55,7 +55,7 @@ In scope for MVP: phone-OTP signup (one phone = one account) with bank-name-matc
 Out of scope for v1: card grading/price guide, in-app shipping label purchase, card-for-card trading (no money), native apps (PWA only for now), seller shops/storefronts, fees and subscriptions (launch free).
 
 Open/undecided product facts (do not invent answers):
-- Identity level — phone OTP + bank-name match, or full Thai ID (KYC)? Deferred, but must be decided before payment code is written (changes the database).
+- Identity level — bank-name match, or full Thai ID (KYC)? Deferred, but must be decided before payment code is written (changes the database).
 - Payment provider for live money — building on Omise; still unconfirmed whether Omise will approve escrow/delayed seller payout (2C2P is the fallback).
 - Who pays the payment fee — buyer, seller, or split.
 - Condition-grading standard — allowed condition terms and dispute authority.
@@ -63,7 +63,7 @@ Open/undecided product facts (do not invent answers):
 - Video size limits and retention period for unboxing videos.
 - Trust-tier tag names and the review-count (or other) threshold each one requires.
 - Full achievement catalog beyond the three confirmed examples above.
-- Real login/session system: profile owner-vs-visitor view depends on it; phone-OTP auth is already in scope (Stack/Capabilities above) but not yet implemented — static design work assumes an authenticated-owner context until it exists.
+- Real login/session system: profile owner-vs-visitor view depends on it; phone-OTP auth was dropped (Google only) — static design work assumes an authenticated-owner context until it exists.
 
 ## Brand Commitments
 
