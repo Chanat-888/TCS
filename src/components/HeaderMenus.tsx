@@ -31,7 +31,9 @@ export const panelClass = (open: boolean) =>
 export const itemClass =
   "flex min-h-11 items-center gap-3 rounded-xl px-3 no-underline transition-colors hover:bg-[var(--line-soft)]";
 
-export const circleButtonStyle = { width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" };
+// 40px on narrow phones, 44px from 480px up: six circles plus the logo must fit a 360px screen.
+export const circleButtonClass = "h-10 w-10 min-[480px]:h-11 min-[480px]:w-11";
+export const circleButtonStyle = { background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" };
 
 export function AccountMenu({ userId }: { userId: string }) {
   const { open, setOpen, ref } = useDisclosure();
@@ -43,7 +45,7 @@ export function AccountMenu({ userId }: { userId: string }) {
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((o) => !o)}
-        className="flex cursor-pointer items-center justify-center rounded-full"
+        className={`${circleButtonClass} flex cursor-pointer items-center justify-center rounded-full`}
         style={circleButtonStyle}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -89,7 +91,7 @@ export function MobileMenu() {
         aria-label="เมนู"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="flex cursor-pointer items-center justify-center rounded-full"
+        className={`${circleButtonClass} flex cursor-pointer items-center justify-center rounded-full`}
         style={circleButtonStyle}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -106,8 +108,73 @@ export function MobileMenu() {
               <span className="text-[13.5px] font-medium">{s.label}</span>
             </Link>
           ))}
+          {/* The search icon leaves the header on very narrow phones to make room. */}
+          <Link href="/search" className={`${itemClass} min-[480px]:hidden`} style={{ color: "var(--white)" }} onClick={() => setOpen(false)}>
+            <span className="text-[13.5px] font-medium">ค้นหาการ์ด</span>
+          </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+const PlusIcon = (
+  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+/**
+ * Quick "post something" buttons. Wide screens get two buttons side by side (sell, and
+ * "looking for"); anything narrower gets one + button that opens both, so the phone header fits.
+ */
+export function CreateMenu() {
+  const { open, setOpen, ref } = useDisclosure();
+  return (
+    <>
+      <div className="hidden items-center gap-[10px] min-[1100px]:flex">
+        <Link
+          href="/listings/new"
+          className="flex h-11 items-center gap-[6px] rounded-full px-[18px] no-underline"
+          style={{ background: "var(--blue)", color: "#071523" }}
+        >
+          {PlusIcon}
+          <span className="text-[14px] font-semibold">ลงขาย</span>
+        </Link>
+        <Link
+          href="/wanted/new"
+          className="flex h-11 items-center rounded-full px-[16px] no-underline transition-colors hover:border-[var(--cyan-line)] hover:text-[var(--cyan)]"
+          style={{ background: "var(--panel)", border: "1px solid var(--line-strong)", color: "var(--white)" }}
+        >
+          <span className="text-[14px] font-medium">ลงประกาศหา</span>
+        </Link>
+      </div>
+      <div ref={ref} className="relative min-[1100px]:hidden">
+        <button
+          type="button"
+          aria-label="ลงประกาศ"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          onClick={() => setOpen((o) => !o)}
+          className={`${circleButtonClass} flex cursor-pointer items-center justify-center rounded-full`}
+          style={{ background: "var(--blue)", color: "#071523" }}
+        >
+          {PlusIcon}
+        </button>
+        <div className={`${panelClass(open)} left-0 min-[641px]:left-auto min-[641px]:right-0`}>
+          <div
+            className="flex w-[220px] flex-col gap-1 rounded-2xl p-2"
+            style={{ background: "var(--panel)", border: "1px solid var(--line)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
+          >
+            <Link href="/listings/new" className={itemClass} style={{ color: "var(--white)" }} onClick={() => setOpen(false)}>
+              <span className="text-[13.5px] font-medium">ลงขายการ์ด</span>
+            </Link>
+            <Link href="/wanted/new" className={itemClass} style={{ color: "var(--white)" }} onClick={() => setOpen(false)}>
+              <span className="text-[13.5px] font-medium">ลงประกาศหาการ์ด</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

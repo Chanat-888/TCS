@@ -11,8 +11,8 @@ export function CartLink() {
     <Link
       href="/cart"
       aria-label="ตะกร้าสินค้า"
-      className="relative flex items-center justify-center rounded-full no-underline"
-      style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
+      className="relative flex h-10 w-10 items-center justify-center rounded-full no-underline min-[480px]:h-11 min-[480px]:w-11"
+      style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.2)", color: "var(--steel)" }}
     >
       <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Brand } from "@/components/Brand";
 import { CartLink } from "@/components/CartLink";
-import { AccountMenu, MobileMenu } from "@/components/HeaderMenus";
+import { AccountMenu, CreateMenu, MobileMenu } from "@/components/HeaderMenus";
 import { NotificationBell } from "@/components/NotificationBell";
 
 type NavItem = {
@@ -173,7 +173,7 @@ export function SiteHeader({ userId }: { userId: string }) {
         borderBottom: "1px solid var(--line-soft)",
       }}
     >
-      <div className="wrap relative flex items-center gap-4 min-[860px]:gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
+      <div className="wrap relative flex items-center gap-3 min-[860px]:gap-8" style={{ paddingTop: 18, paddingBottom: 18 }}>
         <Brand />
         <nav className="flex items-center gap-1 max-[640px]:hidden">
           <NavDropdown label="Auction" href="/browse?type=auction" icon={GavelIcon} items={AUCTION_ITEMS} />
@@ -181,7 +181,7 @@ export function SiteHeader({ userId }: { userId: string }) {
           <NavDropdown label="ประกาศหา" href="/browse?type=wanted" icon={SearchIcon} items={WANTED_ITEMS} />
         </nav>
         <div className="flex-1" />
-        <div className="flex flex-shrink-0 items-center gap-[10px]">
+        <div className="flex flex-shrink-0 items-center gap-[6px] min-[480px]:gap-[10px]">
           <form action="/search" method="get" role="search" className="hidden min-[860px]:block">
             <div className="relative">
               <span className="pointer-events-none absolute left-[13px] top-1/2 -translate-y-1/2" style={{ color: "var(--steel)" }}>
@@ -202,25 +202,15 @@ export function SiteHeader({ userId }: { userId: string }) {
           <Link
             href="/search"
             aria-label="ค้นหา"
-            className="flex items-center justify-center rounded-full no-underline min-[860px]:hidden"
-            style={{ width: 44, height: 44, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
+            className="hidden h-11 w-11 items-center justify-center rounded-full no-underline min-[480px]:flex min-[860px]:hidden"
+            style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--steel)" }}
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <circle cx="9" cy="9" r="6.2" stroke="currentColor" strokeWidth="1.5" />
               <path d="M17 17 L13.6 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </Link>
-          <Link
-            href="/listings/new"
-            aria-label="ลงขายการ์ด"
-            className="flex h-11 flex-shrink-0 items-center justify-center gap-[6px] rounded-full no-underline min-[860px]:px-[18px] max-[859px]:w-11"
-            style={{ background: "var(--blue)", color: "#071523" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="text-[14px] font-semibold max-[859px]:hidden">ลงขาย</span>
-          </Link>
+          <CreateMenu />
           <CartLink />
           <NotificationBell userId={userId} />
           <AccountMenu userId={userId} />
