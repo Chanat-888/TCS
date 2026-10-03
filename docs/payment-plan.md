@@ -508,3 +508,52 @@ Nothing here is legal advice. The lawyer and accountant must confirm every item.
 - Exact terms text, including unclaimed balances, refund timing and dispute authority.
 - Do we need seller KYC beyond the bank-name check (section 8)?
 - When must receipts or tax invoices start, and what VAT applies to commission and withdrawal fees?
+
+---
+
+## 20. Tax follow-ups: reporting, interest, agent ruling, public view of B
+
+All from memory and chat, unverified. The accountant and lawyer confirm.
+
+### E-payment reporting (open question from section 16)
+Banks and payment providers report accounts with many incoming transactions or a large yearly total to the
+Revenue Department (remembered thresholds: about 3,000 transactions a year, or about 400 transactions with
+2 million THB or more; unverified). Account B will receive many buyer payments, so these inflows may be reported
+as if they were company sales. The report does not say whose money it is, so the ledger and reconciliation must
+be able to show that most of it belongs to sellers.
+
+### Interest on account B
+Ask the bank for a type of account that pays no interest or very little, so the question of who owns the interest
+does not arise:
+- Current account (กระแสรายวัน): usually no interest; may need a chequebook and have fees.
+- A business savings account at 0% or a very low rate, if the bank offers one.
+- An ordinary savings account pays interest, normally with 15% withholding tax taken by the bank.
+If B does pay interest, the accountant decides the booking; default is company income. The terms may say interest
+belongs to TCS (lawyer to check the wording).
+
+### Making the tax office accept agent treatment
+No guarantee; it is judged on evidence and substance. What helps:
+1. Terms of service stating TCS collects for the seller and keeps a commission, accepted by clickwrap with a
+   consent log (section 19).
+2. Conduct that matches: separate account B, ledger showing the seller as owed, no spending of seller money.
+3. Books and invoices that match: B booked as a payable; only commission and fees as revenue; invoices to sellers
+   for commission and fees only.
+4. A reconciliation trail from every bank-statement line to an order and a seller (sections 14 to 16).
+5. **Written ruling request** (หนังสือขอหารือ) to the Revenue Department describing the model and asking whether
+   it agrees. The answer is slow, but a written reply is the strongest protection. Ask the accountant if it is
+   worth doing before launch.
+6. Consistency: do not switch between agent and principal treatment over time.
+Weak spot: if TCS sets prices, decides disputes and controls the money, it may look like a seller. Get the
+accountant's opinion before launch.
+
+### Showing account B publicly (balance and transactions)
+Not recommended as a live bank view. Reasons:
+- Transactions carry buyer and seller names and amounts; publishing them risks the PDPA and the terms we give users.
+- Competitors and fraudsters can read our volume and timing.
+- It does not prove anything legally: the tax office and lawyer rely on the ledger, reconciliation and books.
+- Banks do not offer a public read-only view; we would have to copy data out ourselves.
+Safer ways to build trust:
+- Publish only totals on the site, for example "held for sellers" and "owed to sellers", from the daily
+  reconciliation, with no per-transaction detail.
+- A periodic letter or report from the accountant confirming that B's balance covers what is owed to sellers.
+- Clear terms on how money is held, released and refunded.
