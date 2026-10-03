@@ -12,7 +12,7 @@ import { secondsUntil } from "@/lib/countdown";
 import { trackingUrl } from "@/lib/trackingUrl";
 import { formatTHB, formatRelativeTime } from "@/lib/format";
 import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
-import { approveOrder, sendOrderMessage } from "./actions";
+import { approveOrder, getOrderMessages, sendOrderMessage } from "./actions";
 import { reportMeetupNoShow } from "./dispute/actions";
 import { postForm } from "@/lib/postForm";
 import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
@@ -436,6 +436,7 @@ export function OrderView({
           currentUserId={currentUserId}
           avatarFor={(senderId, isMe) => (isMe ? "คุณ" : sellerName.slice(0, 2).toUpperCase())}
           onSend={(body) => sendOrderMessage(order.id, body)}
+          onFetch={() => getOrderMessages(order.id)}
         />
       </div>
     </>

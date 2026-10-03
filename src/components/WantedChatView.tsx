@@ -2,7 +2,7 @@
 
 import { ChatPanel } from "@/components/ChatPanel";
 import type { WantedPostMessage } from "@/lib/supabase/types";
-import { sendWantedPostMessage } from "@/app/wanted/actions";
+import { getWantedThreadMessages, sendWantedPostMessage } from "@/app/wanted/actions";
 
 export function WantedChatView({
   wantedPostId,
@@ -24,6 +24,7 @@ export function WantedChatView({
       currentUserId={currentUserId}
       avatarFor={(senderId, isMe) => (isMe ? "คุณ" : otherPartyLabel)}
       onSend={(body) => sendWantedPostMessage(wantedPostId, responderId, body)}
+      onFetch={() => getWantedThreadMessages(wantedPostId, responderId)}
     />
   );
 }
