@@ -65,7 +65,9 @@ the seller's balance and the refund match. Real cash is already in B, so no gate
 
 1. **A company** (limited company registered with the DBD, with a tax ID) and **two company bank accounts.**
    A = operating (commission, fees, our costs). B = holding (seller money only). Open both at the same bank
-   (free transfers between them) and ask whether B can be marked as a customer-funds account.
+   (free transfers between them) and ask whether B can be marked as a customer-funds account. **Tell the bank in
+   writing what B is for** (customer funds for a marketplace: many small incoming transfers, payouts to many
+   sellers), because banks can freeze accounts that look like pass-through accounts.
 2. **Policy and legal.** Terms of service, privacy policy, registrations, lawyer and accountant answers
    (sections 8 and 16).
 3. **PromptPay QR generation.** A dynamic QR per order from the company's PromptPay ID (juristic person); the
@@ -113,6 +115,12 @@ the seller's balance and the refund match. Real cash is already in B, so no gate
 - Optional: add odd satang to the amount so each open order has its own amount and matching is easy.
 - QR and order expire together; late, wrong or double payments go to an admin queue and are refunded by hand.
 - Keep the slip image and the reader's response with the order as evidence for the audit trail (section 15).
+  The slip shows the buyer's name and account number, so limit who can see it and how long it is kept (PDPA).
+- **Never trust the slip image alone.** Check the receiving account, the amount, and that the payment time is after
+  the order was created. Treat the slip reader's answer as a check, not proof.
+- **Match each payment to a line on the real bank statement before the seller can withdraw it.** A slip alone
+  never releases money. The daily reconciliation compares B's balance with what is owed; this check goes one
+  level lower and matches each payment.
 
 ### Slip reader vs bank API
 
@@ -130,8 +138,12 @@ does not change; only the source of the "paid" event does.
 
 ### Risks of this route
 - **Legal:** with a gateway, a licensed company takes the pay-in. Here TCS receives buyers' money directly on
-  behalf of sellers, which makes the Payment Systems Act and Escrow Act question (section 8) sharper. The
+  behalf of sellers, which makes the Payment Systems Act and Escrow Act question (section 8) sharper. A licensed
   lawyer must answer this before launch.
+- **The bank may freeze account B.** Many small transfers from unrelated people followed by payouts to many
+  others looks like a pass-through account (from memory, verify). Ask the bank in writing before opening B.
+- **Anti-money-laundering rules** probably apply to holding and moving customers' money. Not yet researched;
+  lawyer question.
 - No chargeback or KYC tooling from a gateway; a buyer's bank dispute is settled on our records alone.
 - Buyers forgetting to upload the slip: show clear steps, a reminder and an expiry.
 - Third-party dependency: if the slip reader is down, orders wait for an admin check.
@@ -213,12 +225,15 @@ Notes:
   scope**.
 
 ### Questions to send
-- **Lawyer:** may TCS receive buyers' money directly into its own account on behalf of sellers; is a seller
-  balance a permitted closed-loop wallet; any licence or registration needed; terms wording.
+- **Lawyer (a licensed Thai lawyer, not only a student):** may TCS receive buyers' money directly into its own
+  account on behalf of sellers; is a seller balance a permitted closed-loop wallet; any licence or registration
+  needed; anti-money-laundering duties; what happens if the bank freezes B; terms wording. The full list is in
+  [legal-summary.md](legal-summary.md).
 - **Accountant:** agent vs principal, VAT timing and invoices, seller reporting and withholding, interest on B,
   owner buffer, year-end treatment of money held for sellers.
-- **Bank:** account B as a customer-funds account; fees on incoming and outgoing transfers; zero-interest account
-  types; the corporate cash management service (fees, minimums, approval for a new company).
+- **Bank:** is account B allowed to take many small transfers and pay out to many sellers, and will they note
+  that purpose on the account; account B as a customer-funds account; fees on incoming and outgoing transfers;
+  zero-interest account types; the corporate cash management service (fees, minimums, approval for a new company).
 - **Slip-reader provider:** price per slip, uptime, which banks it covers, how it detects edited slips.
 
 ---
@@ -257,7 +272,8 @@ The existing Omise code is the starting point for Part B if we fall back. The un
    reference; admin queue for mismatches.
 2. **Phase 1, no bank API needed.** Ledger tables; pending/available; withdrawal request screen; admin page with
    a CSV of requests and a "mark as paid" button; admin pays by hand from the bank app.
-3. **Phase 2.** Daily reconciliation report (bank B balance vs total owed); monthly accountant export.
+3. **Phase 2.** Daily reconciliation report (bank B balance vs total owed); match each payment to a bank
+   statement line before it becomes withdrawable; monthly accountant export.
 4. **Phase 3.** Terms and privacy pages, clickwrap and consent log (section 16); needed before real money.
 5. **Phase 4.** Seller bank-name check and verified badge.
 6. **Phase 5.** Bank API for pay-in and bank bulk payment for payouts (corporate cash management), once the
@@ -408,7 +424,7 @@ Nothing here is legal advice. The lawyer and accountant must confirm every item.
 | 4 | Bookkeeping (B = liability, commission and fees = revenue) | Not code; see sections 7 and 15 | Give the accountant sections 7 and 15 |
 | 5 | Ledger and reconciliation tied to order ID and seller code | Planned, not built (sections 11, 13, 14); `0024_seller_payouts.sql` is the old per-order payout | Build Phases 1 and 2; keep the slip image and reader response with each order |
 | 6 | Receipts / tax invoices for commission and fees only | Missing | Needed once VAT-registered; ask the accountant whether before |
-| 7 | Privacy policy (PDPA: we will hold bank account numbers, delivery addresses, IP addresses) | Missing | Lawyer-approved privacy page, linked from signup and checkout |
+| 7 | Privacy policy (PDPA: we will hold bank account numbers, delivery addresses, IP addresses, and slip images showing buyers' names and account numbers) | Missing | Lawyer-approved privacy page, linked from signup and checkout |
 
 ### Build order for the policy work
 1. Terms and privacy pages (draft, versioned) and the `terms_acceptances` migration.
