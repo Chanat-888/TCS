@@ -3,15 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
+import { COURIER_NAMES, cleanTrackingNumber, detectCourier } from "@/lib/trackingUrl";
 
 // TCS always needs video from both sides: the seller's packing video before
 // anything leaves their hands, and the buyer's unboxing video on receipt.
 const PACKING_VIDEO_REQUIRED = "อัปโหลดวิดีโอแพ็คของก่อนยืนยัน — TCS ต้องมีวิดีโอจากทั้งผู้ขายและผู้ซื้อทุกออเดอร์";
 
-export async function confirmShipment(orderId: string, courier: string, trackingNumber: string) {
+// The courier is read from the tracking number's format. `chosenCourier` is only a fallback for
+// numbers we don't recognise, so a shipment is never blocked by an unfamiliar courier.
+export async function confirmShipment(orderId: string, trackingNumber: string, chosenCourier?: string) {
   const userId = await requireVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
-  if (!courier || !trackingNumber.trim()) return { error: "เลือกบริษัทขนส่งและกรอกเลขพัสดุก่อนยืนยัน" as const };
+  const tracking = cleanTrackingNumber(trackingNumber);
+  if (!tracking) return { error: "เลขพัสดุไม่ถูกต้อง (ตัวอักษร/ตัวเลข 5-40 ตัว ไม่มีช่องว่าง)" as const };
+  const courier = detectCourier(tracking) ?? (chosenCourier && COURIER_NAMES.includes(chosenCourier) ? chosenCourier : null);
+  if (!courier) return { error: "ไม่รู้จักเลขพัสดุนี้ กรุณาเลือกบริษัทขนส่ง" as const };
 
   const supabase = createServiceClient();
   const { data: order } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
@@ -23,7 +29,7 @@ export async function confirmShipment(orderId: string, courier: string, tracking
   const now = new Date().toISOString();
   const { data: claimed, error } = await supabase
     .from("orders")
-    .update({ status: "SHIPPED", courier, tracking_number: trackingNumber.trim(), shipped_at: now })
+    .update({ status: "SHIPPED", courier, tracking_number: tracking, shipped_at: now })
     .eq("id", orderId)
     .eq("status", "PAID_HELD")
     .select("id");

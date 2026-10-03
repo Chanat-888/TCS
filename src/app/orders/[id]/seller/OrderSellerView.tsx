@@ -11,10 +11,8 @@ import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 import { postForm } from "@/lib/postForm";
 import { splitPayout } from "@/lib/commission";
-import { trackingUrl } from "@/lib/trackingUrl";
+import { COURIER_NAMES, cleanTrackingNumber, detectCourier, trackingUrl } from "@/lib/trackingUrl";
 import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
-
-const COURIERS = ["Flash Express", "Kerry Express", "ไปรษณีย์ไทย (EMS)", "J&T Express"];
 
 export function OrderSellerView({
   order,
@@ -61,20 +59,30 @@ export function OrderSellerView({
     setError("");
   }
 
+  // The courier comes from the number's format; the dropdown only appears for numbers we don't recognise.
+  const cleanedTracking = cleanTrackingNumber(tracking);
+  const detectedCourier = cleanedTracking ? detectCourier(cleanedTracking) : null;
+  const needsCourierChoice = Boolean(cleanedTracking) && !detectedCourier;
+
   async function handleConfirm() {
-    if (!courier || !tracking.trim()) {
-      setError("เลือกบริษัทขนส่งและกรอกเลขพัสดุก่อนยืนยัน");
+    if (!cleanedTracking) {
+      setError("กรอกเลขพัสดุให้ถูกต้อง (ตัวอักษร/ตัวเลข 5-40 ตัว ไม่มีช่องว่าง)");
+      return;
+    }
+    const finalCourier = detectedCourier ?? courier;
+    if (!finalCourier) {
+      setError("ไม่รู้จักเลขพัสดุนี้ กรุณาเลือกบริษัทขนส่ง");
       return;
     }
     setSubmitting(true);
     setError("");
-    const result = await confirmShipment(order.id, courier, tracking);
+    const result = await confirmShipment(order.id, cleanedTracking, courier || undefined);
     setSubmitting(false);
     if ("error" in result) {
       setError(result.error ?? "เกิดข้อผิดพลาด ลองอีกครั้ง");
       return;
     }
-    setShippedInfo({ courier, tracking });
+    setShippedInfo({ courier: finalCourier, tracking: cleanedTracking });
     setShipped(true);
   }
 
@@ -103,7 +111,7 @@ export function OrderSellerView({
   const steps: TimelineStep[] = [
     { label: "เงินถูกพักไว้", state: "done", meta: <>ผู้ซื้อชำระเงินแล้ว · <span className="mono">{order.paid_at ? formatRelativeTime(order.paid_at) : ""}</span></> },
     { label: "ถ่ายวิดีโอแพ็คของ", state: packingUrl ? "done" : shipped ? "done" : "active", meta: packingUrl ? "อัปโหลดแล้ว — ผู้ซื้อและแอดมินดูได้" : "บังคับทุกออเดอร์ ก่อนยืนยันการจัดส่ง/ส่งมอบ" },
-    { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกขนส่งและเลขพัสดุเพื่อยืนยันการจัดส่ง") },
+    { label: isMeetup ? "ส่งมอบสินค้า (นัดรับ)" : "จัดส่งสินค้า", state: shipped ? "done" : "pending", meta: shipped ? (isMeetup ? "ส่งมอบแล้ว" : <>{shippedInfo.courier} · เลขพัสดุ <span className="mono">{shippedInfo.tracking}</span></>) : (isMeetup ? "นัดสถานที่และเวลากับผู้ซื้อในแชท แล้วกดยืนยันส่งมอบ" : "กรอกเลขพัสดุเพื่อยืนยันการจัดส่ง") },
     { label: "ถึงมือผู้ซื้อ", state: order.delivered_at ? "done" : "pending", meta: "อัปเดตอัตโนมัติเมื่อผู้ซื้อยืนยันว่าได้รับพัสดุ" },
     { label: "ผู้ซื้อยืนยันรับการ์ด", state: isDone ? "done" : "pending", meta: "ผู้ซื้อถ่ายวิดีโอแกะกล่องแล้วกดรับ หรือระบบอนุมัติอัตโนมัติภายใน 48 ชม." },
     { label: "เงินโอนเข้าบัญชีคุณ", state: isDone ? "done" : "pending", meta: payoutMeta },
@@ -273,39 +281,45 @@ export function OrderSellerView({
           <div className="rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid rgba(95,212,255,0.2)" }}>
             <h3 className="text-[15px] font-medium">ยืนยันการจัดส่ง</h3>
             <p className="mt-[6px] max-w-[54ch] text-[13px] leading-relaxed" style={{ color: "var(--steel)" }}>
-              กรอกบริษัทขนส่งและเลขพัสดุ ผู้ซื้อจะเห็นข้อมูลนี้ทันทีและติดตามสถานะได้เอง
+              กรอกเลขพัสดุ ระบบจะดูบริษัทขนส่งจากเลขให้เอง ผู้ซื้อจะเห็นข้อมูลนี้ทันทีและกดติดตามสถานะได้เลย
             </p>
-            <div className="mt-[14px] grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
-              <div>
-                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-                  บริษัทขนส่ง
-                </label>
-                <select
-                  value={courier}
-                  onChange={(e) => { setCourier(e.target.value); setError(""); }}
-                  className="h-11 w-full rounded-[10px] px-[13px] text-[14.5px] outline-none"
-                  style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: courier ? "var(--white)" : "var(--steel-dim)" }}
-                >
-                  <option value="">เลือกบริษัทขนส่ง</option>
-                  {COURIERS.map((c) => (
-                    <option key={c} value={c} style={{ color: "var(--white)" }}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
-                  เลขพัสดุ
-                </label>
-                <input
-                  className="mono h-11 w-full rounded-[10px] px-[13px] text-[14.5px] outline-none"
-                  style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
-                  placeholder="TH0234998877XX"
-                  value={tracking}
-                  onChange={(e) => { setTracking(e.target.value); setError(""); }}
-                />
-              </div>
+            <div className="mt-[14px]">
+              <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                เลขพัสดุ
+              </label>
+              <input
+                className="mono h-11 w-full rounded-[10px] px-[13px] text-[14.5px] outline-none"
+                style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
+                placeholder="TH0234998877XX"
+                autoCapitalize="characters"
+                value={tracking}
+                onChange={(e) => { setTracking(e.target.value); setError(""); }}
+              />
+              {detectedCourier && (
+                <p className="mt-2 text-[12.5px]" style={{ color: "var(--cyan)" }}>
+                  ตรวจพบขนส่ง: {detectedCourier}
+                </p>
+              )}
+              {needsCourierChoice && (
+                <div className="mt-3">
+                  <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
+                    ไม่รู้จักเลขพัสดุนี้ — เลือกบริษัทขนส่งเอง
+                  </label>
+                  <select
+                    value={courier}
+                    onChange={(e) => { setCourier(e.target.value); setError(""); }}
+                    className="h-11 w-full rounded-[10px] px-[13px] text-[14.5px] outline-none"
+                    style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: courier ? "var(--white)" : "var(--steel-dim)" }}
+                  >
+                    <option value="">เลือกบริษัทขนส่ง</option>
+                    {COURIER_NAMES.map((c) => (
+                      <option key={c} value={c} style={{ color: "var(--white)" }}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             {error && (
               <p className="mt-[10px] text-[12px]" style={{ color: "var(--danger)" }}>
