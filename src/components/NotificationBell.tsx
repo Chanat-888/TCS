@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { formatRelativeTime } from "@/lib/format";
-import { useDisclosure, panelClass, circleButtonStyle } from "@/components/HeaderMenus";
+import { useDisclosure, circleButtonClass, circleButtonStyle } from "@/components/HeaderMenus";
 
 type NotificationRow = {
   id: string;
@@ -96,7 +96,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={handleOpen}
-        className="relative flex cursor-pointer items-center justify-center rounded-full"
+        className={`${circleButtonClass} relative flex cursor-pointer items-center justify-center rounded-full`}
         style={circleButtonStyle}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -127,9 +127,12 @@ export function NotificationBell({ userId }: { userId: string }) {
           </span>
         )}
       </button>
-      <div className={`${panelClass(open)} right-0`}>
+      {/* On phones the panel is pinned to the screen edges (the bell is too far from the right edge for a 320px panel). */}
+      <div
+        className={`${open ? "visible opacity-100" : "invisible opacity-0"} fixed inset-x-3 top-[76px] z-10 transition-all duration-150 min-[641px]:absolute min-[641px]:inset-x-auto min-[641px]:right-0 min-[641px]:top-full min-[641px]:pt-3`}
+      >
         <div
-          className="flex max-h-[420px] w-[320px] flex-col overflow-y-auto rounded-2xl p-2"
+          className="flex max-h-[420px] w-full flex-col min-[641px]:w-[320px] overflow-y-auto rounded-2xl p-2"
           style={{ background: "var(--panel)", border: "1px solid var(--line)", boxShadow: "0 24px 48px -16px rgba(0,0,0,0.5)" }}
         >
           <p className="px-2 py-2 text-[13px] font-medium" style={{ color: "var(--white)" }}>
