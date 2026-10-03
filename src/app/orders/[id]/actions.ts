@@ -30,9 +30,12 @@ export async function approveOrder(orderId: string) {
   return { success: true as const };
 }
 
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
+
 export async function sendOrderMessage(orderId: string, body: string) {
   const userId = await requireVerifiedUserId();
   if (!userId || !body.trim()) return { error: "ส่งข้อความไม่สำเร็จ" as const };
+  if (body.trim().length > MAX_CHAT_MESSAGE_LENGTH) return { error: `ข้อความยาวเกินไป (สูงสุด ${MAX_CHAT_MESSAGE_LENGTH} ตัวอักษร)` as const };
 
   const supabase = createServiceClient();
   const { data: order } = await supabase.from("orders").select("buyer_id, seller_id").eq("id", orderId).maybeSingle();
@@ -44,4 +47,15 @@ export async function sendOrderMessage(orderId: string, body: string) {
   revalidatePath(`/orders/${orderId}`);
   revalidatePath(`/orders/${orderId}/seller`);
   return { success: true as const };
+}
+
+/** The order's chat, for the live refresh. Only the buyer or seller may read it. */
+export async function getOrderMessages(orderId: string) {
+  const userId = await requireVerifiedUserId();
+  const supabase = createServiceClient();
+  const { data: order } = await supabase.from("orders").select("buyer_id, seller_id").eq("id", orderId).maybeSingle();
+  if (!order || (order.buyer_id !== userId && order.seller_id !== userId)) return { error: "ไม่พบข้อความ" as const };
+  const { data, error } = await supabase.from("messages").select("id, sender_id, body, created_at").eq("order_id", orderId).order("created_at", { ascending: true });
+  if (error) return { error: "โหลดข้อความไม่สำเร็จ" as const };
+  return { messages: data ?? [] };
 }
