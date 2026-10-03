@@ -22,7 +22,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div style={{ "--wrap-max": "720px" } as CSSProperties}>
-      <BackHeader href="/browse" title="สถานะคำสั่งซื้อ" subtitle={`#${detail.order.order_code}`} />
+      <BackHeader href="/browse" exact title="สถานะคำสั่งซื้อ" subtitle={`#${detail.order.order_code}`} />
       <main className="py-7 pb-[70px]">
         <div className="wrap">
           <OrderItemsList items={orderItems} />

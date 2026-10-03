@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { BackLink } from "./BackLink";
 import type { ReactNode } from "react";
 
 export function BackHeader({
@@ -6,11 +6,13 @@ export function BackHeader({
   title,
   subtitle,
   right,
+  exact,
 }: {
   href: string;
   title: string;
   subtitle?: string;
   right?: ReactNode;
+  exact?: boolean;
 }) {
   return (
     <header
@@ -23,8 +25,9 @@ export function BackHeader({
     >
       <div className="wrap grid grid-cols-[1fr_auto_1fr] items-center gap-3 py-[10px]">
         <div className="flex justify-start">
-          <Link
+          <BackLink
             href={href}
+            exact={exact}
             className="group inline-flex h-11 items-center gap-[4px] rounded-full pl-[10px] pr-[14px] text-[13.5px] font-medium no-underline transition-colors hover:text-[var(--cyan)]"
             style={{ color: "var(--white)" }}
           >
@@ -40,7 +43,7 @@ export function BackHeader({
               <path d="M12.5 4 L6 10 L12.5 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             กลับ
-          </Link>
+          </BackLink>
         </div>
 
         <div className="min-w-0 max-w-[46vw] text-center">
