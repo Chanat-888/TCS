@@ -109,100 +109,152 @@ test("once there is a bid, only the description changes and photos are ignored",
 });
 
 // ---------- "looking for" posts ----------
+const wantedForm = load("src/lib/wantedForm.ts");
+const wantedPhoto = load("src/lib/wantedPhoto.ts");
+
 function wantedDb({ post }) {
-  const calls = { updates: [], inserts: [], filters: [] };
-  return {
-    calls,
-    client: {
-      from() {
-        const filters = {};
-        const chain = {
-          select() { return chain; },
-          eq(col, val) { filters[col] = val; return chain; },
-          insert(v) { calls.inserts.push(v); return Promise.resolve({ error: null }); },
-          update(v) { calls.updates.push(v); calls.filters.push(filters); return chain; },
-          maybeSingle: async () => ({ data: post }),
-          then(resolve) {
+  const calls = { updates: [], inserts: [], deletes: 0, uploads: [], filters: [] };
+  const client = {
+    from() {
+      const filters = {};
+      let mode = "select";
+      const chain = {
+        select() { return chain; },
+        eq(col, val) { filters[col] = val; return chain; },
+        insert(v) { calls.inserts.push(v); mode = "insert"; return chain; },
+        update(v) { calls.updates.push(v); calls.filters.push(filters); mode = "update"; return chain; },
+        delete() { calls.deletes++; mode = "delete"; return chain; },
+        single: async () => ({ data: { id: "w-new" }, error: null }),
+        maybeSingle: async () => ({ data: post }),
+        then(resolve) {
+          if (mode === "update") {
             // An update only "matches" a row that is the poster's own and still active.
             const hit = post && filters.poster_id === post.poster_id && (filters.status ? filters.status === post.status : true);
-            resolve({ data: hit ? [{ id: "w1" }] : [], error: null });
-          },
-        };
-        return chain;
-      },
+            return resolve({ data: hit ? [{ id: "w1" }] : [], error: null });
+          }
+          resolve({ data: [], error: null });
+        },
+      };
+      return chain;
+    },
+    storage: {
+      from: () => ({
+        upload: async (path, _bytes, opts) => { calls.uploads.push({ path, opts }); return { error: null }; },
+        getPublicUrl: (p) => ({ data: { publicUrl: "https://files.test/" + p } }),
+      }),
     },
   };
+  return { calls, client };
 }
 
+function wantedRoutes(userId, db) {
+  const deps = {
+    "next/server": { NextResponse: Response },
+    "next/cache": { revalidatePath() {} },
+    "@/lib/supabase/server": { createServiceClient: () => db.client },
+    "@/lib/session": { getVerifiedUserId: async () => userId },
+    "@/lib/wantedForm": wantedForm,
+    "@/lib/imageUpload": img,
+    "@/lib/wantedPhoto": wantedPhoto,
+  };
+  return { create: load("src/app/api/wanted/route.ts", deps), edit: load("src/app/api/wanted/[id]/route.ts", deps) };
+}
+
+function wantedRequest(extra = {}, method = "POST") {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries({ name: "Blaster", set: "BT01", category: "rare", maxPrice: "500", note: "n", ...extra })) {
+    if (v !== null) fd.append(k, v);
+  }
+  return new Request("https://tcs.test/api/wanted", { method, body: fd });
+}
+const jpeg = () => new File([JPEG], "c.jpg", { type: "image/jpeg" });
+const post = (status = "active") => ({ poster_id: "poster", status });
+
+test("a wanted post is created from valid input, and the form checks are strict", async () => {
+  const db = wantedDb({ post: null });
+  const { create } = wantedRoutes("poster", db);
+  const res = await create.POST(wantedRequest());
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).id, "w-new");
+  assert.equal(db.calls.inserts[0].poster_id, "poster");
+  assert.equal(db.calls.inserts[0].max_price, 500);
+  assert.equal(db.calls.uploads.length, 0, "a photo is optional");
+
+  for (const extra of [{ name: "" }, { category: "weird" }, { maxPrice: "0" }, { maxPrice: "abc" }, { note: "x".repeat(401) }, { name: "x".repeat(121) }]) {
+    const bad = wantedDb({ post: null });
+    assert.equal((await wantedRoutes("poster", bad).create.POST(wantedRequest(extra))).status, 400);
+    assert.equal(bad.calls.inserts.length, 0, "nothing is created for invalid input");
+  }
+  const signedOut = wantedRoutes(null, wantedDb({ post: null }));
+  assert.equal((await signedOut.create.POST(wantedRequest())).status, 403);
+});
+
+test("a reference photo is stored under wanted/<id>/ and linked to the post; a fake image creates nothing", async () => {
+  const db = wantedDb({ post: null });
+  const res = await wantedRoutes("poster", db).create.POST(wantedRequest({ photo: jpeg() }));
+  assert.equal(res.status, 200);
+  assert.match(db.calls.uploads[0].path, /^wanted\/w-new\/photo-[0-9a-f-]+\.jpg$/);
+  assert.equal(db.calls.uploads[0].opts.contentType, "image/jpeg");
+  assert.match(db.calls.updates[0].photo_url, /^https:\/\/files\.test\/wanted\/w-new\//);
+
+  const fake = wantedDb({ post: null });
+  const bad = await wantedRoutes("poster", fake).create.POST(wantedRequest({ photo: new File(["<svg onload=alert(1)>............"], "c.jpg", { type: "image/jpeg" }) }));
+  assert.equal(bad.status, 400);
+  assert.equal(fake.calls.inserts.length, 0);
+  assert.equal(fake.calls.uploads.length, 0);
+});
+
+test("the poster can edit their open post and replace its photo; the update is limited to their own open row", async () => {
+  const db = wantedDb({ post: post() });
+  const { edit } = wantedRoutes("poster", db);
+  const res = await edit.PATCH(wantedRequest({ maxPrice: "900", photo: jpeg() }, "PATCH"), { params: Promise.resolve({ id: "w1" }) });
+  assert.equal(res.status, 200);
+  assert.equal(db.calls.updates[0].max_price, 900);
+  assert.match(db.calls.updates[0].photo_url, /wanted\/w1\//);
+  assert.equal(db.calls.filters[0].poster_id, "poster");
+  assert.equal(db.calls.filters[0].status, "active");
+
+  const keep = wantedDb({ post: post() });
+  await wantedRoutes("poster", keep).edit.PATCH(wantedRequest({}, "PATCH"), { params: Promise.resolve({ id: "w1" }) });
+  assert.equal("photo_url" in keep.calls.updates[0], false, "no new photo keeps the current one");
+});
+
+test("someone else's post, a closed post, and invalid input are all refused when editing", async () => {
+  const params = { params: Promise.resolve({ id: "w1" }) };
+  const stranger = wantedDb({ post: post() });
+  assert.equal((await wantedRoutes("other", stranger).edit.PATCH(wantedRequest({}, "PATCH"), params)).status, 404);
+  assert.equal(stranger.calls.updates.length, 0);
+
+  const closed = wantedDb({ post: post("closed") });
+  assert.equal((await wantedRoutes("poster", closed).edit.PATCH(wantedRequest({}, "PATCH"), params)).status, 409);
+  assert.equal(closed.calls.updates.length, 0);
+
+  const bad = wantedDb({ post: post() });
+  assert.equal((await wantedRoutes("poster", bad).edit.PATCH(wantedRequest({ category: "weird" }, "PATCH"), params)).status, 400);
+  assert.equal(bad.calls.updates.length, 0);
+});
+
 function wantedActions(userId, db) {
-  const redirects = [];
-  const actions = load("src/app/wanted/actions.ts", {
-    "next/navigation": { redirect: (to) => { redirects.push(to); throw new Error("redirect:" + to); } },
+  return load("src/app/wanted/actions.ts", {
     "next/cache": { revalidatePath() {} },
     "@/lib/supabase/server": { createServiceClient: () => db.client },
     "@/lib/session": { requireVerifiedUserId: async () => userId },
   });
-  return { actions, redirects };
 }
 
-const form = (extra = {}) => {
-  const fd = new FormData();
-  for (const [k, v] of Object.entries({ name: "Blaster", set: "BT01", category: "rare", maxPrice: "500", note: "n", ...extra })) fd.append(k, v);
-  return fd;
-};
-
-test("the poster can edit their open post; the update is limited to their own, still-open row", async () => {
-  const db = wantedDb({ post: { poster_id: "poster", status: "active" } });
-  const { actions, redirects } = wantedActions("poster", db);
-  await assert.rejects(actions.updateWantedPost("w1", form({ maxPrice: "900" })), /redirect:\/profile/);
-  assert.equal(db.calls.updates[0].max_price, 900);
-  assert.equal(db.calls.filters[0].poster_id, "poster");
-  assert.equal(db.calls.filters[0].status, "active");
-  assert.deepEqual(redirects, ["/profile"]);
-});
-
-test("someone else's post, a closed post, and invalid input are all refused", async () => {
-  const stranger = wantedActions("other", wantedDb({ post: { poster_id: "poster", status: "active" } }));
-  await assert.rejects(stranger.actions.updateWantedPost("w1", form()), /redirect:\/wanted\/w1\/edit\?error=1/);
-
-  const closed = wantedActions("poster", wantedDb({ post: { poster_id: "poster", status: "closed" } }));
-  await assert.rejects(closed.actions.updateWantedPost("w1", form()), /edit\?error=1/);
-
-  const db = wantedDb({ post: { poster_id: "poster", status: "active" } });
-  const bad = wantedActions("poster", db);
-  for (const extra of [{ name: "" }, { category: "weird" }, { maxPrice: "0" }, { maxPrice: "abc" }, { note: "x".repeat(401) }, { name: "x".repeat(121) }]) {
-    await assert.rejects(bad.actions.updateWantedPost("w1", form(extra)), /edit\?error=1/);
-  }
-  assert.equal(db.calls.updates.length, 0, "nothing is written for invalid input");
-});
-
-test("creating a wanted post uses the same checks", async () => {
-  const db = wantedDb({ post: null });
-  const { actions } = wantedActions("poster", db);
-  await assert.rejects(actions.createWantedPost(form({ category: "weird" })), /\/wanted\/new\?error=1/);
-  assert.equal(db.calls.inserts.length, 0);
-  await assert.rejects(actions.createWantedPost(form()), /redirect:\/profile/);
-  assert.equal(db.calls.inserts[0].poster_id, "poster");
-  assert.equal(db.calls.inserts[0].max_price, 500);
-});
-
 test("only the poster can close their post, and only once", async () => {
-  const ok = wantedDb({ post: { poster_id: "poster", status: "active" } });
-  assert.equal((await wantedActions("poster", ok).actions.closeWantedPost("w1")).success, true);
+  const ok = wantedDb({ post: post() });
+  assert.equal((await wantedActions("poster", ok).closeWantedPost("w1")).success, true);
   assert.equal(ok.calls.updates[0].status, "closed");
 
-  const stranger = wantedActions("other", wantedDb({ post: { poster_id: "poster", status: "active" } }));
-  assert.ok((await stranger.actions.closeWantedPost("w1")).error);
-
-  const again = wantedActions("poster", wantedDb({ post: { poster_id: "poster", status: "closed" } }));
-  assert.ok((await again.actions.closeWantedPost("w1")).error);
+  assert.ok((await wantedActions("other", wantedDb({ post: post() })).closeWantedPost("w1")).error);
+  assert.ok((await wantedActions("poster", wantedDb({ post: post("closed") })).closeWantedPost("w1")).error);
 });
 
 test("nobody can add messages to a closed post", async () => {
-  const closed = wantedActions("resp", wantedDb({ post: { poster_id: "poster", status: "closed" } }));
-  assert.match((await closed.actions.sendWantedPostMessage("w1", "resp", "hi")).error, /ปิดแล้ว/);
+  assert.match((await wantedActions("resp", wantedDb({ post: post("closed") })).sendWantedPostMessage("w1", "resp", "hi")).error, /ปิดแล้ว/);
 
-  const open = wantedDb({ post: { poster_id: "poster", status: "active" } });
-  assert.equal((await wantedActions("resp", open).actions.sendWantedPostMessage("w1", "resp", "hi")).success, true);
+  const open = wantedDb({ post: post() });
+  assert.equal((await wantedActions("resp", open).sendWantedPostMessage("w1", "resp", "hi")).success, true);
   assert.equal(open.calls.inserts.length, 1);
 });

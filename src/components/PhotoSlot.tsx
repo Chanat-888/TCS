@@ -15,12 +15,15 @@ export function PhotoSlot({
   onPick,
   onRemove,
   existingUrl,
+  required = true,
 }: {
   label: string;
   file: File | null;
   onPick: (f: File) => void;
   onRemove: () => void;
   existingUrl?: string | null;
+  /** Shows the red asterisk; false for an optional photo. */
+  required?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preparing, setPreparing] = useState(false);
@@ -61,7 +64,7 @@ export function PhotoSlot({
   return (
     <div>
       <p className="mb-2 text-[12.5px]" style={{ color: "var(--steel)" }}>
-        {label} <span style={{ color: "var(--danger)" }}>*</span>
+        {label} {required && <span style={{ color: "var(--danger)" }}>*</span>}
       </p>
       <div className="relative" style={{ aspectRatio: "5 / 6.2" }}>
         {!preview ? (

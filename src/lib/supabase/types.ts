@@ -152,6 +152,8 @@ export interface WantedPost {
   category: ListingCategory;
   max_price: number;
   note: string;
+  /** Reference photo of the card (absent before migration 0025; null if none was added). */
+  photo_url?: string | null;
   status: WantedPostStatus;
   created_at: string;
 }

@@ -1,29 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
-import type { ListingCategory } from "@/lib/supabase/types";
-
-const WANTED_CATEGORIES: ListingCategory[] = ["new", "deck", "rare"];
-const MAX_TEXT = 120;
-const MAX_NOTE = 400;
-const MAX_BUDGET = 10_000_000;
-
-/** Reads and checks the create/edit form; null means something is missing or out of range. */
-function parseWantedForm(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const setName = String(formData.get("set") ?? "").trim();
-  const category = String(formData.get("category") ?? "") as ListingCategory;
-  const maxPrice = parseInt(String(formData.get("maxPrice") ?? ""), 10);
-  const note = String(formData.get("note") ?? "").trim();
-  if (!name || !setName || name.length > MAX_TEXT || setName.length > MAX_TEXT) return null;
-  if (!WANTED_CATEGORIES.includes(category)) return null;
-  if (!Number.isInteger(maxPrice) || maxPrice < 1 || maxPrice > MAX_BUDGET) return null;
-  if (note.length > MAX_NOTE) return null;
-  return { name, set_name: setName, category, max_price: maxPrice, note };
-}
 
 function refreshWantedPages() {
   revalidatePath("/profile");
@@ -31,42 +10,7 @@ function refreshWantedPages() {
   revalidatePath("/search");
 }
 
-export async function createWantedPost(formData: FormData) {
-  const userId = await requireVerifiedUserId();
-
-  const fields = parseWantedForm(formData);
-  if (!fields) redirect("/wanted/new?error=1");
-
-  const supabase = createServiceClient();
-  const { error } = await supabase.from("wanted_posts").insert({ poster_id: userId, ...fields });
-  if (error) redirect("/wanted/new?error=1");
-
-  refreshWantedPages();
-  redirect("/profile");
-}
-
 const MAX_CHAT_MESSAGE_LENGTH = 1000;
-
-/** Poster edits their own open post. A closed post stays as it was. */
-export async function updateWantedPost(postId: string, formData: FormData) {
-  const userId = await requireVerifiedUserId();
-
-  const fields = parseWantedForm(formData);
-  if (!fields) redirect(`/wanted/${postId}/edit?error=1`);
-
-  const supabase = createServiceClient();
-  const { data: updated, error } = await supabase
-    .from("wanted_posts")
-    .update(fields)
-    .eq("id", postId)
-    .eq("poster_id", userId)
-    .eq("status", "active")
-    .select("id");
-  if (error || !updated?.length) redirect(`/wanted/${postId}/edit?error=1`);
-
-  refreshWantedPages();
-  redirect("/profile");
-}
 
 /** Poster takes their post down (e.g. they found the card). It disappears from browse and search; existing chats stay readable. */
 export async function closeWantedPost(postId: string) {
