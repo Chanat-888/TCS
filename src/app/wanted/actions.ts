@@ -45,6 +45,8 @@ export async function createWantedPost(formData: FormData) {
   redirect("/profile");
 }
 
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
+
 /** Poster edits their own open post. A closed post stays as it was. */
 export async function updateWantedPost(postId: string, formData: FormData) {
   const userId = await requireVerifiedUserId();
@@ -88,6 +90,7 @@ export async function closeWantedPost(postId: string) {
 export async function sendWantedPostMessage(wantedPostId: string, responderId: string, body: string) {
   const userId = await requireVerifiedUserId();
   if (!body.trim()) return { error: "ส่งข้อความไม่สำเร็จ" as const };
+  if (body.trim().length > MAX_CHAT_MESSAGE_LENGTH) return { error: `ข้อความยาวเกินไป (สูงสุด ${MAX_CHAT_MESSAGE_LENGTH} ตัวอักษร)` as const };
 
   const supabase = createServiceClient();
   const { data: post } = await supabase.from("wanted_posts").select("poster_id, status").eq("id", wantedPostId).maybeSingle();
@@ -104,4 +107,20 @@ export async function sendWantedPostMessage(wantedPostId: string, responderId: s
   revalidatePath(`/wanted/${wantedPostId}/chat`);
   revalidatePath(`/wanted/${wantedPostId}/threads/${responderId}`);
   return { success: true as const };
+}
+
+/** One wanted-post thread, for the live refresh. Only the poster and that responder may read it. */
+export async function getWantedThreadMessages(wantedPostId: string, responderId: string) {
+  const userId = await requireVerifiedUserId();
+  const supabase = createServiceClient();
+  const { data: post } = await supabase.from("wanted_posts").select("poster_id").eq("id", wantedPostId).maybeSingle();
+  if (!post || (userId !== post.poster_id && userId !== responderId)) return { error: "ไม่พบข้อความ" as const };
+  const { data, error } = await supabase
+    .from("wanted_post_messages")
+    .select("id, sender_id, body, created_at")
+    .eq("wanted_post_id", wantedPostId)
+    .eq("responder_id", responderId)
+    .order("created_at", { ascending: true });
+  if (error) return { error: "โหลดข้อความไม่สำเร็จ" as const };
+  return { messages: data ?? [] };
 }
