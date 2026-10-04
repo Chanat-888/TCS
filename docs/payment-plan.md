@@ -1,7 +1,11 @@
 # TCS payment plan (draft, Oct 2026)
 
-Status: **plan only, nothing in Part A is built yet.** Today's code takes buyer payments through Omise and pays
-sellers one by one through Omise transfers ([src/lib/payout.ts](../src/lib/payout.ts)). Part A replaces both.
+Status: **Phase 1 of Part A is written** (ledger, withdrawals, seller earnings page, admin withdrawals page; migration
+`0025_ledger.sql`, branch `feat/ledger-phase1`), but not yet applied to the live database. Everything else in Part A is
+not built. Buyers still pay through Omise at checkout. Sellers are no longer paid per order through Omise
+([src/lib/payout.ts](../src/lib/payout.ts) is unused and kept for Part B): a completed order credits the ledger and the
+seller withdraws. To run Phase 1 set `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
+numbers unreadable) and apply the migration.
 
 - **Part A (sections 1 to 20) is the current plan:** buyers pay a PromptPay QR we generate straight into a company
   account, a slip reader confirms the payment, a ledger tracks what sellers are owed, and early on we pay sellers
@@ -345,7 +349,7 @@ Do not store a mutable `total_balance` as the source of truth: a seller's balanc
 | `orders` (exists) | One row per sale | code, seller, gross, seller share, commission, `commission_bps`, status, slip reference, paid/completed dates, refunded amount |
 | `payment_slips` (new) | Each uploaded slip | order, image, slip reference (unique), amount, sender, reader response, status (accepted/rejected/review) |
 | `ledger_entries` (new, append-only) | Every change to a seller's money | seller, order or withdrawal link, type (order credited / order completed / withdrawal / withdrawal fee / refund / adjustment), bucket (pending/available), signed amount, date, note, unique key |
-| `seller_bank_accounts` | Where to pay | seller, bank, encrypted number, account name, verified flag |
+| `seller_payout_accounts` (exists; reused in Phase 1) | Where to pay | seller, bank, encrypted number, last 4, account name. The `verified` flag is added in Phase 4 |
 | `withdrawals` | Seller requests | seller, amount requested, fee (1%), amount paid, status (requested/batched/paid/failed), batch, dates, bank reference |
 | `commission_moves` | B to A transfers | amount, date, bank reference, the safe-to-move figure at the time |
 | `reconciliation_log` | Daily check | date, B bank balance, total owed, difference |

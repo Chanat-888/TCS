@@ -104,7 +104,7 @@ export function OrderSellerView({
   const payoutMeta = (
     <>
       {formatTHB(payout)} (ยอดขาย {formatTHB(order.amount)} หักค่าธรรมเนียม {Math.round(COMMISSION_RATE * 100)}% {formatTHB(commission)}){" "}
-      {order.payout_status === "sent" ? "โอนเข้าบัญชีของคุณแล้ว" : isDone ? "— เพิ่มบัญชีรับเงินที่หน้าโปรไฟล์เพื่อรับเงิน" : "จะโอนเมื่อผู้ซื้อรับสินค้า"}
+      {isDone ? "เข้ากระเป๋ารายได้แล้ว — ถอนได้ที่หน้ารายได้" : "จะเข้ากระเป๋ารายได้เมื่อผู้ซื้อรับสินค้า"}
     </>
   );
   const isDisputed = order.status === "DISPUTED";

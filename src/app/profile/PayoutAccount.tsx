@@ -2,7 +2,9 @@
 
 import { useState, type CSSProperties } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import Link from "next/link";
 import { BANKS } from "@/lib/bankAccount";
+import { COMMISSION_RATE } from "@/lib/commission";
 import { saveBankAccount } from "./payoutActions";
 
 const inputStyle: CSSProperties = {
@@ -38,8 +40,9 @@ export function PayoutAccount({ saved }: { saved: { bank_brand: string; account_
       <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
         <h2 className="text-[1.15rem]">บัญชีรับเงินของผู้ขาย</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-          เมื่อผู้ซื้อรับสินค้าแล้ว เราจะโอนเงินเข้าบัญชีนี้ (หักค่าธรรมเนียม 5%) ใช้ชื่อบัญชีที่ตรงกับสมุดบัญชีเท่านั้น
+          เมื่อผู้ซื้อรับสินค้าแล้ว เงินจะเข้ากระเป๋ารายได้ (หักค่าธรรมเนียม {Math.round(COMMISSION_RATE * 100)}%) แล้วคุณกดถอนเข้าบัญชีนี้ได้ (ค่าถอน 1%) ใช้ชื่อบัญชีที่ตรงกับสมุดบัญชีเท่านั้น
         </p>
+        <Link href="/earnings" className="mt-2 inline-block text-[13px] font-medium no-underline" style={{ color: "var(--cyan)" }}>ดูรายได้และถอนเงิน →</Link>
         {saved && !editing ? (
           <div className="mt-4 flex items-center justify-between gap-3">
             <p className="text-[14px]" style={{ color: "var(--white)" }}>

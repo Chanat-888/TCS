@@ -31,6 +31,8 @@ function fixture({
   isAdminFlag = false,
   verifiedFlag = false,
   tier = null,
+  walletSatang = 0,
+  openWithdrawals = 0,
 } = {}) {
   const calls = { profileUpdated: [], addressesDeleted: [], storageRemoved: [], authUserDeleted: [], signedOut: [] };
   const actions = load("src/app/profile/deleteAccountActions.ts", {
@@ -48,6 +50,12 @@ function fixture({
         from(table) {
           if (table === "orders") {
             return { select: () => ({ or: () => ({ in: async () => ({ count: ordersCount }) }) }) };
+          }
+          if (table === "seller_balances") {
+            return { select: () => ({ eq: () => ({ in: async () => ({ data: [{ total: walletSatang }] }) }) }) };
+          }
+          if (table === "withdrawals") {
+            return { select: () => ({ eq: () => ({ eq: async () => ({ count: openWithdrawals }) }) }) };
           }
           if (table === "listings") {
             return {
@@ -103,11 +111,13 @@ test("signed-out callers cannot check blockers or delete anything", async () => 
   assert.equal(calls.authUserDeleted.length, 0);
 });
 
-test("an open order, an active listing, and an active bid are each reported as blockers", async () => {
+test("an open order, an active listing, an active bid, wallet money and an open withdrawal are each reported as blockers", async () => {
   for (const options of [
     { ordersCount: 1 },
     { activeListingsCount: 1 },
     { bidRows: [{ listing_id: "l1" }], activeBidListingsCount: 1 },
+    { walletSatang: 5000 },
+    { openWithdrawals: 1 },
   ]) {
     const { actions } = fixture(options);
     const check = await actions.getAccountDeletionBlockers();
