@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CloseWantedPostButton } from "@/components/CloseWantedPostButton";
 import { formatTHB } from "@/lib/format";
 import type { Profile, WantedPost } from "@/lib/supabase/types";
 
@@ -63,13 +64,26 @@ export function WantedPostCard({
       </div>
 
       {posterThreadsHref ? (
-        <Link
-          href={posterThreadsHref}
-          className="mt-1 flex h-[38px] items-center justify-center rounded-[10px] text-[12.5px] font-medium no-underline"
-          style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
-        >
-          ข้อความที่ได้รับ
-        </Link>
+        <>
+          <Link
+            href={posterThreadsHref}
+            className="mt-1 flex h-[38px] items-center justify-center rounded-[10px] text-[12.5px] font-medium no-underline"
+            style={{ background: "var(--panel-2)", border: "1px solid rgba(140,147,163,0.2)", color: "var(--steel)" }}
+          >
+            ข้อความที่ได้รับ
+          </Link>
+          {/* Owner-only controls: only the owner's profile passes posterThreadsHref. */}
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/wanted/${post.id}/edit`}
+              className="flex h-[38px] flex-1 items-center justify-center rounded-[10px] text-[12.5px] no-underline"
+              style={{ background: "transparent", border: "1px solid rgba(140,147,163,0.2)", color: "var(--white)" }}
+            >
+              แก้ไข
+            </Link>
+            <CloseWantedPostButton postId={post.id} />
+          </div>
+        </>
       ) : (
         <>
           {poster && (
