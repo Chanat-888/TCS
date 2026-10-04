@@ -104,7 +104,7 @@ test("only the poster and that responder can read a wanted-post thread", async (
 });
 
 test("a wanted-post message over 1000 characters is refused", async () => {
-  const db = makeDb({ owners: { poster_id: "poster" } });
+  const db = makeDb({ owners: { poster_id: "poster", status: "active" } });
   assert.match((await wanted("resp", db).sendWantedPostMessage("w1", "resp", "x".repeat(1001))).error, /ยาวเกินไป/);
   assert.equal(db.calls.inserts.length, 0);
   assert.equal((await wanted("resp", db).sendWantedPostMessage("w1", "resp", "hello")).success, true);
