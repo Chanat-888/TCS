@@ -28,6 +28,7 @@ export default async function WantedPostChatPage({ params }: { params: Promise<{
             currentUserId={userId}
             messages={messages}
             otherPartyLabel={(poster?.display_name ?? "ผ").slice(0, 2).toUpperCase()}
+            readOnly={post.status !== "active"}
           />
         </div>
       </main>

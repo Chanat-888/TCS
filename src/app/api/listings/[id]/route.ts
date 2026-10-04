@@ -4,7 +4,7 @@ import { getVerifiedUserId } from "@/lib/session";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
 import { checkPhotoFile } from "@/lib/imageUpload";
-import { MIN_PRICE } from "@/lib/listingKind";
+import { MIN_PRICE, isSpread } from "@/lib/listingKind";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -14,6 +14,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const supabase = createServiceClient();
   const { data: listing } = await supabase.from("listings").select("*").eq("id", id).maybeSingle();
   if (!listing || listing.seller_id !== userId) return NextResponse.json({ error: "ไม่พบประกาศนี้" }, { status: 404 });
+  // A sold, cancelled or expired listing is a record of what the buyer bought (and the evidence in
+  // any dispute): it must not change. "Buy now" creates no bid, so the bid lock alone is not enough.
+  if (listing.status !== "active") {
+    return NextResponse.json({ error: "ประกาศนี้ปิดการขายแล้ว แก้ไขไม่ได้" }, { status: 409 });
+  }
+  if (isSpread(listing)) {
+    return NextResponse.json({ error: "โพสต์เลือกซื้อเป็นใบ ๆ แก้ไขไม่ได้ กรุณาปิดโพสต์แล้วลงใหม่" }, { status: 409 });
+  }
 
   const { count: bidCount } = await supabase.from("bids").select("id", { count: "exact", head: true }).eq("listing_id", id);
   const locked = (bidCount ?? 0) > 0;
