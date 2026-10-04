@@ -3,10 +3,10 @@
 Status: **plan only, nothing in Part A is built yet.** Today's code takes buyer payments through Omise and pays
 sellers one by one through Omise transfers ([src/lib/payout.ts](../src/lib/payout.ts)). Part A replaces both.
 
-- **Part A (sections 1 to 19) is the current plan:** buyers pay a PromptPay QR we generate straight into a company
+- **Part A (sections 1 to 20) is the current plan:** buyers pay a PromptPay QR we generate straight into a company
   account, a slip reader confirms the payment, a ledger tracks what sellers are owed, and early on we pay sellers
   by hand.
-- **Part B (section 20) is the fallback:** the earlier Omise route, kept in case the lawyer or slip fraud rules
+- **Part B (section 21) is the fallback:** the earlier Omise route, kept in case the lawyer or slip fraud rules
   out direct collection.
 
 Fee, price and bank API details come from public pages, comparison sites and memory, not contracts or quotes.
@@ -238,15 +238,43 @@ Notes:
 
 ---
 
-## 9. Seller bank-name check (part of this plan)
+## 9. Seller identity and bank-name check (part of this plan)
 
-- Goal: the bank account name must match the seller's verified legal name before any payout; matching earns the
-  verified badge (the `verified` column exists but nothing sets it today).
-- Flow: seller enters legal name -> adds bank account -> server compares normalised names (strip Thai titles,
-  spaces, punctuation) -> match sets verified; near-misses go to an admin; changing name or account clears it.
-- Weakness: a self-typed name only catches typos, not fraud. Ask the bank whether it checks the account holder
-  name; stronger options are KYC or ID.
-- With bank payouts this check matters more, because the money goes straight to the account typed in.
+Decision (Oct 2026): sellers prove both **who they are** and **whose bank account it is**. Buyers are not verified;
+a buyer only gets money back through a refund, and every refund goes to the **same account the payment came from**.
+
+### Seller flow
+1. **Identity (eKYC):** the seller photographs their ID card and a live face check; an external eKYC provider
+   checks the card is genuine and the face matches. We keep the provider's result and the verified legal name,
+   not the images (see privacy below).
+2. **Bank account:** the seller enters the account number. The account holder name must match the verified legal
+   name from step 1.
+3. **Proof of the account name that cannot be faked by the seller:** the name shown by **our own bank** when an
+   admin enters the account number in the bank app to pay. In the manual-payout phase the admin compares that
+   name with the verified legal name **before the first transfer** and marks the account verified. A name typed
+   by the seller, or a name read from a transfer slip, is not accepted as proof.
+4. A near-miss goes to an admin; changing the legal name or the account clears the verified flag and everything
+   is checked again.
+5. Only then does the seller get the verified badge (the `verified` column exists but nothing sets it today)
+   and may withdraw. Decide whether verification is needed before listing (builds buyer trust) or only before
+   the first withdrawal; the trust argument favours before listing.
+
+### Why not the other methods
+- Seller-typed names are too easy to fake. Names on slips are partly hidden and only exist for buyers.
+- A 1 baht test transfer can be passed with a mule account; it proves control of an account, not whose it is.
+- A bank or provider name lookup, if one exists for us, is still not proof of identity on its own.
+
+### Buyers
+- No identity check. Refunds go back to the paying account only, never to another account.
+- Fraud limits instead: new-buyer spending limits, flags for repeated or unusual purchases, and every slip
+  checked as in section 5.
+
+### Privacy and law
+- An ID card and a face scan are personal data, and face data is biometric (treated as sensitive under the PDPA;
+  Thai ID cards also print religion). Get explicit consent, store as little as possible (provider result and name,
+  not the images), restrict access and set a retention period. Ask the lawyer (see legal-summary.md).
+- eKYC provider and price are not chosen; get quotes.
+- Weak spot that remains: a stolen ID with a matching bank account. Liveness checks reduce it; they do not remove it.
 
 ---
 
@@ -513,7 +541,78 @@ Mostly yes, if we start small and manual.
 
 ---
 
-## 19. Not yet verified
+## 19. Trust, fraud and account-freeze controls
+
+Raised by a reviewer who works at the Stock Exchange of Thailand (Oct 2026). Two concerns: (1) buyers will not trust
+an unknown company enough to send money first; (2) criminals may send stolen money, and the bank could freeze all of
+account B, including honest sellers' money. Bank and law details are from memory and unverified.
+
+### 19.1 Why a buyer would trust us
+The escrow-style hold (money released only on approval, video evidence, dispute decisions, refunds by hand from B)
+is only a mechanism; buyers must first trust TCS. Steps that help, in order of importance:
+1. Verified sellers only (section 9): ID card, face check and bank-name match, and a visible verified badge.
+2. Start with few, vetted sellers; cap order values for new sellers.
+3. Show real company details (name, registration number, address, DBD e-commerce mark once registered).
+4. Plain terms: where the money is, when it is released, how refunds and disputes work, who decides.
+5. Third-party proof when ready: the accountant's letter that B covers what is owed; only totals shown, never the
+   bank transactions (section 17).
+6. Seller reviews and sales history (reviews already exist).
+7. A refund promise we can afford: keep a cash buffer in B (section 4).
+
+### 19.2 Stolen money and freezing
+Scenario: a criminal tricks a victim into paying our QR (the QR shows TCS's name, which helps but does not stop a
+victim who is being coached), the victim reports it, and the bank freezes all of B.
+- **Refunds go only to the account that paid.** A criminal cannot cash out through a refund to another account.
+- **Sellers are verified (section 9),** so we can trace who was paid.
+- **The remaining route is a seller who is an accomplice** (the criminal "buys" from a friend who withdraws clean
+  money). Controls below.
+- Keep every slip and ledger entry so we can show an officer which money belongs to which order and ask for a
+  partial release.
+- If the bank freezes B: the terms must say what happens to sellers' and buyers' money, and the lawyer must tell
+  us our duties (legal-summary.md, group G).
+- Be honest about what is left: one account receiving everyone's money means a freeze hits everyone. Paying
+  sellers sooner after the dispute window shortens how much sits in B, but conflicts with holding for buyers.
+  This trade-off is open.
+
+### 19.3 What to watch (unusual patterns)
+- Many different buyer accounts paying from the **same bank account** (one person with many accounts, or one mule).
+- One new seller receiving many high-value orders from brand-new buyers, then withdrawing at once.
+- Orders from brand-new buyers at high values.
+- Buy-and-refund quickly is low priority, since refunds go back to the payer.
+Show flagged orders on the admin page; the action is to hold the money and ask the seller or buyer for more.
+
+### 19.4 Unidentified deposits (money in B with no slip)
+- The bank statement for B is the source of truth about who paid; the sender name is often partly hidden and the
+  detail depends on the bank (ask).
+- If someone pays the QR but never uploads a slip, the order stays unpaid and the money is an **unidentified
+  deposit**. It is not owed to any seller and must never become withdrawable.
+- The daily reconciliation shows B holding more than the ledger accounts for; that is the alarm. Check with the
+  bank who paid, refund to the paying account, and keep the record. A deposit nobody claims is a laundering
+  warning sign for the lawyer or bank.
+- A bank bill-payment QR with a reference per order (Phase 5) identifies the payer without a slip.
+
+### 19.5 Delivery checks before money is released (code items)
+Today a courier order cannot be shipped without a tracking number, but the number is only checked for format
+([trackingUrl.ts](../src/lib/trackingUrl.ts)), and meet-up orders have no tracking at all.
+1. Check with the courier that the number exists and shows a real parcel (courier access unverified).
+2. Make money available only when the courier shows delivered **and** the buyer approves or the 48h auto-approve
+   passes, so a parcel that never moved cannot be approved.
+3. Compare the delivery area with the buyer's address (province or postcode) where the courier shows it.
+4. Require tracking or restrict meet-up for higher-value orders.
+These make a fake sale cost more and leave evidence, but a real near-empty parcel to an accomplice still passes.
+So pair them with:
+- an order-value cap for new sellers;
+- a longer wait before a new seller's first withdrawals become available;
+- the flags in 19.3.
+
+### 19.6 Decisions still open
+Whether verification is needed before listing or only before the first withdrawal; the order cap and wait for new
+sellers; the new-buyer spending limit; whether meet-up is allowed at all above some value; how long money stays in B
+(shorter lowers freeze exposure, longer protects buyers).
+
+---
+
+## 20. Not yet verified
 
 - Every fee, price and threshold here is from public pages, comparison sites or memory.
 - The slip-reader provider, its price and its fraud detection are not chosen.
@@ -528,7 +627,7 @@ Mostly yes, if we start small and manual.
 Use this only if the lawyer says direct collection needs a licence, or slip fraud is too high. Part A's ledger,
 accounts, tax and policy work all carry over; only the pay-in and the "paid" event change.
 
-## 20. Omise route (earlier plan)
+## 21. Omise route (earlier plan)
 
 ### Flow
 ```

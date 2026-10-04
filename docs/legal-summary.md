@@ -69,7 +69,7 @@ If that position is wrong, we may need a licence we cannot afford. Everything de
 | Books | Seller money booked as a liability (payable); only the commission and fees booked as revenue. |
 | Ledger | Append-only record of every order, fee, refund and withdrawal, so each bank line traces to an order and a seller. |
 | Tax documents | Receipts or tax invoices to sellers **only for our commission and fees**, never for the full sale price. |
-| Seller checks | Bank account holder name must match the seller's verified legal name before any payout. |
+| Seller checks | Sellers verify their ID card and face (eKYC). The bank account holder name, as shown by our own bank, must match the verified legal name before any payout. Buyers are not verified; refunds go only to the account the payment came from. |
 | Registrations | Company registration, e-commerce registration with the DBD, platform notification to ETDA, possibly direct-sales registration with the consumer protection office. |
 | Tax authority | Possibly ask the Revenue Department for a written ruling confirming the agent treatment. |
 | Transparency | Publish only totals ("held for sellers"), not the bank transactions. Accountant's periodic letter confirming B covers what is owed. |
@@ -116,6 +116,10 @@ If that position is wrong, we may need a licence we cannot afford. Everything de
 **F. Risk**
 17. If TCS is later found to need a licence, what are the consequences (fines, criminal liability for directors)?
 18. Fraud: fake or edited transfer slips; what is our exposure if a seller is paid on a forged slip?
+
+11b. **Seller ID card and face scan** (eKYC): we keep only the provider's result and the verified name, not the
+    images. Is explicit PDPA consent enough for biometric data, what notice do we need, and how long may we keep
+    the result?
 
 **G. Banking and anti-money-laundering (lawyer)**
 19. Account B will receive many small transfers from unrelated buyers and pay out to many sellers. Banks may treat
