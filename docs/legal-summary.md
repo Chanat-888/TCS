@@ -34,7 +34,7 @@ Google only. TCS is meant to be a platform, not a seller: the goods belong to th
    order auto-approves**, or a dispute is decided by an admin.
 4. When the order completes, the seller's share becomes **available** on the seller's **wallet**. The wallet is
    only a number in our database (a ledger). The real cash stays in account B.
-5. The seller requests a withdrawal. TCS keeps a **commission** (5%, 8% or 10%, undecided) and a **1% withdrawal
+5. The seller requests a withdrawal. TCS keeps a **commission** (decided: 9%) and a **1% withdrawal
    fee**. In the early phase an admin pays the seller **by hand** from the bank app.
 6. TCS moves its own earnings (commission and fees) by hand from account B to **company account A**.
 

@@ -161,13 +161,15 @@ Per 1,000 THB order, before those costs, with the 1% withdrawal fee charged on t
 | Commission | We keep: commission | + withdrawal fee | Roughly kept |
 |---|---|---|---|
 | 5% | 50 | 9.50 | **59.50** |
+| **9% (chosen)** | 90 | 9.10 | **99.10** |
 | 8% | 80 | 9.20 | **89.20** |
 | 10% | 100 | 9.00 | **109.00** |
 
 Notes:
-- The commission rate (5%, 8% or 10%) is still undecided. The setting is `COMMISSION_RATE` in
+- **The commission rate is decided: 9%** (Oct 2026). The setting is `COMMISSION_RATE` in
   [src/lib/commission.ts](../src/lib/commission.ts). Facebook groups charge nothing, so a high rate may push
-  sellers away. Compare seller reaction at 5%, 8% and 10%.
+  sellers away, so watch seller reaction. The other rows in this table are for comparison. Examples elsewhere in this
+  plan use round numbers (10%) and are not the chosen rate.
 - Without a gateway fee, cheap orders are no longer the weak spot they were with Omise, but a fixed slip-reader or
   bank cost per order still matters at low prices. Fill this in when we have quotes.
 - Manual payouts cost admin time instead of bank fees; that is why bulk payment comes later.
@@ -307,7 +309,7 @@ The existing Omise code is the starting point for Part B if we fall back. The un
 6. **Phase 5.** Bank API for pay-in and bank bulk payment for payouts (corporate cash management), once the
    corporate account is open and the legal answers are in.
 
-Open decisions: commission rate (5%, 8% or 10%), minimum withdrawal, how disputed orders affect pending balances,
+Open decisions: minimum withdrawal, how disputed orders affect pending balances,
 unclaimed-balance rule, which slip-reader service, how many open orders may share an amount.
 
 ---

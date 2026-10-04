@@ -8,7 +8,9 @@
 
 ## Implementation update — Omise payments (test mode)
 
-Checkout charges through Omise in test mode (`skey_test_` key): PromptPay QR and TrueMoney Wallet. Card was removed from checkout. An order only becomes `PAID_HELD` after the server re-reads a successful charge from Omise (webhook at `/api/omise/webhook`, the QR status poll, or the TrueMoney return page). Not built yet: seller payout on `COMPLETED`, refunds on disputes, and a live account (Omise approval for an individual-run C2C marketplace is unconfirmed).
+Checkout charges through Omise in test mode (`skey_test_` key): PromptPay QR and TrueMoney Wallet. Card was removed from checkout. An order only becomes `PAID_HELD` after the server re-reads a successful charge from Omise (webhook at `/api/omise/webhook`, the QR status poll, or the TrueMoney return page). Seller payouts on `COMPLETED` currently go through Omise transfers (`src/lib/payout.ts`) in test mode.
+
+**Payment direction (decided Oct 2026, see `docs/payment-plan.md`):** Omise is being replaced by a direct PromptPay QR into a company account, a slip reader to confirm payments, a ledger for seller balances, and manual seller payouts at first. Commission is 9% plus a 1% withdrawal fee. Sellers verify ID card, face and bank-account name; buyers are not verified and refunds go only to the paying account. The Omise route stays documented as a fallback. Nothing in this direction is built yet, and it depends on legal answers (`docs/legal-summary.md`).
 
 ## Platform
 
@@ -55,9 +57,9 @@ In scope for MVP: Google signup with bank-name-matched verified badge (phone OTP
 Out of scope for v1: card grading/price guide, in-app shipping label purchase, card-for-card trading (no money), native apps (PWA only for now), seller shops/storefronts, fees and subscriptions (launch free).
 
 Open/undecided product facts (do not invent answers):
-- Identity level — bank-name match, or full Thai ID (KYC)? Deferred, but must be decided before payment code is written (changes the database).
-- Payment provider for live money — building on Omise; still unconfirmed whether Omise will approve escrow/delayed seller payout (2C2P is the fallback).
-- Who pays the payment fee — buyer, seller, or split.
+- Identity level — decided: sellers verify ID card and face (eKYC) and bank-name match; buyers are not verified. eKYC provider not chosen.
+- Payment for live money — decided: direct PromptPay QR + slip reader (see `docs/payment-plan.md`); Omise is the fallback. Depends on the lawyer's answer on collecting buyer money directly.
+- Who pays the payment fee — decided: sellers pay a 9% commission and a 1% withdrawal fee; there is no gateway fee on the QR route.
 - Condition-grading standard — allowed condition terms and dispute authority.
 - Shipping — whether insured/tracked courier is required for high-value cards.
 - Video size limits and retention period for unboxing videos.
