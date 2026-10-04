@@ -10,7 +10,7 @@ import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
 import { sendOrderMessage } from "../actions";
 import { postForm } from "@/lib/postForm";
-import { splitPayout } from "@/lib/commission";
+import { COMMISSION_RATE, splitPayout } from "@/lib/commission";
 import { COURIER_NAMES, cleanTrackingNumber, detectCourier, trackingUrl } from "@/lib/trackingUrl";
 import { MAX_VIDEO_BYTES } from "@/lib/videoUpload";
 
@@ -103,7 +103,7 @@ export function OrderSellerView({
   const { commission, payout } = splitPayout(order.amount);
   const payoutMeta = (
     <>
-      {formatTHB(payout)} (ยอดขาย {formatTHB(order.amount)} หักค่าธรรมเนียม 5% {formatTHB(commission)}){" "}
+      {formatTHB(payout)} (ยอดขาย {formatTHB(order.amount)} หักค่าธรรมเนียม {Math.round(COMMISSION_RATE * 100)}% {formatTHB(commission)}){" "}
       {order.payout_status === "sent" ? "โอนเข้าบัญชีของคุณแล้ว" : isDone ? "— เพิ่มบัญชีรับเงินที่หน้าโปรไฟล์เพื่อรับเงิน" : "จะโอนเมื่อผู้ซื้อรับสินค้า"}
     </>
   );
