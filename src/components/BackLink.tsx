@@ -14,7 +14,10 @@ export function BackLink({ href, onClick, exact, ...props }: ComponentProps<type
       onClick={(e) => {
         onClick?.(e);
         const plain = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
-        if (plain && !exact && window.history.length > 1) {
+        // history.length counts entries from other sites (e.g. Facebook); Navigation API only counts ours.
+        const nav = (window as { navigation?: { canGoBack: boolean } }).navigation;
+        const canGoBack = nav ? nav.canGoBack : window.history.length > 1;
+        if (plain && !exact && canGoBack) {
           e.preventDefault();
           router.back();
         }
