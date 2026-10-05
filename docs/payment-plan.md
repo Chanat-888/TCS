@@ -1,11 +1,11 @@
 # TCS payment plan (draft, Oct 2026)
 
 Status: **Phases 1 and 2 of Part A are written** (ledger, withdrawals, seller earnings page, admin withdrawals page; migration
-`0025_ledger.sql`, branch `feat/ledger-phase1`), but not yet applied to the live database. Everything else in Part A is
+`0025_ledger.sql`, branch `feat/ledger-phase1`) and Phase 2 (`0026_reconciliation.sql`, branch `feat/ledger-phase2`); both migrations are applied to the live database. Everything else in Part A is
 not built. Buyers still pay through Omise at checkout. Sellers are no longer paid per order through Omise
 ([src/lib/payout.ts](../src/lib/payout.ts) is unused and kept for Part B): a completed order credits the ledger and the
-seller withdraws. To run Phase 1 set `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
-numbers unreadable) and apply the migration.
+seller withdraws. Phase 1 needs `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
+numbers unreadable).
 
 - **Part A (sections 1 to 20) is the current plan:** buyers pay a PromptPay QR we generate straight into a company
   account, a slip reader confirms the payment, a ledger tracks what sellers are owed, and early on we pay sellers
