@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { notFound, redirect } from "next/navigation";
 import { requireVerifiedUserId } from "@/lib/session";
+import { requireTerms } from "@/lib/terms";
 import { getOrderDetail } from "@/lib/orders";
 import { syncCharge } from "@/lib/omise";
 import { listAddresses } from "@/lib/addressBook";
@@ -15,6 +16,7 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
   const { orderId } = await params;
   const userId = await requireVerifiedUserId();
   if (!userId) redirect("/login");
+  await requireTerms(userId, `/checkout/${orderId}`);
 
   const detail = await getOrderDetail(orderId, userId);
   if (!detail || !detail.isBuyer) notFound();

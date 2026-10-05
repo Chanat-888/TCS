@@ -313,7 +313,10 @@ The existing Omise code is the starting point for Part B if we fall back. The un
    completed order's money is withdrawable; monthly CSV export for the accountant. Not built: statement CSV import
    (add when the bank and its format are chosen), the `commission_moves` table (so the difference also contains
    our unmoved commission), and matching on slip upload (Phase 0 does not exist yet).
-4. **Phase 3.** Terms and privacy pages, clickwrap and consent log (section 16); needed before real money.
+4. **Phase 3. Written (Oct 2026), migration `0027_terms_acceptances.sql`, draft text in [terms-draft.md](terms-draft.md).**
+   Draft `/terms` and `/privacy` pages (version `v0-draft`, lawyer text replaces them later), an optional tick at
+   `/welcome` (skippable), and a consent step (`/terms/accept`) that sellers hit when listing or withdrawing and
+   buyers hit at checkout. Bidding is not gated. Consent log is append-only: user, version, time, IP.
 5. **Phase 4.** Seller bank-name check and verified badge.
 6. **Phase 5.** Bank API for pay-in and bank bulk payment for payouts (corporate cash management), once the
    corporate account is open and the legal answers are in.

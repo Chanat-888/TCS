@@ -172,6 +172,7 @@ function QuietSubmit({ children, className = "" }: { children: React.ReactNode; 
 export function WelcomeDeck() {
   const [index, setIndex] = useState(0);
   const [drag, setDrag] = useState<number | null>(null);
+  const [accepted, setAccepted] = useState(false);
   const startX = useRef(0);
   const go = (next: number) => setIndex(Math.max(0, Math.min(LAST, next)));
 
@@ -199,7 +200,7 @@ export function WelcomeDeck() {
           <BrandMark size={28} />
           <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17 }}>TCS</span>
         </div>
-        <form action={finishWelcome.bind(null, "/browse")}>
+        <form action={finishWelcome.bind(null, "/browse", false)}>
           <QuietSubmit className="-mr-3">ข้าม</QuietSubmit>
         </form>
       </header>
@@ -307,14 +308,21 @@ export function WelcomeDeck() {
             </div>
           ) : (
             <>
-              <form action={finishWelcome.bind(null, "/browse")}>
+              <label className="mb-3 flex cursor-pointer items-start gap-2 text-[13px] leading-[1.6]" style={{ color: "var(--steel)" }}>
+                <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="mt-1 h-4 w-4 shrink-0" />
+                <span>
+                  ฉันยอมรับ <a href="/terms" target="_blank" style={{ color: "var(--cyan)" }}>ข้อกำหนดการใช้งาน</a> และ{" "}
+                  <a href="/privacy" target="_blank" style={{ color: "var(--cyan)" }}>นโยบายความเป็นส่วนตัว</a> (ข้ามได้ แต่ต้องยอมรับก่อนขาย ถอนเงิน หรือชำระเงิน)
+                </span>
+              </label>
+              <form action={finishWelcome.bind(null, "/browse", accepted)}>
                 <FinishButton autoFocus>ดูการ์ด</FinishButton>
               </form>
               <div className="mt-2 flex justify-center gap-2">
-                <form action={finishWelcome.bind(null, "/listings/new")}>
+                <form action={finishWelcome.bind(null, "/listings/new", accepted)}>
                   <QuietSubmit>ลงขายการ์ด</QuietSubmit>
                 </form>
-                <form action={finishWelcome.bind(null, "/profile")}>
+                <form action={finishWelcome.bind(null, "/profile", accepted)}>
                   <QuietSubmit>ตั้งชื่อโปรไฟล์</QuietSubmit>
                 </form>
               </div>

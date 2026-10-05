@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getSessionUserId } from "@/lib/session";
+import { TERMS_REQUIRED, hasAcceptedTerms } from "@/lib/terms";
 import { MIN_WITHDRAWAL_BAHT } from "@/lib/money";
 
 // The browser only says how much; the database checks the balance, works out the fee and
@@ -10,6 +11,7 @@ import { MIN_WITHDRAWAL_BAHT } from "@/lib/money";
 export async function requestWithdrawal(amountBaht: number) {
   const userId = await getSessionUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
+  if (!(await hasAcceptedTerms(userId))) return { error: TERMS_REQUIRED.error };
   if (!Number.isInteger(amountBaht) || amountBaht < MIN_WITHDRAWAL_BAHT) {
     return { error: `ถอนขั้นต่ำ ฿${MIN_WITHDRAWAL_BAHT} (ใส่เป็นจำนวนเต็ม)` as const };
   }

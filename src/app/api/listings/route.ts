@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
+import { TERMS_REQUIRED, hasAcceptedTerms } from "@/lib/terms";
 import type { ListingCategory } from "@/lib/supabase/types";
 import { parseListingDetails } from "@/lib/vanguard";
 import { checkPhotoFile } from "@/lib/imageUpload";
@@ -16,6 +17,7 @@ const MAX_BID_INCREMENT = 1000;
 export async function POST(request: Request) {
   const userId = await getVerifiedUserId();
   if (!userId) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบก่อน", code: "LOGIN_REQUIRED" }, { status: 403 });
+  if (!(await hasAcceptedTerms(userId))) return NextResponse.json(TERMS_REQUIRED, { status: 403 });
 
   let formData: FormData;
   try {
