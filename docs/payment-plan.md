@@ -317,7 +317,16 @@ The existing Omise code is the starting point for Part B if we fall back. The un
    Draft `/terms` and `/privacy` pages (version `v0-draft`, lawyer text replaces them later), an optional tick at
    `/welcome` (skippable), and a consent step (`/terms/accept`) that sellers hit when listing or withdrawing and
    buyers hit at checkout. Bidding is not gated. Consent log is append-only: user, version, time, IP.
-5. **Phase 4.** Seller bank-name check and verified badge.
+5. **Phase 4. Written (Oct 2026), migration `0028_seller_verification.sql`, admin page `/admin/sellers`.**
+   Manual identity check, no eKYC provider yet: the seller uploads a selfie holding the ID card plus the card front
+   (private bucket `id-checks`, consent tick); an admin looks, types the legal name from the card and approves or
+   rejects; **the images are deleted on either decision** (only name, admin and time are kept). A second admin step
+   confirms that the account holder name our own bank shows for the saved number matches that name. A seller may
+   verify any time but needs both steps to withdraw (`request_withdrawal` raises `not_verified`); changing the
+   account clears the name check; `profiles.verified` (the badge) follows both checks. Buyers need nothing but
+   login. Not built: an eKYC provider (iApp and Didit list roughly 1 to 12 THB per check, unverified; get quotes
+   that include liveness), a "name does not match" state (the admin just leaves it and tells the seller), and
+   checks for a seller changing the legal name later (a new submission is blocked while approved).
 6. **Phase 5.** Bank API for pay-in and bank bulk payment for payouts (corporate cash management), once the
    corporate account is open and the legal answers are in.
 

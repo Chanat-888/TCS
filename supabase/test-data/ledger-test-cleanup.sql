@@ -30,3 +30,8 @@ select count(*) as test_orders_left from public.orders where order_code like 'TE
 -- update public.profiles set is_admin = false where display_name = 'Chanat';
 -- To remove the bank account you saved while testing (this deletes ANY account saved on that profile):
 -- delete from public.seller_payout_accounts where user_id = (select id from public.profiles where display_name = 'Chanat');
+
+-- Migration 0028 (seller verification): to undo a hand-test of the identity check, uncomment and run.
+-- Deleting the rows also turns the profile's verified badge back off.
+-- delete from public.seller_verifications where user_id = (select id from public.profiles where display_name = 'Chanat');
+-- delete from public.seller_payout_accounts where user_id = (select id from public.profiles where display_name = 'Chanat');

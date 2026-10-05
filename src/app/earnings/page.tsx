@@ -27,7 +27,7 @@ export default async function EarningsPage() {
   await requireTerms(userId, "/earnings");
   const supabase = createServiceClient();
 
-  const [{ data: balances }, { data: entries }, { data: withdrawals }, { data: account }, { data: withdrawableData }] = await Promise.all([
+  const [{ data: balances }, { data: entries }, { data: withdrawals }, { data: account }, { data: withdrawableData }, { data: verified }, { data: identity }] = await Promise.all([
     supabase.from("seller_balances").select("bucket, total").eq("seller_id", userId).in("bucket", ["pending", "available"]),
     // A completed order writes two entries (pending out, available in); the "available in" one is the one to show.
     supabase
@@ -41,6 +41,8 @@ export default async function EarningsPage() {
     supabase.from("withdrawals").select("id, amount, fee, status, created_at, bank_reference").eq("seller_id", userId).order("created_at", { ascending: false }).limit(20),
     supabase.from("seller_payout_accounts").select("bank_brand").eq("user_id", userId).not("account_number_enc", "is", null).maybeSingle(),
     supabase.rpc("withdrawable", { p_seller: userId }),
+    supabase.rpc("seller_verified", { p_user: userId }),
+    supabase.from("seller_verifications").select("status").eq("user_id", userId).maybeSingle(),
   ]);
   const total = (bucket: string) => Number(balances?.find((b) => b.bucket === bucket)?.total ?? 0);
   const withdrawable = Number(withdrawableData ?? 0);
@@ -69,8 +71,16 @@ export default async function EarningsPage() {
 
         <section className="mt-6 rounded-2xl p-5" style={card}>
           <h2 className="text-[1.1rem]">ถอนเงิน</h2>
-          {account ? (
+          {account && verified ? (
             <WithdrawForm availableBaht={Math.floor(withdrawable / 100)} />
+          ) : account ? (
+            <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
+              {identity?.status === "approved" ? (
+                "ยืนยันตัวตนแล้ว รอทีมงานตรวจชื่อบัญชีธนาคารก่อนจึงจะถอนได้"
+              ) : (
+                <>ต้องยืนยันตัวตนที่ <Link href="/profile" style={{ color: "var(--cyan)" }}>หน้าโปรไฟล์</Link> ก่อนถอนเงินครั้งแรก ยอดของคุณสะสมไว้ได้ตามปกติ</>
+              )}
+            </p>
           ) : (
             <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
               เพิ่มบัญชีรับเงินที่ <Link href="/profile" style={{ color: "var(--cyan)" }}>หน้าโปรไฟล์</Link> ก่อนจึงจะถอนได้

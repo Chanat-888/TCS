@@ -33,8 +33,9 @@ function fixture({
   tier = null,
   walletSatang = 0,
   openWithdrawals = 0,
+  idCheck = null,
 } = {}) {
-  const calls = { profileUpdated: [], addressesDeleted: [], storageRemoved: [], authUserDeleted: [], signedOut: [] };
+  const calls = { profileUpdated: [], addressesDeleted: [], storageRemoved: [], authUserDeleted: [], signedOut: [], idCheckDeleted: [] };
   const actions = load("src/app/profile/deleteAccountActions.ts", {
     "@/lib/authLog": { logAuthError: () => {} },
     "@/lib/avatar": { AVATAR_STORAGE_PATH_PREFIX: "/storage/v1/object/public/avatars/" },
@@ -81,6 +82,12 @@ function fixture({
               update: (fields) => ({
                 eq: async (col, val) => { calls.profileUpdated.push({ fields, col, val }); return { error: anonymizeError }; },
               }),
+            };
+          }
+          if (table === "seller_verifications") {
+            return {
+              select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: idCheck }) }) }),
+              delete: () => ({ eq: async (col, val) => { calls.idCheckDeleted.push(val); return { error: null }; } }),
             };
           }
           throw new Error("Unexpected table: " + table);
@@ -211,4 +218,12 @@ test("if removing the Auth login fails, that failure is reported rather than cla
   const result = await actions.deleteMyAccount();
   assert.ok(result.error);
   assert.equal(result.success, undefined);
+});
+
+test("ID images still waiting for review are deleted with the account, and the row goes", async () => {
+  const { actions, calls } = fixture({ idCheck: { selfie_path: "u1/a.jpg", card_path: "u1/b.jpg" } });
+  const result = await actions.deleteMyAccount();
+  assert.equal(result.success, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.storageRemoved)), [["u1/a.jpg", "u1/b.jpg"]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.idCheckDeleted)), ["u1"]);
 });

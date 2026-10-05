@@ -18,6 +18,7 @@ export async function requestWithdrawal(amountBaht: number) {
   const { error } = await createServiceClient().rpc("request_withdrawal", { p_seller: userId, p_amount: amountBaht * 100 });
   if (error) {
     if (error.message.includes("insufficient_balance")) return { error: "ยอดที่ถอนได้ไม่พอ" as const };
+    if (error.message.includes("not_verified")) return { error: "ต้องยืนยันตัวตนและให้ทีมงานตรวจชื่อบัญชีก่อนถอนเงิน" as const };
     if (error.message.includes("no_bank_account")) return { error: "เพิ่มบัญชีรับเงินที่หน้าโปรไฟล์ก่อน" as const };
     console.error("[withdrawal] request failed", error.message);
     return { error: "ส่งคำขอถอนไม่สำเร็จ ลองอีกครั้ง" as const };

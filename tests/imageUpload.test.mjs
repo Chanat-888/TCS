@@ -96,6 +96,7 @@ function route() {
   const listingRoute = load("src/app/api/listings/route.ts", {
     "next/server": { NextResponse: Response },
     "@/lib/session": { getVerifiedUserId: async () => "seller" },
+"@/lib/terms": { hasAcceptedTerms: async () => true, requireTerms: async () => {}, TERMS_REQUIRED: { error: "terms", code: "TERMS_REQUIRED" } },
     "@/lib/supabase/server": { createServiceClient: () => supabase },
     "@/lib/listingKind": { MIN_PRICE: 20, ANTI_SNIPE_PRESETS_SECONDS: [0, 60, 120, 300, 600], DEFAULT_ANTI_SNIPE_SECONDS: 120 },
     "@/lib/vanguard": { parseListingDetails: () => ({ ok: true, rarity: "RRR", quantity: 1, hasExtras: null }) },

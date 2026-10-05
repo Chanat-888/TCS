@@ -8,7 +8,7 @@ end $$;
 create type public.order_status as enum (
   'PENDING_PAYMENT', 'PAID_HELD', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'DISPUTED', 'CANCELLED', 'REFUNDED'
 );
-create table public.profiles (id uuid primary key default gen_random_uuid());
+create table public.profiles (id uuid primary key default gen_random_uuid(), verified boolean not null default false);
 create table public.orders (
   id uuid primary key default gen_random_uuid(),
   seller_id uuid not null references public.profiles(id),
@@ -30,3 +30,7 @@ insert into public.orders (seller_id, amount, status, payout_status) values
   ('00000000-0000-0000-0000-00000000000a', 1000, 'SHIPPED', null),
   ('00000000-0000-0000-0000-00000000000a', 2000, 'COMPLETED', 'pending'),
   ('00000000-0000-0000-0000-00000000000a', 3000, 'COMPLETED', 'sent');
+
+-- Supabase Storage's bucket table (migration 0028 creates a private bucket).
+create schema storage;
+create table storage.buckets (id text primary key, name text not null, public boolean not null default false);
