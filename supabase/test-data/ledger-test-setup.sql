@@ -60,3 +60,6 @@ where seller_id = (select id from public.profiles where display_name = 'Chanat')
 -- Then in the app: save a bank account on /profile, open /earnings, withdraw 100 baht (fee 1.00, you
 -- receive 99.00), open /admin/withdrawals and mark it paid (the fee becomes TCS's) or failed (the
 -- money returns to available). Run the check query above again after each step.
+--
+-- Migration 0026: TEST-LEDGER-A shows as 0.00 withdrawable until its payment is matched. Open
+-- /admin/reconciliation, give TEST-LEDGER-A any statement reference, then withdraw as above.

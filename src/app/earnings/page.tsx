@@ -25,7 +25,7 @@ export default async function EarningsPage() {
   if (!userId) redirect("/login");
   const supabase = createServiceClient();
 
-  const [{ data: balances }, { data: entries }, { data: withdrawals }, { data: account }] = await Promise.all([
+  const [{ data: balances }, { data: entries }, { data: withdrawals }, { data: account }, { data: withdrawableData }] = await Promise.all([
     supabase.from("seller_balances").select("bucket, total").eq("seller_id", userId).in("bucket", ["pending", "available"]),
     // A completed order writes two entries (pending out, available in); the "available in" one is the one to show.
     supabase
@@ -38,9 +38,12 @@ export default async function EarningsPage() {
       .limit(30),
     supabase.from("withdrawals").select("id, amount, fee, status, created_at, bank_reference").eq("seller_id", userId).order("created_at", { ascending: false }).limit(20),
     supabase.from("seller_payout_accounts").select("bank_brand").eq("user_id", userId).not("account_number_enc", "is", null).maybeSingle(),
+    supabase.rpc("withdrawable", { p_seller: userId }),
   ]);
   const total = (bucket: string) => Number(balances?.find((b) => b.bucket === bucket)?.total ?? 0);
-  const available = total("available");
+  const withdrawable = Number(withdrawableData ?? 0);
+  // Completed orders whose payment is not yet matched to the bank statement (Phase 2).
+  const held = total("available") - withdrawable;
 
   return (
     <div style={{ "--wrap-max": "820px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
@@ -51,8 +54,10 @@ export default async function EarningsPage() {
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="rounded-2xl p-5" style={card}>
-            <div className="mono text-[22px]" style={{ color: "var(--white)" }}>{formatSatang(available)}</div>
-            <div className="mt-1 text-[12.5px]" style={{ color: "var(--steel)" }}>ถอนได้ตอนนี้</div>
+            <div className="mono text-[22px]" style={{ color: "var(--white)" }}>{formatSatang(withdrawable)}</div>
+            <div className="mt-1 text-[12.5px]" style={{ color: "var(--steel)" }}>
+              ถอนได้ตอนนี้{held > 0 ? ` · รอตรวจยอดเข้าบัญชี ${formatSatang(held)}` : ""}
+            </div>
           </div>
           <div className="rounded-2xl p-5" style={card}>
             <div className="mono text-[22px]" style={{ color: "var(--white)" }}>{formatSatang(total("pending"))}</div>
@@ -63,7 +68,7 @@ export default async function EarningsPage() {
         <section className="mt-6 rounded-2xl p-5" style={card}>
           <h2 className="text-[1.1rem]">ถอนเงิน</h2>
           {account ? (
-            <WithdrawForm availableBaht={Math.floor(available / 100)} />
+            <WithdrawForm availableBaht={Math.floor(withdrawable / 100)} />
           ) : (
             <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
               เพิ่มบัญชีรับเงินที่ <Link href="/profile" style={{ color: "var(--cyan)" }}>หน้าโปรไฟล์</Link> ก่อนจึงจะถอนได้

@@ -1,11 +1,11 @@
 # TCS payment plan (draft, Oct 2026)
 
-Status: **Phase 1 of Part A is written** (ledger, withdrawals, seller earnings page, admin withdrawals page; migration
-`0025_ledger.sql`, branch `feat/ledger-phase1`), but not yet applied to the live database. Everything else in Part A is
+Status: **Phases 1 and 2 of Part A are written** (ledger, withdrawals, seller earnings page, admin withdrawals page; migration
+`0025_ledger.sql`, branch `feat/ledger-phase1`) and Phase 2 (`0026_reconciliation.sql`, branch `feat/ledger-phase2`); both migrations are applied to the live database. Everything else in Part A is
 not built. Buyers still pay through Omise at checkout. Sellers are no longer paid per order through Omise
 ([src/lib/payout.ts](../src/lib/payout.ts) is unused and kept for Part B): a completed order credits the ledger and the
-seller withdraws. To run Phase 1 set `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
-numbers unreadable) and apply the migration.
+seller withdraws. Phase 1 needs `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
+numbers unreadable).
 
 - **Part A (sections 1 to 20) is the current plan:** buyers pay a PromptPay QR we generate straight into a company
   account, a slip reader confirms the payment, a ledger tracks what sellers are owed, and early on we pay sellers
@@ -307,8 +307,12 @@ The existing Omise code is the starting point for Part B if we fall back. The un
 2. **Phase 1, no bank API needed. Done and hand-tested (Oct 2026).** Ledger tables; pending/available; withdrawal
    request screen; admin page with a CSV of requests and a "mark as paid" button; admin pays by hand from the bank
    app. Hand-test scripts: `supabase/test-data/`.
-3. **Phase 2.** Daily reconciliation report (bank B balance vs total owed); match each payment to a bank
-   statement line before it becomes withdrawable; monthly accountant export.
+3. **Phase 2. Written (Oct 2026), migration `0026_reconciliation.sql`, admin page `/admin/reconciliation`.**
+   Daily reconciliation (admin types B's balance; owed comes from the ledger; a shortfall shows a red alarm and
+   does not block withdrawals); each payment matched by hand to a bank statement line (reference, unique) before a
+   completed order's money is withdrawable; monthly CSV export for the accountant. Not built: statement CSV import
+   (add when the bank and its format are chosen), the `commission_moves` table (so the difference also contains
+   our unmoved commission), and matching on slip upload (Phase 0 does not exist yet).
 4. **Phase 3.** Terms and privacy pages, clickwrap and consent log (section 16); needed before real money.
 5. **Phase 4.** Seller bank-name check and verified badge.
 6. **Phase 5.** Bank API for pay-in and bank bulk payment for payouts (corporate cash management), once the
