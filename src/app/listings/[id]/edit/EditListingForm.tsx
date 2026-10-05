@@ -4,6 +4,8 @@ import { useState, type CSSProperties } from "react";
 import { formatTHB } from "@/lib/format";
 import type { Listing } from "@/lib/supabase/types";
 import { OTHER_RARITY, PRODUCT_TYPE_LABELS, VANGUARD_RARITIES } from "@/lib/vanguard";
+import { PhotoSlot } from "@/components/PhotoSlot";
+import { postForm } from "@/lib/postForm";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -55,6 +57,9 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
   const [hasExtras, setHasExtras] = useState(listing.has_extras == null ? "" : String(listing.has_extras));
   const [startPrice, setStartPrice] = useState(String(listing.start_price));
   const [buyNowPrice, setBuyNowPrice] = useState(listing.buy_now_price ? String(listing.buy_now_price) : "");
+  // A photo is only sent when the seller picks a replacement; otherwise the current one stays.
+  const [front, setFront] = useState<File | null>(null);
+  const [back, setBack] = useState<File | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -78,18 +83,19 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
       formData.append("hasExtras", hasExtras);
       formData.append("startPrice", startPrice);
       if (buyNowPrice) formData.append("buyNowPrice", buyNowPrice);
+      if (front) formData.append("front", front);
+      if (back) formData.append("back", back);
     }
-    const res = await fetch(`/api/listings/${listing.id}`, { method: "PATCH", body: formData });
-    const json = await res.json();
+    const sent = await postForm<{ changed?: boolean; editedAt?: string | null }>(`/api/listings/${listing.id}`, formData, "PATCH");
     setSaving(false);
-    if (!res.ok) {
-      setError(json.error ?? "บันทึกไม่สำเร็จ");
+    if (!sent.ok) {
+      setError(sent.error || "บันทึกไม่สำเร็จ");
       return;
     }
     setSaved(true);
-    if (json.changed) {
+    if (sent.data.changed) {
       setEdited(true);
-      setEditedAt(json.editedAt);
+      setEditedAt(sent.data.editedAt ?? null);
     }
   }
 
@@ -129,6 +135,20 @@ export function EditListingForm({ listing, bidCount, locked }: { listing: Listin
             <p className="mt-[3px] text-[10.5px]" style={{ color: "var(--steel)" }}>สถานะ</p>
           </div>
         </div>
+      )}
+
+      {!locked && (
+        <>
+          <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>
+            รูปภาพการ์ด
+          </h2>
+          <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
+            <div className="grid grid-cols-2 gap-[14px] max-[420px]:grid-cols-1">
+              <PhotoSlot label="ด้านหน้า" file={front} existingUrl={listing.photo_front_url} onPick={(f) => { setFront(f); setSaved(false); }} onRemove={() => setFront(null)} />
+              <PhotoSlot label="ด้านหลัง" file={back} existingUrl={listing.photo_back_url} onPick={(f) => { setBack(f); setSaved(false); }} onRemove={() => setBack(null)} />
+            </div>
+          </div>
+        </>
       )}
 
       <h2 className="mb-3 mt-6 text-[14px] font-medium" style={{ color: "var(--steel)" }}>

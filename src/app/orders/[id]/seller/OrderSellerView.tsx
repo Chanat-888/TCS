@@ -8,7 +8,7 @@ import { ShipDatePanel } from "@/components/ShipDatePanel";
 import { formatTHB, maskUserLabel, formatRelativeTime } from "@/lib/format";
 import type { Message, Order, ShipProposal } from "@/lib/supabase/types";
 import { confirmHandover, confirmShipment } from "./actions";
-import { sendOrderMessage } from "../actions";
+import { getOrderMessages, sendOrderMessage } from "../actions";
 import { postForm } from "@/lib/postForm";
 import { COMMISSION_RATE, splitPayout } from "@/lib/commission";
 import { COURIER_NAMES, cleanTrackingNumber, detectCourier, trackingUrl } from "@/lib/trackingUrl";
@@ -372,6 +372,7 @@ export function OrderSellerView({
           currentUserId={currentUserId}
           avatarFor={(senderId, isMe) => (isMe ? "คุณ" : maskUserLabel(senderId).slice(-3))}
           onSend={(body) => sendOrderMessage(order.id, body)}
+          onFetch={() => getOrderMessages(order.id)}
         />
       </div>
     </>

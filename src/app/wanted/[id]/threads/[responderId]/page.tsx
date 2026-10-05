@@ -29,6 +29,7 @@ export default async function WantedPostThreadPage({ params }: { params: Promise
             currentUserId={userId}
             messages={messages}
             otherPartyLabel={responder.display_name.slice(0, 2).toUpperCase()}
+            readOnly={post.status !== "active"}
           />
         </div>
       </main>
