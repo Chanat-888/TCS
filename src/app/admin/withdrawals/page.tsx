@@ -30,7 +30,10 @@ export default async function AdminWithdrawalsPage() {
     supabase.from("seller_balances").select("bucket, total"),
   ]);
   // What TCS owes all sellers: the cash that must still be in the holding account (plan section 12).
-  const owed = (balances ?? []).filter((b) => b.bucket !== "commission").reduce((sum, b) => sum + Number(b.total), 0);
+  // Requested withdrawals already left the balances but are not transferred yet, so they still count.
+  const owed =
+    (balances ?? []).filter((b) => b.bucket !== "commission").reduce((sum, b) => sum + Number(b.total), 0) +
+    (open ?? []).reduce((sum, w) => sum + (w.amount - w.fee), 0);
   const name = (row: { seller: unknown }) => (row.seller as { display_name: string } | null)?.display_name ?? "—";
 
   return (
@@ -41,7 +44,7 @@ export default async function AdminWithdrawalsPage() {
           <div className="rounded-2xl p-5" style={card}>
             <div className="mono text-[22px]" style={{ color: "var(--white)" }}>{formatSatang(owed)}</div>
             <div className="mt-1 text-[12.5px]" style={{ color: "var(--steel)" }}>
-              ยอดที่ต้องจ่ายผู้ขายทั้งหมด (รอ + ถอนได้) เงินในบัญชี B ต้องไม่น้อยกว่านี้
+              ยอดที่ต้องจ่ายผู้ขายทั้งหมด (รอ + ถอนได้ + คำขอถอนที่ยังไม่โอน) เงินในบัญชี B ต้องไม่น้อยกว่านี้
             </div>
           </div>
 
