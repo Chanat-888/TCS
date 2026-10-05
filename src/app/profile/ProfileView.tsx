@@ -16,6 +16,7 @@ import { EditProfileButton } from "./EditProfileButton";
 import { DisputeTile, OwnerDisputeTile } from "./OwnerDisputeTile";
 import { AddressBookSkeleton, OwnerAddressBook } from "./OwnerAddressBook";
 import { OwnerPayoutAccount } from "./OwnerPayoutAccount";
+import { OwnerIdentityCheck } from "./OwnerIdentityCheck";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 import { OwnerAvatarEditor } from "./OwnerAvatarEditor";
 
@@ -368,6 +369,7 @@ export async function ProfileView({ id, viewerId, data }: { id: string; viewerId
         {isOwner && (
           <div className="mt-10">
             <Suspense fallback={null}>
+              <OwnerIdentityCheck userId={id} />
               <OwnerPayoutAccount userId={id} />
             </Suspense>
             <AccountSignInMethods />

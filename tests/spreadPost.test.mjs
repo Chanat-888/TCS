@@ -213,6 +213,7 @@ function routeDb({ itemsError = null, uploadFails = false } = {}) {
   const route = load("src/app/api/listings/spread/route.ts", {
     "next/server": { NextResponse: Response },
     "@/lib/session": { getVerifiedUserId: async () => "seller" },
+"@/lib/terms": { hasAcceptedTerms: async () => true, requireTerms: async () => {}, TERMS_REQUIRED: { error: "terms", code: "TERMS_REQUIRED" } },
     "@/lib/supabase/server": { createServiceClient: () => client },
     "@/lib/imageUpload": imageUpload,
     "@/lib/spreadPost": spread,

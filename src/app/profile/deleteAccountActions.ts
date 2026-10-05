@@ -104,6 +104,12 @@ export async function deleteMyAccount(): Promise<{ success: true } | { error: st
     const { data: profile } = await service.from("profiles").select("avatar_url").eq("id", userId).maybeSingle();
     await service.from("profile_addresses").delete().eq("user_id", userId);
 
+    // Any ID images still waiting for review go with the account (the decision normally deletes them).
+    const { data: idCheck } = await service.from("seller_verifications").select("selfie_path, card_path").eq("user_id", userId).maybeSingle();
+    const idPaths = [idCheck?.selfie_path, idCheck?.card_path].filter((p): p is string => Boolean(p));
+    if (idPaths.length) await service.storage.from("id-checks").remove(idPaths);
+    await service.from("seller_verifications").delete().eq("user_id", userId);
+
     const avatarUrl = profile?.avatar_url;
     if (avatarUrl) {
       try {

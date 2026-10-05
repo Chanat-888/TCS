@@ -96,6 +96,7 @@ function checkout({ userId = "buyer", order = ORDER, saved = SAVED, existing = [
     "next/cache": { revalidatePath: (path) => revalidated.push(path) },
     "@/lib/supabase/server": { createServiceClient: () => db.client },
     "@/lib/session": { requireVerifiedUserId: async () => userId },
+"@/lib/terms": { hasAcceptedTerms: async () => true, requireTerms: async () => {}, TERMS_REQUIRED: { error: "terms", code: "TERMS_REQUIRED" } },
     "@/lib/addressBook": {
       getAddress: async (uid, id) => (saved && uid === saved.owner && id === saved.id ? saved : (saved && !saved.owner && id === saved.id ? saved : null)),
       listAddresses: async () => existing,
