@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { redirect } from "next/navigation";
 import { requireVerifiedUserId } from "@/lib/session";
+import { requireTerms } from "@/lib/terms";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import { CreateListingForm } from "./CreateListingForm";
 export default async function NewListingPage() {
   const userId = await requireVerifiedUserId();
   if (!userId) redirect("/login");
+  await requireTerms(userId, "/listings/new");
 
   return (
     <div style={{ "--wrap-max": "680px" } as CSSProperties}>

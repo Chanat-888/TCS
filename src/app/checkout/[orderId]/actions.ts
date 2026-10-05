@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireVerifiedUserId } from "@/lib/session";
+import { TERMS_REQUIRED, hasAcceptedTerms } from "@/lib/terms";
 import { getAddress, listAddresses } from "@/lib/addressBook";
 import { MAX_ADDRESSES, cleanAddressFields, type AddressFields } from "@/lib/addresses";
 import type { PaymentMethod } from "@/lib/supabase/types";
@@ -50,6 +51,7 @@ async function resolveDelivery(userId: string, delivery: unknown): Promise<Resol
 export async function payOrder(orderId: string, input: PayOrderInput) {
   const userId = await requireVerifiedUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
+  if (!(await hasAcceptedTerms(userId))) return { error: TERMS_REQUIRED.error };
   if (input?.method !== "promptpay" && input?.method !== "truemoney") return { error: "เลือกวิธีชำระเงิน" as const };
   const walletPhone = String(input.walletPhone ?? "").replace(/\D/g, "");
   if (input.method === "truemoney" && !/^0\d{9}$/.test(walletPhone)) return { error: "กรอกเบอร์ TrueMoney 10 หลัก" as const };

@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
+import { requireTerms } from "@/lib/terms";
 import { createServiceClient } from "@/lib/supabase/server";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Footer } from "@/components/Footer";
@@ -23,6 +24,7 @@ const card: CSSProperties = { background: "var(--panel)", border: "1px solid rgb
 export default async function EarningsPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/login");
+  await requireTerms(userId, "/earnings");
   const supabase = createServiceClient();
 
   const [{ data: balances }, { data: entries }, { data: withdrawals }, { data: account }, { data: withdrawableData }] = await Promise.all([
