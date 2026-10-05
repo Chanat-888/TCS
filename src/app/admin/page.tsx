@@ -47,6 +47,9 @@ export default async function AdminOverviewPage() {
           <Link href="/admin/withdrawals" className="mt-5 inline-block text-[13.5px] font-medium no-underline" style={{ color: "var(--cyan)" }}>
             คำขอถอนเงินของผู้ขาย →
           </Link>
+          <Link href="/admin/reconciliation" className="mt-5 ml-6 inline-block text-[13.5px] font-medium no-underline" style={{ color: "var(--cyan)" }}>
+            ตรวจยอดบัญชี B →
+          </Link>
 
           <div className="mt-7">
             <h2 className="mb-[14px] text-[1.1rem]">ข้อพิพาท</h2>

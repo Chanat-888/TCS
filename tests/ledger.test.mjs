@@ -17,6 +17,7 @@ test("the SQL commission rate matches COMMISSION_RATE in code", () => {
 // do not mind being wiped (the public schema is dropped), e.g. postgres://test@localhost:5544/postgres.
 test("ledger scenarios", { skip: !process.env.LEDGER_PG_URL && "set LEDGER_PG_URL to run" }, () => {
   const run = spawnSync("psql", [process.env.LEDGER_PG_URL, "-v", "ON_ERROR_STOP=1", "-q",
-    "-f", "tests/ledger.stub.sql", "-f", migration, "-f", "tests/ledger.sql"], { encoding: "utf8" });
+    "-f", "tests/ledger.stub.sql", "-f", migration, "-f", "tests/ledger.sql",
+    "-f", "supabase/migrations/0026_reconciliation.sql", "-f", "tests/reconciliation.sql"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr);
 });
