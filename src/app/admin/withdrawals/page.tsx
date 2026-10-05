@@ -70,7 +70,7 @@ export default async function AdminWithdrawalsPage() {
             {(open ?? []).length === 0 && <p className="text-[13.5px]" style={{ color: "var(--steel)" }}>ไม่มีคำขอที่รอโอน</p>}
           </div>
 
-          <h2 className="mt-8 mb-3 text-[1.1rem]">ล่าสุด</h2>
+          <div className="mt-8 mb-3"><h2 className="text-[1.1rem]">ล่าสุด</h2></div>
           <div className="flex flex-col gap-2">
             {(done ?? []).map((w) => (
               <div key={w.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-[13.5px]" style={card}>

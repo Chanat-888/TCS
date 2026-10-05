@@ -45,7 +45,8 @@ export default async function EarningsPage() {
   return (
     <div style={{ "--wrap-max": "820px", "--wrap-pad": "24px", "--wrap-pad-sm": "16px" } as CSSProperties}>
       <SiteHeader userId={userId} />
-      <main className="wrap py-8">
+      <main className="wrap">
+        <div className="py-8">
         <h1 className="text-[clamp(1.4rem,3vw,1.75rem)]">รายได้ของฉัน</h1>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
@@ -70,7 +71,7 @@ export default async function EarningsPage() {
           )}
         </section>
 
-        <h2 className="mt-8 mb-3 text-[1.1rem]">คำขอถอนเงิน</h2>
+        <div className="mt-8 mb-3"><h2 className="text-[1.1rem]">คำขอถอนเงิน</h2></div>
         {(withdrawals ?? []).length === 0 ? (
           <p className="text-[13.5px]" style={{ color: "var(--steel)" }}>ยังไม่มีคำขอถอนเงิน</p>
         ) : (
@@ -88,7 +89,7 @@ export default async function EarningsPage() {
           </div>
         )}
 
-        <h2 className="mt-8 mb-3 text-[1.1rem]">ประวัติ</h2>
+        <div className="mt-8 mb-3"><h2 className="text-[1.1rem]">ประวัติ</h2></div>
         {(entries ?? []).length === 0 ? (
           <p className="text-[13.5px]" style={{ color: "var(--steel)" }}>ยังไม่มีรายการ</p>
         ) : (
@@ -111,6 +112,7 @@ export default async function EarningsPage() {
             })}
           </div>
         )}
+        </div>
       </main>
       <Footer note="ยอดทั้งหมดคำนวณจากบัญชีแยกประเภทที่แก้ไขย้อนหลังไม่ได้" />
     </div>
