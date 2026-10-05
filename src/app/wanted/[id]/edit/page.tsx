@@ -4,18 +4,10 @@ import { requireVerifiedUserId } from "@/lib/session";
 import { getWantedPostById } from "@/lib/wantedPosts";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
-import { updateWantedPost } from "../../actions";
 import { WantedPostForm } from "../../WantedPostForm";
 
-export default async function EditWantedPostPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
-}) {
+export default async function EditWantedPostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { error } = await searchParams;
   const userId = await requireVerifiedUserId();
 
   const post = await getWantedPostById(id);
@@ -31,7 +23,7 @@ export default async function EditWantedPostPage({
               ประกาศนี้ปิดแล้ว แก้ไขไม่ได้ ถ้ายังต้องการหาการ์ด กรุณาลงประกาศใหม่
             </p>
           ) : (
-            <WantedPostForm action={updateWantedPost.bind(null, id)} submitLabel="บันทึกการแก้ไข" post={post} error={Boolean(error)} />
+            <WantedPostForm postId={id} submitLabel="บันทึกการแก้ไข" post={post} />
           )}
         </div>
       </main>

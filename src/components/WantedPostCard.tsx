@@ -24,6 +24,12 @@ export function WantedPostCard({
       className="flex flex-col gap-3 rounded-[14px] p-[14px]"
       style={{ background: "var(--panel)", border: "1px solid rgba(140, 147, 163, 0.12)" }}
     >
+      {post.photo_url && (
+        <div className="-mx-[14px] -mt-[14px] overflow-hidden rounded-t-[14px]" style={{ aspectRatio: "5 / 4", background: "var(--panel-2)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.photo_url} alt={`การ์ดที่ต้องการหา: ${post.name}`} loading="lazy" className="h-full w-full object-cover" />
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <span
           className="mono rounded-full px-2 py-[3px] text-[10.5px]"

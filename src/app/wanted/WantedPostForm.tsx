@@ -1,4 +1,9 @@
-import type { CSSProperties } from "react";
+"use client";
+
+import { useState, type CSSProperties, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { PhotoSlot } from "@/components/PhotoSlot";
+import { postForm } from "@/lib/postForm";
 import type { WantedPost } from "@/lib/supabase/types";
 
 const inputStyle: CSSProperties = {
@@ -13,22 +18,53 @@ const inputStyle: CSSProperties = {
   outline: "none",
 };
 
-/** The "looking for" form, shared by posting a new one and editing an existing one. */
+/**
+ * The "looking for" form, shared by posting a new one and editing an existing one. A reference photo
+ * of the card is optional; while editing, the current one stays unless a replacement is picked.
+ */
 export function WantedPostForm({
-  action,
   submitLabel,
+  postId,
   post,
-  error,
 }: {
-  action: (formData: FormData) => void | Promise<void>;
   submitLabel: string;
+  /** Present when editing. */
+  postId?: string;
   /** Present when editing: the current values. */
-  post?: Pick<WantedPost, "name" | "set_name" | "category" | "max_price" | "note">;
-  error?: boolean;
+  post?: Pick<WantedPost, "name" | "set_name" | "category" | "max_price" | "note" | "photo_url">;
 }) {
+  const router = useRouter();
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setError("");
+    const formData = new FormData(e.currentTarget);
+    if (photo) formData.set("photo", photo);
+    const sent = await postForm(postId ? `/api/wanted/${postId}` : "/api/wanted", formData, postId ? "PATCH" : "POST");
+    if (!sent.ok) {
+      setSubmitting(false);
+      setError(sent.error || "บันทึกไม่สำเร็จ ลองอีกครั้ง");
+      return;
+    }
+    router.push("/profile");
+    router.refresh();
+  }
+
   return (
-    <form action={action} className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-      <div>
+    <form onSubmit={submit} className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
+      <div className="max-w-[220px]">
+        <PhotoSlot label="การ์ดที่ต้องการ" required={false} file={photo} existingUrl={post?.photo_url} onPick={setPhoto} onRemove={() => setPhoto(null)} />
+      </div>
+      <p className="mt-2 text-[12px] leading-relaxed" style={{ color: "var(--steel-dim)" }}>
+        ไม่บังคับ แต่ใส่รูปการ์ดที่ต้องการช่วยให้ผู้ขายเสนอได้ตรงขึ้น
+      </p>
+
+      <div className="mt-[18px]">
         <label className="mb-[7px] block text-[12.5px]" style={{ color: "var(--steel)" }}>
           ชื่อการ์ด
         </label>
@@ -90,11 +126,16 @@ export function WantedPostForm({
 
       {error && (
         <p role="alert" className="mt-3 text-[12.5px]" style={{ color: "var(--danger)" }}>
-          บันทึกไม่สำเร็จ กรอกข้อมูลให้ครบและถูกต้อง แล้วลองอีกครั้ง
+          {error}
         </p>
       )}
-      <button type="submit" className="mt-[22px] h-[52px] w-full rounded-xl text-[15.5px] font-semibold" style={{ background: "var(--blue)", color: "#071523" }}>
-        {submitLabel}
+      <button
+        type="submit"
+        disabled={submitting}
+        className="mt-[22px] h-[52px] w-full rounded-xl text-[15.5px] font-semibold disabled:opacity-60"
+        style={{ background: "var(--blue)", color: "#071523" }}
+      >
+        {submitting ? "..." : submitLabel}
       </button>
     </form>
   );

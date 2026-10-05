@@ -2,12 +2,10 @@ import type { CSSProperties } from "react";
 import { requireVerifiedUserId } from "@/lib/session";
 import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
-import { createWantedPost } from "../actions";
 import { WantedPostForm } from "../WantedPostForm";
 
-export default async function NewWantedPostPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewWantedPostPage() {
   await requireVerifiedUserId();
-  const { error } = await searchParams;
 
   return (
     <div style={{ "--wrap-max": "680px" } as CSSProperties}>
@@ -17,7 +15,7 @@ export default async function NewWantedPostPage({ searchParams }: { searchParams
           <h2 className="mb-3 text-[14px] font-medium" style={{ color: "var(--steel)" }}>
             คุณกำลังหาการ์ดอะไร
           </h2>
-          <WantedPostForm action={createWantedPost} submitLabel="เผยแพร่ประกาศหา" error={Boolean(error)} />
+          <WantedPostForm submitLabel="เผยแพร่ประกาศหา" />
         </div>
       </main>
       <Footer note="เอกสารแนวคิดฉบับพรีวิว — ประกาศหาเชื่อมกับฐานข้อมูลจริง" />
