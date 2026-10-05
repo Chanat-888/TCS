@@ -304,8 +304,9 @@ The existing Omise code is the starting point for Part B if we fall back. The un
 
 1. **Phase 0, pay-in.** Dynamic QR generation per order; slip upload plus slip-reader check with a unique slip
    reference; admin queue for mismatches.
-2. **Phase 1, no bank API needed.** Ledger tables; pending/available; withdrawal request screen; admin page with
-   a CSV of requests and a "mark as paid" button; admin pays by hand from the bank app.
+2. **Phase 1, no bank API needed. Done and hand-tested (Oct 2026).** Ledger tables; pending/available; withdrawal
+   request screen; admin page with a CSV of requests and a "mark as paid" button; admin pays by hand from the bank
+   app. Hand-test scripts: `supabase/test-data/`.
 3. **Phase 2.** Daily reconciliation report (bank B balance vs total owed); match each payment to a bank
    statement line before it becomes withdrawable; monthly accountant export.
 4. **Phase 3.** Terms and privacy pages, clickwrap and consent log (section 16); needed before real money.
