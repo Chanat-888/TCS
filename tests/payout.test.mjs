@@ -44,10 +44,10 @@ function fakeDb({ orders, account, claimed = [{ id: "o1" }] }) {
 
 const order = { id: "o1", seller_id: "s1", amount: 1000, payout_status: "pending", payout_attempted_at: null };
 
-test("5% commission is cut and rounded to whole baht", () => {
+test("9% commission is cut and rounded to whole baht", () => {
   const { splitPayout } = load(async () => ({}));
-  assert.deepEqual({ ...splitPayout(1000) }, { commission: 50, payout: 950 });
-  assert.deepEqual({ ...splitPayout(999) }, { commission: 50, payout: 949 });
+  assert.deepEqual({ ...splitPayout(1000) }, { commission: 90, payout: 910 });
+  assert.deepEqual({ ...splitPayout(999) }, { commission: 90, payout: 909 });
 });
 
 test("pays the seller the net amount in satang with a per-order idempotency key", async () => {
@@ -57,7 +57,7 @@ test("pays the seller the net amount in satang with a per-order idempotency key"
   const result = await payOutOrders(db, Date.now());
   assert.equal(result.processed, 1);
   assert.equal(calls[0].path, "/transfers");
-  assert.equal(calls[0].body, "amount=95000&recipient=recp_1");
+  assert.equal(calls[0].body, "amount=91000&recipient=recp_1");
   assert.equal(calls[0].headers["Idempotency-Key"], "payout-o1");
   assert.equal(updates.at(-1).patch.payout_status, "sent");
   assert.equal(updates.at(-1).patch.omise_transfer_id, "trsf_1");

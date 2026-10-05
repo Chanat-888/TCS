@@ -21,6 +21,17 @@ async function findBlockers(userId: string): Promise<string[]> {
     .in("status", OPEN_ORDER_STATUSES);
   if ((openOrders ?? 0) > 0) blockers.push("คุณมีคำสั่งซื้อ/ขายที่ยังไม่เสร็จสิ้น รอให้จัดส่ง ได้รับเงิน หรือปิดข้อพิพาทก่อน");
 
+  // Money still in the wallet or on its way to the bank must be withdrawn first.
+  const { data: balances } = await supabase.from("seller_balances").select("total").eq("seller_id", userId).in("bucket", ["pending", "available"]);
+  const { count: openWithdrawals } = await supabase
+    .from("withdrawals")
+    .select("id", { count: "exact", head: true })
+    .eq("seller_id", userId)
+    .eq("status", "requested");
+  if ((balances ?? []).some((b) => Number(b.total) > 0) || (openWithdrawals ?? 0) > 0) {
+    blockers.push("คุณมียอดเงินในกระเป๋ารายได้หรือคำขอถอนที่ยังไม่เสร็จ ถอนเงินและรอให้โอนเสร็จก่อน");
+  }
+
   const { count: activeListings } = await supabase
     .from("listings")
     .select("id", { count: "exact", head: true })

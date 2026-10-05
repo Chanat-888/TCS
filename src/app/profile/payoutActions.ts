@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAuthClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { getSessionUserId } from "@/lib/session";
-import { omise } from "@/lib/omise";
 import { cleanBankAccount } from "@/lib/bankAccount";
+import { encrypt } from "@/lib/secretBox";
 
-// Saves (or replaces) the signed-in seller's bank account as an Omise recipient. The
-// account number goes to Omise only; we keep the recipient id and the last 4 digits.
+// Saves (or replaces) the signed-in seller's bank account. We keep the number encrypted
+// (admins read it to pay withdrawals by hand) plus the last 4 digits for display.
 export async function saveBankAccount(input: unknown) {
   const userId = await getSessionUserId();
   if (!userId) return { error: "กรุณาเข้าสู่ระบบก่อน" as const };
@@ -16,23 +16,11 @@ export async function saveBankAccount(input: unknown) {
   const { brand, number, name } = cleaned.value;
 
   try {
-    // Omise requires an email; LINE users may have none, so fall back to a placeholder.
-    const { data: { user } } = await (await createAuthClient()).auth.getUser();
-    const recipient = await omise<{ id: string }>(
-      "/recipients",
-      new URLSearchParams({
-        name,
-        email: user?.email ?? `${userId}@seller.invalid`,
-        type: "individual",
-        "bank_account[brand]": brand,
-        "bank_account[number]": number,
-        "bank_account[name]": name,
-      }),
-    );
     const { error } = await createServiceClient().from("seller_payout_accounts").upsert({
       user_id: userId,
-      omise_recipient_id: recipient.id,
+      omise_recipient_id: null,
       bank_brand: brand,
+      account_number_enc: encrypt(number),
       account_last4: number.slice(-4),
       account_name: name,
       updated_at: new Date().toISOString(),
