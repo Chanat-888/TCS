@@ -2,9 +2,8 @@
 
 import { useState, type CSSProperties } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import Link from "next/link";
+import { SetupStep } from "@/components/SetupStep";
 import { BANKS } from "@/lib/bankAccount";
-import { COMMISSION_RATE } from "@/lib/commission";
 import { saveBankAccount } from "./payoutActions";
 
 const inputStyle: CSSProperties = {
@@ -19,6 +18,9 @@ const inputStyle: CSSProperties = {
   outline: "none",
 };
 
+const linkClass = "border-0 bg-transparent p-0 text-[13px] font-medium cursor-pointer leading-7";
+
+/** Step 2 of the seller setup rail: the bank account payouts go to. */
 export function PayoutAccount({ saved }: { saved: { bank_brand: string; account_last4: string; account_name: string } | null }) {
   const [editing, setEditing] = useState(!saved);
   const [form, setForm] = useState({ brand: "", number: "", name: "" });
@@ -35,37 +37,40 @@ export function PayoutAccount({ saved }: { saved: { bank_brand: string; account_
     setEditing(false);
   }
 
+  const showSaved = saved && !editing;
   return (
-    <section className="wrap py-6">
-      <div className="max-w-md rounded-2xl p-5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-        <h2 className="text-[1.15rem]">บัญชีรับเงินของผู้ขาย</h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: "var(--steel)" }}>
-          เมื่อผู้ซื้อรับสินค้าแล้ว เงินจะเข้ากระเป๋ารายได้ (หักค่าธรรมเนียม {Math.round(COMMISSION_RATE * 100)}%) แล้วคุณกดถอนเข้าบัญชีนี้ได้ (ค่าถอน 1%) ใช้ชื่อบัญชีที่ตรงกับสมุดบัญชีเท่านั้น
-        </p>
-        <Link href="/earnings" className="mt-2 inline-block text-[13px] font-medium no-underline" style={{ color: "var(--cyan)" }}>ดูรายได้และถอนเงิน →</Link>
-        {saved && !editing ? (
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-[14px]" style={{ color: "var(--white)" }}>
-              {BANKS[saved.bank_brand] ?? saved.bank_brand} · <span className="mono">xxx{saved.account_last4}</span>
-              <span className="block text-[12.5px]" style={{ color: "var(--steel)" }}>{saved.account_name}</span>
-            </p>
-            <button type="button" className="border-0 bg-transparent p-0 text-[13px] font-medium cursor-pointer" style={{ color: "var(--cyan)" }} onClick={() => setEditing(true)}>
-              เปลี่ยนบัญชี
-            </button>
-          </div>
+    <SetupStep
+      n={2}
+      state={saved ? "done" : "todo"}
+      title="บัญชีรับเงิน"
+      action={showSaved ? <button type="button" className={linkClass} style={{ color: "var(--cyan)" }} onClick={() => setEditing(true)}>เปลี่ยน</button> : undefined}
+      note={
+        showSaved ? (
+          <>
+            <span style={{ color: "var(--white)" }}>{BANKS[saved.bank_brand] ?? saved.bank_brand} · <span className="mono">xxx{saved.account_last4}</span></span>
+            <br />
+            {saved.account_name}
+          </>
         ) : (
-          <div className="mt-4 flex flex-col gap-3">
-            <select style={inputStyle} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} aria-label="ธนาคาร">
-              <option value="">เลือกธนาคาร</option>
-              {Object.entries(BANKS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-            </select>
-            <input style={inputStyle} className="mono" inputMode="numeric" placeholder="เลขบัญชี" aria-label="เลขบัญชี" autoComplete="off" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
-            <input style={inputStyle} placeholder="ชื่อบัญชี" aria-label="ชื่อบัญชี" autoComplete="off" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            {error && <p role="alert" className="text-[12.5px]" style={{ color: "var(--danger)" }}>{error}</p>}
+          "ใช้ชื่อบัญชีที่ตรงกับสมุดบัญชีเท่านั้น"
+        )
+      }
+    >
+      {!showSaved && (
+        <div className="mt-3 flex flex-col gap-3">
+          <select style={inputStyle} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} aria-label="ธนาคาร">
+            <option value="">เลือกธนาคาร</option>
+            {Object.entries(BANKS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+          </select>
+          <input style={inputStyle} className="mono" inputMode="numeric" placeholder="เลขบัญชี" aria-label="เลขบัญชี" autoComplete="off" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} />
+          <input style={inputStyle} placeholder="ชื่อบัญชี" aria-label="ชื่อบัญชี" autoComplete="off" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          {error && <p role="alert" className="text-[12.5px]" style={{ color: "var(--danger)" }}>{error}</p>}
+          <div className="flex items-center gap-3">
             <PrimaryButton loading={saving} onClick={submit}>บันทึกบัญชี</PrimaryButton>
+            {saved && <button type="button" className={linkClass} style={{ color: "var(--steel)" }} onClick={() => setEditing(false)}>ยกเลิก</button>}
           </div>
-        )}
-      </div>
-    </section>
+        </div>
+      )}
+    </SetupStep>
   );
 }
