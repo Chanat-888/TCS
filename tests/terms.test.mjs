@@ -29,6 +29,7 @@ test("selling, withdrawing and paying are gated on accepted terms", () => {
     "src/app/earnings/actions.ts",
     "src/app/checkout/[orderId]/page.tsx",
     "src/app/checkout/[orderId]/actions.ts",
+    "src/app/api/orders/[id]/slip/route.ts",
   ];
   for (const f of gated) {
     assert.match(readFileSync(new URL(`../${f}`, import.meta.url), "utf8"), /requireTerms|hasAcceptedTerms/, f);

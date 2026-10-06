@@ -14,7 +14,9 @@ create table public.orders (
   seller_id uuid not null references public.profiles(id),
   amount integer not null,
   status public.order_status not null default 'PENDING_PAYMENT',
-  payout_status text
+  payout_status text,
+  paid_at timestamptz,
+  payment_method text
 );
 create table public.seller_payout_accounts (
   user_id uuid primary key references public.profiles(id),
@@ -32,5 +34,6 @@ insert into public.orders (seller_id, amount, status, payout_status) values
   ('00000000-0000-0000-0000-00000000000a', 3000, 'COMPLETED', 'sent');
 
 -- Supabase Storage's bucket table (migration 0028 creates a private bucket).
+drop schema if exists storage cascade;
 create schema storage;
 create table storage.buckets (id text primary key, name text not null, public boolean not null default false);

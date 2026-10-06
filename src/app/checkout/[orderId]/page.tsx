@@ -10,6 +10,7 @@ import { BackHeader } from "@/components/BackHeader";
 import { Footer } from "@/components/Footer";
 import { getOrderItems } from "@/lib/listingItems";
 import { OrderItemsList } from "@/components/OrderItemsList";
+import { paymentQr } from "@/lib/promptpayQr";
 import { CheckoutForm } from "./CheckoutForm";
 
 export default async function CheckoutPage({ params }: { params: Promise<{ orderId: string }> }) {
@@ -41,6 +42,8 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
   }
 
   const orderItems = await getOrderItems(orderId);
+  // Back on the page after choosing delivery (a refresh, or a rejected slip): show the QR again.
+  const initialQr = detail.order.payment_method === "promptpay" ? await paymentQr(detail.order.amount) : null;
 
   return (
     <div style={{ "--wrap-max": "640px" } as CSSProperties}>
@@ -57,10 +60,12 @@ export default async function CheckoutPage({ params }: { params: Promise<{ order
             paymentDeadlineAt={detail.order.payment_deadline_at ?? new Date().toISOString()}
             isAuctionWin={detail.listing.buy_now_price == null}
             savedAddresses={savedAddresses}
+            initialQr={initialQr}
+            initialDelivery={detail.order.delivery_method === "meetup" ? "meetup" : "ship"}
           />
         </div>
       </main>
-      <Footer note={process.env.OMISE_SECRET_KEY?.startsWith("skey_test_") ? "โหมดทดสอบ — ชำระผ่าน Omise test mode ไม่มีการตัดเงินจริง" : undefined} />
+      <Footer />
     </div>
   );
 }
