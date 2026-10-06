@@ -8,8 +8,8 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { ProvinceCombobox } from "@/components/ProvinceCombobox";
 import { formatTHB } from "@/lib/format";
 import { MAX_ADDRESSES, type SavedAddress } from "@/lib/addresses";
-import type { PaymentMethod } from "@/lib/supabase/types";
-import { checkPayment, payOrder, type DeliveryChoice } from "./actions";
+import { checkSlip, startQrPayment, type DeliveryChoice } from "./actions";
+import { SlipUpload } from "./SlipUpload";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -70,6 +70,8 @@ export function CheckoutForm({
   paymentDeadlineAt,
   isAuctionWin,
   savedAddresses,
+  initialQr,
+  initialDelivery,
 }: {
   orderId: string;
   listingName: string;
@@ -79,6 +81,8 @@ export function CheckoutForm({
   paymentDeadlineAt: string;
   isAuctionWin: boolean;
   savedAddresses: SavedAddress[];
+  initialQr: string | null;
+  initialDelivery: "ship" | "meetup";
 }) {
   const defaultSaved = savedAddresses.find((a) => a.is_default) ?? savedAddresses[0];
   const [delivery, setDelivery] = useState<DeliveryKind>(defaultSaved ? "saved" : "other");
@@ -89,33 +93,35 @@ export function CheckoutForm({
   const [address, setAddress] = useState("");
   const [province, setProvince] = useState("");
   const [postcode, setPostcode] = useState("");
-  const [method, setMethod] = useState<PaymentMethod>("promptpay");
-  const [walletPhone, setWalletPhone] = useState("");
-  const [qr, setQr] = useState<null | { url: string; delivery: "ship" | "meetup" }>(null);
+  const [qr, setQr] = useState<null | { url: string; delivery: "ship" | "meetup" }>(initialQr ? { url: initialQr, delivery: initialDelivery } : null);
+  const [slip, setSlip] = useState<null | { status: string; note: string | null }>(null);
 
   const [addressError, setAddressError] = useState("");
-  const [methodError, setMethodError] = useState(false);
   const [payError, setPayError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<null | "ship" | "meetup">(null);
 
   const canSaveNew = savedAddresses.length < MAX_ADDRESSES;
 
-  // While the PromptPay QR is up, ask the server every few seconds whether Omise
-  // has seen the payment (the webhook may also get there first).
+  // While the QR is up, ask the server every few seconds whether an admin has confirmed the
+  // payment and what happened to the slip (accepted, rejected with a reason, waiting).
   useEffect(() => {
     if (!qr) return;
-    const timer = setInterval(async () => {
-      const status = await checkPayment(orderId).catch(() => "pending" as const);
-      if (status === "paid") {
+    const poll = async () => {
+      const result = await checkSlip(orderId).catch(() => null);
+      if (!result) return;
+      setSlip(result.slip);
+      if (result.state === "paid") {
         setQr(null);
         setDone(qr.delivery);
         window.scrollTo({ top: 0 });
-      } else if (status === "failed") {
+      } else if (result.state === "cancelled") {
         setQr(null);
-        setPayError("QR หมดอายุหรือชำระไม่สำเร็จ กดชำระเงินเพื่อสร้าง QR ใหม่");
+        setPayError("คำสั่งซื้อนี้ถูกยกเลิกแล้ว (เกินกำหนดชำระเงิน) หากคุณโอนเงินไปแล้ว ทีมงานจะคืนเงินให้");
       }
-    }, 3000);
+    };
+    poll();
+    const timer = setInterval(poll, 5000);
     return () => clearInterval(timer);
   }, [qr, orderId]);
 
@@ -138,27 +144,13 @@ export function CheckoutForm({
       choice = { type: "other", address: { recipient, phone, address, province, postcode }, save: saveNew && canSaveNew };
     }
     setAddressError("");
-    if (method === "truemoney" && !/^0\d{9}$/.test(walletPhone.replace(/\D/g, ""))) {
-      setMethodError(true);
-      return;
-    }
-    setMethodError(false);
 
     setSubmitting(true);
     try {
-      const result = await payOrder(orderId, { method, delivery: choice, walletPhone });
+      const result = await startQrPayment(orderId, choice);
       if ("error" in result) {
         // Address problems are shown next to the address; anything else at the button.
         setPayError(result.error ?? "ชำระเงินไม่สำเร็จ ลองอีกครั้ง");
-        return;
-      }
-      if (result.authorizeUri) {
-        // TrueMoney: OTP on Omise's page, which returns to /checkout/[orderId].
-        window.location.assign(result.authorizeUri);
-        return;
-      }
-      if (!result.qrUrl) {
-        setPayError("เริ่มการชำระเงินไม่สำเร็จ ลองอีกครั้ง");
         return;
       }
       setQr({ url: result.qrUrl, delivery: result.deliveryMethod });
@@ -228,15 +220,26 @@ export function CheckoutForm({
       <div className="py-6 text-center">
         <h1 className="text-[1.4rem]">สแกนเพื่อชำระเงิน</h1>
         <p className="mt-2 text-[13.5px]" style={{ color: "var(--steel)" }}>
-          เปิดแอปธนาคาร สแกน QR พร้อมเพย์ แล้วชำระ <strong style={{ color: "var(--white)" }}>{formatTHB(amount)}</strong>
+          เปิดแอปธนาคาร สแกน QR พร้อมเพย์ แล้วโอน <strong style={{ color: "var(--white)" }}>{formatTHB(amount)}</strong> ตามยอดนี้เป๊ะ
         </p>
-        {/* eslint-disable-next-line @next/next/no-img-element -- Omise-hosted QR, not a static asset */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- generated QR data URL, not a static asset */}
         <img src={qr.url} alt="QR พร้อมเพย์สำหรับชำระเงิน" className="mx-auto mt-5 rounded-xl bg-white p-3" style={{ width: 260, maxWidth: "100%" }} />
-        <p className="mt-4 text-[12.5px]" role="status" style={{ color: "var(--steel-dim)" }}>
-          รอการยืนยันการชำระเงิน… หน้านี้จะเปลี่ยนเองเมื่อชำระสำเร็จ
-        </p>
+        {slip?.status === "review" ? (
+          <p className="mt-5 text-[13.5px] leading-relaxed" role="status" style={{ color: "var(--steel)" }}>
+            ได้รับสลิปแล้ว ทีมงานกำลังตรวจสอบกับรายการเงินเข้า หน้านี้จะเปลี่ยนเองเมื่อยืนยันแล้ว (คำสั่งซื้อจะไม่ถูกยกเลิกระหว่างรอ)
+          </p>
+        ) : (
+          <>
+            {slip?.status === "rejected" && (
+              <p role="alert" className="mt-5 text-[13px]" style={{ color: "var(--danger)" }}>
+                สลิปไม่ผ่านการตรวจสอบ{slip.note ? `: ${slip.note}` : ""} ตรวจสอบยอดโอนแล้วส่งสลิปใหม่ได้
+              </p>
+            )}
+            <SlipUpload orderId={orderId} onSent={() => setSlip({ status: "review", note: null })} />
+          </>
+        )}
         <button type="button" onClick={() => setQr(null)} className="mt-5 text-[13px] underline" style={{ color: "var(--steel)" }}>
-          เปลี่ยนวิธีชำระเงิน
+          กลับไปแก้ที่อยู่จัดส่ง
         </button>
       </div>
     );
@@ -381,29 +384,10 @@ export function CheckoutForm({
           วิธีชำระเงิน
         </h2>
         <div className="rounded-2xl p-[18px]" style={{ background: "var(--panel)", border: "1px solid rgba(140,147,163,0.14)" }}>
-          <div className="flex flex-col gap-[10px]">
-            {(
-              [
-                { key: "promptpay" as const, label: "พร้อมเพย์ (PromptPay)", sub: "สแกน QR ผ่านแอปธนาคารของคุณ" },
-                { key: "truemoney" as const, label: "TrueMoney Wallet", sub: "ยืนยันด้วยรหัส OTP ที่ส่งไปยังเบอร์ TrueMoney" },
-              ]
-            ).map((opt) => (
-              <ChoiceCard key={opt.key} selected={method === opt.key} onSelect={() => { setMethod(opt.key); setMethodError(false); }} title={opt.label} sub={opt.sub} />
-            ))}
-          </div>
-
-          {method === "truemoney" && (
-            <div className="mt-[14px]">
-              <Field label="เบอร์ TrueMoney Wallet">
-                <input className="mono" style={inputStyle} value={walletPhone} onChange={(e) => { setWalletPhone(e.target.value); setMethodError(false); }} placeholder="08X-XXX-XXXX" inputMode="tel" autoComplete="tel" />
-              </Field>
-            </div>
-          )}
-          {methodError && (
-            <p className="mt-[8px] text-[12px]" style={{ color: "var(--danger)" }}>
-              กรอกเบอร์ TrueMoney 10 หลักก่อนดำเนินการต่อ
-            </p>
-          )}
+          <p className="text-[14px] font-medium" style={{ color: "var(--white)" }}>พร้อมเพย์ (PromptPay)</p>
+          <p className="mt-[3px] text-[12.5px] leading-relaxed" style={{ color: "var(--steel-dim)" }}>
+            ขั้นถัดไปคุณจะได้ QR สำหรับสแกนผ่านแอปธนาคาร แล้วแนบสลิปการโอน ทีมงานตรวจสอบกับรายการเงินเข้าก่อนยืนยันการชำระเงิน
+          </p>
         </div>
       </div>
 
@@ -437,7 +421,7 @@ export function CheckoutForm({
       )}
       <div className="mt-[18px]">
         <PrimaryButton height={52} loading={submitting} onClick={handlePay}>
-          ชำระเงินตอนนี้
+          ไปขั้นถัดไป: รับ QR ชำระเงิน
         </PrimaryButton>
       </div>
     </>

@@ -19,6 +19,7 @@ test("ledger scenarios", { skip: !process.env.LEDGER_PG_URL && "set LEDGER_PG_UR
   const run = spawnSync("psql", [process.env.LEDGER_PG_URL, "-v", "ON_ERROR_STOP=1", "-q",
     "-f", "tests/ledger.stub.sql", "-f", migration, "-f", "tests/ledger.sql",
     "-f", "supabase/migrations/0026_reconciliation.sql", "-f", "tests/reconciliation.sql",
-    "-f", "supabase/migrations/0028_seller_verification.sql", "-f", "tests/verification.sql"], { encoding: "utf8" });
+    "-f", "supabase/migrations/0028_seller_verification.sql", "-f", "tests/verification.sql",
+    "-f", "supabase/migrations/0029_payin_slips.sql", "-f", "tests/payin.sql"], { encoding: "utf8" });
   assert.equal(run.status, 0, run.stderr);
 });

@@ -2,7 +2,8 @@
 
 Status: **Phases 1 and 2 of Part A are written** (ledger, withdrawals, seller earnings page, admin withdrawals page; migration
 `0025_ledger.sql`, branch `feat/ledger-phase1`) and Phase 2 (`0026_reconciliation.sql`, branch `feat/ledger-phase2`); both migrations are applied to the live database. Everything else in Part A is
-not built. Buyers still pay through Omise at checkout. Sellers are no longer paid per order through Omise
+not built. Phases 0 to 4 are written (see section 11); Phase 0 needs `PROMPTPAY_ID` and migration `0029_payin_slips.sql`.
+Buyers pay by PromptPay QR and slip; Omise is dormant. Sellers are no longer paid per order through Omise
 ([src/lib/payout.ts](../src/lib/payout.ts) is unused and kept for Part B): a completed order credits the ledger and the
 seller withdraws. Phase 1 needs `BANK_ENCRYPTION_KEY` (32 random bytes, base64; losing it makes saved account
 numbers unreadable).
@@ -302,8 +303,17 @@ The existing Omise code is the starting point for Part B if we fall back. The un
 
 ## 11. Build order
 
-1. **Phase 0, pay-in.** Dynamic QR generation per order; slip upload plus slip-reader check with a unique slip
-   reference; admin queue for mismatches.
+1. **Phase 0, pay-in. Written (Oct 2026), migration `0029_payin_slips.sql`, admin page `/admin/payments`.**
+   Checkout now shows a dynamic PromptPay QR for the exact order amount (payload in `src/lib/promptpay.ts`, no
+   gateway; set `PROMPTPAY_ID` to the company's 13-digit tax ID or 10-digit mobile number) and takes a slip
+   upload (private bucket `payment-slips`). **An admin confirms the payment** against account B's statement
+   (statement reference required, one line pays one order); that sets `PAID_HELD` and does the Phase 2 match in
+   one step. A rejected slip shows its reason and the buyer can upload another; a slip for a cancelled or already
+   paid order goes to "refund due" and is refunded by hand to the paying account. A slip under review extends the
+   order's deadline by 48 hours so the timer does not cancel it. No slip-reader service yet (it would replace the
+   admin step); the Omise code is dormant (`payOrder`, webhook, `syncCharge`) as the Part B fallback. Not built:
+   random odd satang per order (buyers pay the exact price; add if matching slips to statement lines gets hard),
+   and unidentified deposits (money in B with no slip) still show only as the reconciliation surplus.
 2. **Phase 1, no bank API needed. Done and hand-tested (Oct 2026).** Ledger tables; pending/available; withdrawal
    request screen; admin page with a CSV of requests and a "mark as paid" button; admin pays by hand from the bank
    app. Hand-test scripts: `supabase/test-data/`.
