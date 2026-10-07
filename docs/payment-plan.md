@@ -241,6 +241,18 @@ Notes:
 - **Bank:** is account B allowed to take many small transfers and pay out to many sellers, and will they note
   that purpose on the account; account B as a customer-funds account; fees on incoming and outgoing transfers;
   zero-interest account types; the corporate cash management service (fees, minimums, approval for a new company).
+  **Checking a payment with the bank** (from weakest to strongest; answers decide which way we go, the ledger
+  stays the same):
+  1. Does account B give a **file or API feed of its transactions** (so our system reads the statement lines and
+     matches orders itself instead of an admin looking them up)? Which product, fee, minimum balance, approval?
+  2. Do you offer **Bill Payment QR with a callback** (the bank tells our server "reference X paid 300 baht", no
+     slip needed) to a small new company? Fee, paperwork, how long?
+  3. Do you offer a **slip verification API** for business customers, or which providers do you recommend?
+  4. What does an **incoming-transfer line on the statement show**: sender name, sender bank, hidden account
+     number, a unique transaction reference? Please show one real example. (We type the payer name and bank from it.)
+  5. Is the **transaction reference printed in the slip QR** the same one that appears on our statement line, so
+     one number can match slip and statement?
+  6. Can we get **statements daily and in a machine-readable format** (CSV or similar)?
 - **Slip-reader provider:** price per slip, uptime, which banks it covers, how it detects edited slips.
 
 ---
@@ -312,7 +324,14 @@ The existing Omise code is the starting point for Part B if we fall back. The un
    paid order goes to "refund due" and is refunded by hand to the paying account. A slip under review extends the
    order's deadline by 48 hours so the timer does not cancel it. No slip-reader service yet (it would replace the
    admin step); the Omise code is dormant (`payOrder`, webhook, `syncCharge`) as the Part B fallback. Not built:
-   random odd satang per order (buyers pay the exact price; add if matching slips to statement lines gets hard),
+   random odd satang per order (buyers pay the exact price; add if matching slips to statement lines gets hard).
+   Payer info (migration `0030_payer_info.sql`): the admin can type the payer name, a bank (list) and the hidden
+   account digits from the slip or statement when confirming, and fix them later; stored per slip so each is linked
+   to its buyer, name also stored cleaned for matching; all optional hints, the slip image stays the truth. The
+   slip's own QR (transaction reference and sending bank) is read in the buyer's browser (jsQR), re-parsed by the
+   server and used only to stop one slip paying twice and to pre-fill the bank; it does not prove the slip is real.
+   Bank codes and the QR layout are from memory: test with real slips from each bank. Fraud flags that use the
+   payer data are the next step,
    and unidentified deposits (money in B with no slip) still show only as the reconciliation surplus.
 2. **Phase 1, no bank API needed. Done and hand-tested (Oct 2026).** Ledger tables; pending/available; withdrawal
    request screen; admin page with a CSV of requests and a "mark as paid" button; admin pays by hand from the bank

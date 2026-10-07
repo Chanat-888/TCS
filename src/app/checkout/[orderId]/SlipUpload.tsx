@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { prepareCardPhoto } from "@/lib/clientImage";
+import { readSlipQr } from "@/lib/slipQrReader";
 
 /** Uploads the transfer slip. The server only stores it; an admin confirms the payment. */
 export function SlipUpload({ orderId, onSent }: { orderId: string; onSent: () => void }) {
@@ -20,6 +21,9 @@ export function SlipUpload({ orderId, onSent }: { orderId: string; onSent: () =>
       if (!prepared.ok) return setError(prepared.error);
       const formData = new FormData();
       formData.set("slip", prepared.file);
+      // The slip's own QR (transaction reference + sending bank). A hint: the server re-checks it.
+      const qr = await readSlipQr(file);
+      if (qr) formData.set("qr", qr);
       const res = await fetch(`/api/orders/${orderId}/slip`, { method: "POST", body: formData });
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) return setError(body.error ?? "ส่งสลิปไม่สำเร็จ กรุณาลองอีกครั้ง");

@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/session";
 import { TERMS_REQUIRED, hasAcceptedTerms } from "@/lib/terms";
 import { checkPhotoFile } from "@/lib/imageUpload";
+import { parseSlipQr } from "@/lib/slipQr";
 
 const BUCKET = "payment-slips";
 // An admin checks slips by hand, so a slip under review keeps its order alive for this long.
@@ -43,11 +44,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "อัปโหลดสลิปไม่สำเร็จ กรุณาลองอีกครั้ง" }, { status: 500 });
   }
 
-  const { error } = await supabase.from("payment_slips").insert({ order_id: orderId, buyer_id: userId, image_path: path });
+  // The slip's own QR, read in the buyer's browser: only a hint, so the server parses it again. It stops one
+  // slip being used for two payments; it does not prove the slip is real.
+  const qr = parseSlipQr(formData.get("qr"));
+  const { error } = await supabase
+    .from("payment_slips")
+    .insert({ order_id: orderId, buyer_id: userId, image_path: path, slip_ref: qr?.ref ?? null, slip_bank: qr?.bank ?? null });
   if (error) {
     await supabase.storage.from(BUCKET).remove([path]);
-    // One slip waits for review per order (unique index).
-    if (error.code === "23505") return NextResponse.json({ error: "ส่งสลิปแล้ว รอทีมงานตรวจสอบ" }, { status: 409 });
+    if (error.code === "23505") {
+      if (error.message.includes("slip_ref")) return NextResponse.json({ error: "สลิปนี้เคยถูกใช้ชำระเงินแล้ว กรุณาส่งสลิปของการโอนครั้งนี้" }, { status: 409 });
+      // One slip waits for review per order (unique index).
+      return NextResponse.json({ error: "ส่งสลิปแล้ว รอทีมงานตรวจสอบ" }, { status: 409 });
+    }
     console.error("[slip] save failed", error.message);
     return NextResponse.json({ error: "บันทึกสลิปไม่สำเร็จ กรุณาลองอีกครั้ง" }, { status: 500 });
   }
